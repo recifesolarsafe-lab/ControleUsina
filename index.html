@@ -218,15 +218,31 @@
 
   .grid-input{width:104px; padding:6px 8px; font-size:12.5px; font-family:var(--font-mono); text-align:right;}
   .grid-input.obs{width:160px; font-family:var(--font-body); text-align:left;}
-  .usina-detail-cell{min-width:260px; max-width:340px; white-space:normal;}
-  .usina-row-chips{display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;}
-  .usina-row-chips .chip.small{
-    font-size:10.5px; padding:4px 9px; font-family:var(--font-mono);
-    background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim);
-    border-radius:14px; cursor:pointer; transition:all .15s ease;
+  .usina-detail-cell{min-width:280px; max-width:420px; white-space:normal;}
+  .usina-picker{position:relative; margin-bottom:8px;}
+  .usina-picker-btn{
+    width:100%; text-align:left; display:flex; align-items:center; justify-content:space-between; gap:6px;
+    font-family:var(--font-body); font-size:12px; color:var(--text-dim);
+    background:var(--surface-2); border:1px solid var(--border); border-radius:7px;
+    padding:7px 10px; cursor:pointer; transition:all .15s ease;
   }
-  .usina-row-chips .chip.small:hover{border-color:var(--amber); color:var(--text);}
-  .usina-row-chips .chip.small.active{background:var(--amber-soft); border-color:var(--amber); color:var(--amber);}
+  .usina-picker-btn:hover{border-color:var(--amber); color:var(--text);}
+  .usina-picker.open .usina-picker-btn{border-color:var(--amber); color:var(--text);}
+  .usina-picker-btn .upb-caret{flex-shrink:0; transition:transform .15s ease; opacity:.6;}
+  .usina-picker.open .upb-caret{transform:rotate(180deg);}
+  .usina-picker-menu{
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:40;
+    background:var(--surface-3); border:1px solid var(--border); border-radius:8px;
+    padding:6px; max-height:220px; overflow-y:auto; display:none;
+    box-shadow:0 10px 24px rgba(0,0,0,0.4);
+  }
+  .usina-picker.open .usina-picker-menu{display:block;}
+  .usina-picker-menu label{
+    display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px;
+    font-size:12px; color:var(--text-dim); cursor:pointer; transition:background .1s ease;
+  }
+  .usina-picker-menu label:hover{background:var(--surface-2); color:var(--text);}
+  .usina-picker-menu input[type=checkbox]{width:14px; height:14px; accent-color:var(--amber); cursor:pointer; flex-shrink:0;}
   .usina-kwh-list{display:flex; flex-direction:column; gap:4px;}
   .usina-kwh-row{display:flex; align-items:center; gap:6px; font-size:11.5px;}
   .usina-kwh-row .ukr-label{flex:1; color:var(--text-dim); font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
@@ -665,6 +681,10 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
       <div class="toolbar" style="margin-bottom:14px;">
         <div class="field"><label for="comp-month">Mês</label><input type="month" id="comp-month"></div>
         <div class="field grow"><label for="comp-search">Buscar cliente</label><input type="text" id="comp-search" placeholder="nome ou código…"></div>
+        <label style="display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim); cursor:pointer; padding-bottom:9px; white-space:nowrap;">
+          <input type="checkbox" id="comp-only-pending" checked style="width:15px; height:15px; accent-color:var(--amber); cursor:pointer;">
+          Só pendentes
+        </label>
       </div>
 
       <div class="day-totals" id="comp-totals">
@@ -1331,6 +1351,11 @@ async function renderDashboard(){
     if(meta){ usinasComMeta++; if(prAvg!=null && prAvg<90) abaixo90++; }
     if(list.length) usinasComDado++;
     return {u, real, meta, prAvg, hasData: list.length>0};
+  }).sort((a,b)=>{
+    if(a.prAvg==null && b.prAvg==null) return 0;
+    if(a.prAvg==null) return 1;
+    if(b.prAvg==null) return -1;
+    return b.prAvg - a.prAvg;
   });
 
   document.getElementById('kpi-geracao').textContent = fmtNum(totalReal);
@@ -2082,6 +2107,11 @@ function populateClienteFilterSelect(){
 }
 
 /* ---- Compensação mensal (grade em massa) ---- */
+function usinaPickerSummary(codes){
+  if(!codes || !codes.length) return 'Selecionar usinas…';
+  if(codes.length <= 2) return codes.map(cod=>{ const u=USINAS.find(x=>x.codigo===cod); return u?u.nome:cod; }).join(', ');
+  return codes.length + ' usinas selecionadas';
+}
 async function renderCompGrid(){
   const month = document.getElementById('comp-month').value || currentMonth();
   document.getElementById('comp-month').value = month;
@@ -2108,8 +2138,16 @@ async function renderCompGrid(){
   const usinasOrdenadas = USINAS.slice().sort((a,b)=>a.codigo.localeCompare(b.codigo));
 
   const q = (document.getElementById('comp-search').value||'').toLowerCase().trim();
+  const onlyPending = document.getElementById('comp-only-pending').checked;
   const rows = CLIENTES.filter(c => !q || c.nome.toLowerCase().includes(q) || c.codigo.toLowerCase().includes(q))
+    .filter(c => !onlyPending || !byCliente[c.codigo])
     .sort((a,b)=>a.codigo.localeCompare(b.codigo));
+
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">${onlyPending ? 'Todos os clientes já têm compensação lançada neste mês. Desmarque "Só pendentes" para ver/editar todos.' : 'Nenhum cliente encontrado.'}</div></td></tr>`;
+    updateCompTotals();
+    return;
+  }
 
   tbody.innerHTML = rows.map(c=>{
     const comp = byCliente[c.codigo];
@@ -2118,8 +2156,9 @@ async function renderCompGrid(){
     if(comp && comp.detalhe) comp.detalhe.forEach(d=>{ kwhMap[d.codigo]=d.kwh; });
     const selSet = new Set(selectedCodes);
 
-    const chipsHtml = usinasOrdenadas.map(u=>
-      `<button type="button" class="chip small ${selSet.has(u.codigo)?'active':''}" data-codigo="${u.codigo}" title="${escapeHtml(u.nome)}">${u.codigo}</button>`
+    const pickerBtnLabel = usinaPickerSummary(selectedCodes);
+    const pickerMenuHtml = usinasOrdenadas.map(u=>
+      `<label><input type="checkbox" class="upm-check" value="${u.codigo}" ${selSet.has(u.codigo)?'checked':''}> ${escapeHtml(u.nome)}</label>`
     ).join('');
 
     const kwhListHtml = selectedCodes.map(cod=>{
@@ -2136,7 +2175,10 @@ async function renderCompGrid(){
       <td>${c.codigo}</td>
       <td class="txt">${escapeHtml(c.nome)}</td>
       <td class="usina-detail-cell">
-        <div class="usina-row-chips">${chipsHtml}</div>
+        <div class="usina-picker">
+          <button type="button" class="usina-picker-btn"><span class="upb-label">${escapeHtml(pickerBtnLabel)}</span><svg class="upb-caret" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+          <div class="usina-picker-menu">${pickerMenuHtml}</div>
+        </div>
         <div class="usina-kwh-list">${kwhListHtml}</div>
       </td>
       <td class="num"><div class="g-total-display">${fmtNum(totalInicial)}</div></td>
@@ -2148,7 +2190,7 @@ async function renderCompGrid(){
 }
 
 function syncUsinaKwhList(tr){
-  const activeCodes = Array.from(tr.querySelectorAll('.usina-row-chips .chip.active')).map(c=>c.dataset.codigo);
+  const activeCodes = Array.from(tr.querySelectorAll('.usina-picker-menu .upm-check:checked')).map(c=>c.value);
   const list = tr.querySelector('.usina-kwh-list');
   const existingValues = {};
   list.querySelectorAll('.usina-kwh-row').forEach(row=>{
@@ -2160,6 +2202,8 @@ function syncUsinaKwhList(tr){
     const val = existingValues[cod] !== undefined ? existingValues[cod] : '';
     return `<div class="usina-kwh-row" data-codigo="${cod}"><span class="ukr-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span><input type="number" class="g-usina-kwh" step="0.1" min="0" value="${val}"></div>`;
   }).join('');
+  const btnLabel = tr.querySelector('.usina-picker-btn .upb-label');
+  if(btnLabel) btnLabel.textContent = usinaPickerSummary(activeCodes);
   recalcRowTotal(tr);
 }
 function recalcRowTotal(tr){
@@ -2188,10 +2232,27 @@ function updateCompTotals(){
   document.getElementById('ct-count').textContent = count + ' / ' + all;
 }
 document.getElementById('comp-tbody').addEventListener('click', (e)=>{
-  const chip = e.target.closest('.usina-row-chips .chip');
-  if(!chip) return;
-  chip.classList.toggle('active');
-  syncUsinaKwhList(chip.closest('tr'));
+  const pickerBtn = e.target.closest('.usina-picker-btn');
+  if(pickerBtn){
+    const picker = pickerBtn.closest('.usina-picker');
+    const wasOpen = picker.classList.contains('open');
+    document.querySelectorAll('#comp-tbody .usina-picker.open').forEach(p=>p.classList.remove('open'));
+    if(!wasOpen) picker.classList.add('open');
+    return;
+  }
+  if(!e.target.closest('.usina-picker-menu')){
+    document.querySelectorAll('#comp-tbody .usina-picker.open').forEach(p=>p.classList.remove('open'));
+  }
+});
+document.getElementById('comp-tbody').addEventListener('change', (e)=>{
+  if(e.target.classList.contains('upm-check')){
+    syncUsinaKwhList(e.target.closest('tr'));
+  }
+});
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('#comp-tbody .usina-picker')){
+    document.querySelectorAll('#comp-tbody .usina-picker.open').forEach(p=>p.classList.remove('open'));
+  }
 });
 document.getElementById('comp-tbody').addEventListener('input', (e)=>{
   if(e.target.classList.contains('g-usina-kwh')) recalcRowTotal(e.target.closest('tr'));
@@ -2199,6 +2260,7 @@ document.getElementById('comp-tbody').addEventListener('input', (e)=>{
 });
 document.getElementById('comp-month').addEventListener('change', renderCompGrid);
 document.getElementById('comp-search').addEventListener('input', renderCompGrid);
+document.getElementById('comp-only-pending').addEventListener('change', renderCompGrid);
 
 document.getElementById('comp-save').addEventListener('click', async ()=>{
   const month = document.getElementById('comp-month').value || currentMonth();
@@ -2280,6 +2342,7 @@ async function renderCompHistory(){
 }
 window.editCompInGrid = function(month){
   document.getElementById('comp-month').value = month;
+  document.getElementById('comp-only-pending').checked = false;
   renderCompGrid();
   document.getElementById('comp-grid-panel').scrollIntoView({behavior:'smooth', block:'start'});
 };
