@@ -90,6 +90,27 @@
   .view.active{display:block;}
   @keyframes fadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
 
+  .tab-dropdown{position:relative;}
+  .tab-dropdown > button{display:inline-flex; align-items:center; gap:5px;}
+  .tab-dropdown .caret{transition:transform .15s ease; flex-shrink:0;}
+  .tab-dropdown:hover .caret, .tab-dropdown.open .caret{transform:rotate(180deg);}
+  .tab-dropdown-menu{
+    position:absolute; top:calc(100% + 6px); left:0;
+    background:var(--surface-3); border:1px solid var(--border); border-radius:10px;
+    padding:6px; min-width:190px; display:none; flex-direction:column; gap:2px;
+    box-shadow:0 10px 28px rgba(0,0,0,0.4); z-index:60;
+  }
+  .tab-dropdown:hover .tab-dropdown-menu, .tab-dropdown.open .tab-dropdown-menu{display:flex;}
+  .tab-dropdown-menu button{
+    font-family:var(--font-body); font-weight:500; font-size:13px;
+    color:var(--text-dim); background:transparent; border:none; border-radius:7px;
+    padding:9px 12px; text-align:left; cursor:pointer; transition:all .15s ease; white-space:nowrap;
+  }
+  .tab-dropdown-menu button:hover{background:var(--surface-2); color:var(--text);}
+  .tab-dropdown-menu button.active{background:var(--amber-soft); color:var(--amber);}
+  .subview{display:none; animation:fadeIn .3s ease;}
+  .subview.active{display:block;}
+
   .page-head{margin-bottom:22px;}
   .page-head h2{font-family:var(--font-display); font-size:22px; font-weight:600;}
   .page-head p{color:var(--text-dim); font-size:13.5px; margin-top:4px; max-width:660px;}
@@ -197,6 +218,23 @@
 
   .grid-input{width:104px; padding:6px 8px; font-size:12.5px; font-family:var(--font-mono); text-align:right;}
   .grid-input.obs{width:160px; font-family:var(--font-body); text-align:left;}
+  .usina-detail-cell{min-width:260px; max-width:340px; white-space:normal;}
+  .usina-row-chips{display:flex; flex-wrap:wrap; gap:5px; margin-bottom:8px;}
+  .usina-row-chips .chip.small{
+    font-size:10.5px; padding:4px 9px; font-family:var(--font-mono);
+    background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim);
+    border-radius:14px; cursor:pointer; transition:all .15s ease;
+  }
+  .usina-row-chips .chip.small:hover{border-color:var(--amber); color:var(--text);}
+  .usina-row-chips .chip.small.active{background:var(--amber-soft); border-color:var(--amber); color:var(--amber);}
+  .usina-kwh-list{display:flex; flex-direction:column; gap:4px;}
+  .usina-kwh-row{display:flex; align-items:center; gap:6px; font-size:11.5px;}
+  .usina-kwh-row .ukr-label{flex:1; color:var(--text-dim); font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .usina-kwh-row input{width:90px; padding:5px 7px; font-size:12px; font-family:var(--font-mono); text-align:right;
+    background:var(--surface-2); border:1px solid var(--border); border-radius:6px; color:var(--text);}
+  .usina-kwh-row input:focus{outline:none; border-color:var(--amber);}
+  .g-total-display{width:104px; padding:6px 8px; font-size:12.5px; font-family:var(--font-mono); text-align:right;
+    background:var(--surface-3); border:1px solid var(--border); border-radius:7px; color:var(--amber); font-weight:600;}
   tr.row-dirty td{background:rgba(242,169,60,0.05);}
   tr.row-saved td{background:rgba(52,217,196,0.04);}
 
@@ -249,10 +287,17 @@
       </div>
     </div>
     <nav class="tabs">
-      <button class="active" data-view="dashboard">Dashboard</button>
-      <button data-view="lancamento">Lançamento Diário</button>
-      <button data-view="graficos">Gráficos</button>
-      <button data-view="cadastro">Cadastro</button>
+      <div class="tab-dropdown" id="usinas-dropdown">
+        <button class="active" data-view="usinas">Usinas <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="tab-dropdown-menu">
+          <button data-subview="dashboard" class="active">Dashboard</button>
+          <button data-subview="lancamento">Lançamento Diário</button>
+          <button data-subview="graficos">Gráfico</button>
+          <button data-subview="cadastro">Cadastro Usinas</button>
+        </div>
+      </div>
+      <button data-view="clientes">Clientes</button>
+      <button data-view="graficos-clientes">Gráf. Clientes</button>
     </nav>
     <div class="sync-pill"><span class="sync-dot"></span>dados compartilhados</div>
   </div>
@@ -261,15 +306,12 @@
 <main>
 
   <!-- ================= DASHBOARD ================= -->
-  <section class="view active" id="view-dashboard">
+  <section class="view active" id="view-usinas">
+
+    <div class="subview active" id="subview-dashboard">
     <div class="page-head">
       <h2>Dashboard mensal da frota</h2>
       <p>Geração x meta (calculada automaticamente pelo esperado mensal cadastrado) e performance ratio, consolidados por usina no mês selecionado.</p>
-    </div>
-
-    <div class="shared-note">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-      <span>Este painel lê e grava direto numa planilha Google Sheets: cadastro de usinas e lançamentos ficam visíveis e editáveis por qualquer pessoa que abrir este link, de qualquer navegador — e também podem ser conferidos diretamente na planilha.</span>
     </div>
 
     <div class="panel" style="margin-bottom:18px;">
@@ -337,10 +379,10 @@
         </table>
       </div>
     </div>
-  </section>
+    </div>
 
-  <!-- ================= LANÇAMENTO DIÁRIO ================= -->
-  <section class="view" id="view-lancamento">
+    <!-- ================= LANÇAMENTO DIÁRIO ================= -->
+    <div class="subview" id="subview-lancamento">
     <div class="page-head">
       <h2>Lançamento diário</h2>
       <p>Escolha o dia e preencha a geração real de todas as usinas. A meta do dia é calculada automaticamente a partir do esperado mensal cadastrado.</p>
@@ -396,10 +438,10 @@
         </table>
       </div>
     </div>
-  </section>
+    </div>
 
-  <!-- ================= GRÁFICOS ================= -->
-  <section class="view" id="view-graficos">
+    <!-- ================= GRÁFICOS ================= -->
+    <div class="subview" id="subview-graficos">
     <div class="page-head">
       <h2>Gráficos</h2>
       <p>Tendências de geração e ranking de usinas no período selecionado.</p>
@@ -430,17 +472,33 @@
         <div class="field"><label for="chart-year">Ano</label><input type="number" id="chart-year" step="1"></div>
       </div>
       <div class="chart-box tall"><canvas id="chart-annual"></canvas></div>
-      <div class="hint">Esperado vem do cadastro de cada usina (aba Cadastro). Real é a soma dos lançamentos diários de cada mês.</div>
+      <div class="hint">Esperado vem do cadastro de cada usina (Usinas → Cadastro Usinas). Real é a soma dos lançamentos diários de cada mês.</div>
     </div>
 
     <div class="panel" style="margin-top:18px;">
       <div class="panel-title">Geração diária da frota — real x meta<small id="chart-line-meta"></small></div>
       <div class="chart-box tall"><canvas id="chart-line"></canvas></div>
     </div>
-  </section>
 
-  <!-- ================= CADASTRO ================= -->
-  <section class="view" id="view-cadastro">
+    <div class="panel" style="margin-top:18px;">
+      <div class="panel-title">Comparativo entre duas usinas<small>geração por kWp instalado, para comparar de forma justa usinas de tamanhos diferentes</small></div>
+      <div class="toolbar" style="margin-bottom:14px;">
+        <div class="field grow"><label for="compare-usina-a">Usina A</label><select id="compare-usina-a"><option value="">selecione…</option></select></div>
+        <div class="field grow"><label for="compare-usina-b">Usina B</label><select id="compare-usina-b"><option value="">selecione…</option></select></div>
+      </div>
+      <div class="chart-box tall"><canvas id="chart-compare"></canvas></div>
+      <div class="day-totals" id="compare-totals" style="margin-top:16px; margin-bottom:0; display:none;">
+        <div class="item amber">Usina A — total no mês<b id="cmp-a-total">—</b></div>
+        <div class="item amber">Usina A — média kWh/kWp/dia<b id="cmp-a-avg">—</b></div>
+        <div class="item teal">Usina B — total no mês<b id="cmp-b-total">—</b></div>
+        <div class="item teal">Usina B — média kWh/kWp/dia<b id="cmp-b-avg">—</b></div>
+      </div>
+      <div id="compare-diff" style="display:none; margin-top:14px; padding:12px 16px; border-radius:8px; font-size:13px; text-align:center;"></div>
+    </div>
+    </div>
+
+    <!-- ================= CADASTRO USINAS ================= -->
+    <div class="subview" id="subview-cadastro">
     <div class="page-head">
       <h2>Cadastro de usinas</h2>
       <p>Cadastre cada usina uma vez — o código é gerado automaticamente e usado nos lançamentos.</p>
@@ -522,6 +580,151 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         </table>
       </div>
     </div>
+
+    <div class="panel" id="inj-grid-panel">
+      <div class="panel-title">Energia injetada mensal<small>quanto cada usina injetou na rede naquele mês</small></div>
+      <div class="toolbar" style="margin-bottom:14px;">
+        <div class="field"><label for="inj-month">Mês</label><input type="month" id="inj-month"></div>
+        <div class="field grow"><label for="inj-search">Buscar usina</label><input type="text" id="inj-search" placeholder="nome ou código…"></div>
+      </div>
+
+      <div class="day-totals" id="inj-totals">
+        <div class="item amber">Total injetado no mês<b id="it-total">0</b></div>
+        <div class="item">Usinas preenchidas<b id="it-count">0 / 0</b></div>
+      </div>
+
+      <div class="table-wrap" style="max-height:520px;">
+        <table>
+          <thead><tr><th>Código</th><th>Usina</th><th class="num">kWh Injetado</th><th>Obs.</th></tr></thead>
+          <tbody id="inj-tbody"><tr><td colspan="4" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="inj-save">Salvar energia injetada do mês</button>
+        <span class="hint" id="inj-save-hint"></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Histórico de energia injetada<small id="inj-hist-meta"></small></div>
+      <div class="toolbar">
+        <div class="field"><label for="injh-month">Mês</label><input type="month" id="injh-month"></div>
+        <div class="field grow"><label for="injh-usina">Filtrar por usina</label><select id="injh-usina"><option value="">todas as usinas</option></select></div>
+      </div>
+      <div class="table-wrap" style="max-height:420px;">
+        <table>
+          <thead><tr><th>Mês</th><th>Código</th><th>Usina</th><th class="num">kWh Injetado</th><th class="txt">Obs.</th><th></th></tr></thead>
+          <tbody id="injh-tbody"><tr><td colspan="6" class="loading-row"><span class="spin"></span>carregando histórico…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- ================= CLIENTES ================= -->
+  <section class="view" id="view-clientes">
+    <div class="page-head">
+      <h2>Controle de clientes</h2>
+      <p>Cadastre os clientes vinculados às usinas e registre, todo mês, quantos kWh cada um compensou.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Novo cliente</div>
+      <form id="form-cliente" novalidate>
+        <div class="field-grid">
+          <div><label for="cl-nome">Nome do cliente</label><input type="text" id="cl-nome" required></div>
+          <div><label for="cl-conta">Conta contrato</label><input type="text" id="cl-conta" placeholder="ex: 123456789"></div>
+        </div>
+        <div class="field" style="margin-top:12px;">
+          <label>Usina(s) padrão <span class="hint" style="margin:0;">(sugestão inicial ao lançar a compensação — pode ser trocada mês a mês, sem afetar meses já lançados)</span></label>
+          <div class="status-chips" id="cl-usinas-chips"></div>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="cl-submit">Adicionar cliente</button>
+          <button type="button" class="btn btn-ghost" id="cl-cancel" style="display:none;">Cancelar edição</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Clientes cadastrados<small id="clientes-count"></small></div>
+      <div class="toolbar">
+        <div class="field grow"><label for="clf-search">Buscar</label><input type="text" id="clf-search" placeholder="nome, código ou conta contrato…"></div>
+      </div>
+      <div class="table-wrap" style="max-height:420px;">
+        <table>
+          <thead><tr><th>Código</th><th>Nome</th><th>Conta Contrato</th><th>Usina(s) padrão</th><th></th></tr></thead>
+          <tbody id="clientes-tbody"><tr><td colspan="5" class="loading-row"><span class="spin"></span>carregando clientes…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" id="comp-grid-panel">
+      <div class="panel-title">Compensação mensal</div>
+      <div class="toolbar" style="margin-bottom:14px;">
+        <div class="field"><label for="comp-month">Mês</label><input type="month" id="comp-month"></div>
+        <div class="field grow"><label for="comp-search">Buscar cliente</label><input type="text" id="comp-search" placeholder="nome ou código…"></div>
+      </div>
+
+      <div class="day-totals" id="comp-totals">
+        <div class="item amber">Total compensado no mês<b id="ct-total">0</b></div>
+        <div class="item">Clientes preenchidos<b id="ct-count">0 / 0</b></div>
+      </div>
+
+      <div class="table-wrap" style="max-height:520px;">
+        <table>
+          <thead><tr><th>Código</th><th>Cliente</th><th>Usina(s) do mês</th><th class="num">kWh Compensado</th><th>Obs.</th></tr></thead>
+          <tbody id="comp-tbody"><tr><td colspan="5" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="comp-save">Salvar compensações do mês</button>
+        <span class="hint" id="comp-save-hint"></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Histórico de compensações<small id="comp-hist-meta"></small></div>
+      <div class="toolbar">
+        <div class="field"><label for="comph-month">Mês</label><input type="month" id="comph-month"></div>
+        <div class="field grow"><label for="comph-cliente">Filtrar por cliente</label><select id="comph-cliente"><option value="">todos os clientes</option></select></div>
+      </div>
+      <div class="table-wrap" style="max-height:420px;">
+        <table>
+          <thead><tr><th>Mês</th><th>Código</th><th>Cliente</th><th>Usina(s)</th><th class="num">kWh Compensado</th><th class="txt">Obs.</th><th></th></tr></thead>
+          <tbody id="comph-tbody"><tr><td colspan="7" class="loading-row"><span class="spin"></span>carregando histórico…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= GRÁFICOS DE CLIENTES ================= -->
+  <section class="view" id="view-graficos-clientes">
+    <div class="page-head">
+      <h2>Gráficos de clientes</h2>
+      <p>Compensação mensal de cada cliente (ou de todos) e a origem (usina) dessa energia, mês a mês.</p>
+    </div>
+
+    <div class="panel" style="margin-bottom:18px;">
+      <div class="toolbar" style="margin-bottom:0;">
+        <div class="field grow"><label for="gc-cliente">Cliente</label><select id="gc-cliente"><option value="">Todos os clientes</option></select></div>
+        <div class="field grow"><label for="gc-usina">Filtrar por usina</label><select id="gc-usina"><option value="">Todas as usinas</option></select></div>
+        <div class="field"><label for="gc-year">Ano</label><input type="number" id="gc-year" step="1"></div>
+        <button class="btn btn-ghost" id="gc-refresh">Atualizar</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Compensação mensal<small id="gc-mensal-meta"></small></div>
+      <div class="chart-box tall"><canvas id="chart-cliente-mensal"></canvas></div>
+    </div>
+
+    <div class="panel" style="margin-top:18px;">
+      <div class="panel-title" id="gc-origem-title">Origem da energia por mês<small id="gc-origem-meta">de qual usina veio a compensação, mês a mês</small></div>
+      <div class="chart-box tall"><canvas id="chart-cliente-origem"></canvas></div>
+    </div>
   </section>
 
 </main>
@@ -568,8 +771,8 @@ window.addEventListener('unhandledrejection', (e)=>{
 const SHEET_API = 'https://script.google.com/macros/s/AKfycbwzOmUSW3ZJ5U5PV3qo3Ns-VhC40-KcwdZtrdvyJS2DrgDeL37b1rU91e3SXUoOwviv/exec';
 
 async function sheetGet(sheet, params){
-  const qs = new URLSearchParams(Object.assign({sheet}, params||{})).toString();
-  const res = await fetch(SHEET_API + '?' + qs);
+  const qs = new URLSearchParams(Object.assign({sheet, _: Date.now()}, params||{})).toString();
+  const res = await fetch(SHEET_API + '?' + qs, { cache: 'no-store' });
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const json = await res.json();
   if(!json.ok) throw new Error(json.error || 'erro desconhecido na planilha');
@@ -591,7 +794,7 @@ function usinaRowToObj(row){
   const expectedMonthly = {};
   MESES.forEach(m=>{ expectedMonthly[m.n] = parseFloat(row[m.l]) || 0; });
   return {
-    codigo: row.Codigo, nome: row.Nome, capacidade: parseFloat(row.Capacidade)||0,
+    codigo: String(row.Codigo||'').trim(), nome: row.Nome, capacidade: parseFloat(row.Capacidade)||0,
     uf: row.UF||'', dataInicio: row.DataInicio||'', status: row.Status||'', expectedMonthly
   };
 }
@@ -650,16 +853,53 @@ async function deleteLancRemote(id){
 /* ============================================================
    Tabs
    ============================================================ */
-document.querySelectorAll('nav.tabs button').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.remove('active'));
+function activateSubview(name){
+  document.querySelectorAll('.tab-dropdown-menu button').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#view-usinas .subview').forEach(v=>v.classList.remove('active'));
+  document.getElementById('subview-'+name).classList.add('active');
+  const subBtn = document.querySelector('.tab-dropdown-menu button[data-subview="'+name+'"]');
+  if(subBtn) subBtn.classList.add('active');
+}
+async function renderSubview(name){
+  if(name === 'dashboard') renderDashboard();
+  if(name === 'lancamento'){ renderGrid(); renderLancTable(); }
+  if(name === 'graficos') renderCharts();
+  if(name === 'cadastro'){ renderInjGrid(); renderInjHistory(); }
+}
+
+document.querySelectorAll('nav.tabs > button, nav.tabs > .tab-dropdown > button').forEach(btn=>{
+  btn.addEventListener('click', async (e)=>{
+    document.querySelectorAll('nav.tabs > button, nav.tabs > .tab-dropdown > button').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('view-'+btn.dataset.view).classList.add('active');
-    if(btn.dataset.view === 'dashboard') renderDashboard();
-    if(btn.dataset.view === 'lancamento'){ renderGrid(); renderLancTable(); }
-    if(btn.dataset.view === 'graficos') renderCharts();
+    if(BASE_DATA_READY) await BASE_DATA_READY;
+    if(btn.dataset.view === 'usinas'){
+      activateSubview('dashboard'); renderSubview('dashboard');
+      document.getElementById('usinas-dropdown').classList.toggle('open');
+    }
+    if(btn.dataset.view === 'clientes'){ renderClientesTable(); renderCompGrid(); renderCompHistory(); }
+    if(btn.dataset.view === 'graficos-clientes') renderClientesCharts();
   });
+});
+
+document.querySelectorAll('.tab-dropdown-menu button').forEach(btn=>{
+  btn.addEventListener('click', async (e)=>{
+    e.stopPropagation();
+    document.querySelectorAll('nav.tabs > button, nav.tabs > .tab-dropdown > button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.querySelector('.tab-dropdown > button[data-view="usinas"]').classList.add('active');
+    document.getElementById('view-usinas').classList.add('active');
+    document.getElementById('usinas-dropdown').classList.remove('open');
+    activateSubview(btn.dataset.subview);
+    if(BASE_DATA_READY) await BASE_DATA_READY;
+    renderSubview(btn.dataset.subview);
+  });
+});
+
+document.addEventListener('click', (e)=>{
+  const dd = document.getElementById('usinas-dropdown');
+  if(dd.classList.contains('open') && !dd.contains(e.target)) dd.classList.remove('open');
 });
 
 /* ============================================================
@@ -682,6 +922,19 @@ function populateUsinaSelects(){
   const currentA = aSel.value;
   aSel.innerHTML = '<option value="">Frota inteira</option>' + opts;
   if(currentA) aSel.value = currentA;
+
+  const cmpASel = document.getElementById('compare-usina-a');
+  const cmpBSel = document.getElementById('compare-usina-b');
+  const currentCmpA = cmpASel.value, currentCmpB = cmpBSel.value;
+  cmpASel.innerHTML = '<option value="">selecione…</option>' + opts;
+  cmpBSel.innerHTML = '<option value="">selecione…</option>' + opts;
+  if(currentCmpA) cmpASel.value = currentCmpA;
+  if(currentCmpB) cmpBSel.value = currentCmpB;
+
+  const gcUSel = document.getElementById('gc-usina');
+  const currentGcU = gcUSel.value;
+  gcUSel.innerHTML = '<option value="">Todas as usinas</option>' + opts;
+  if(currentGcU) gcUSel.value = currentGcU;
 }
 const MESES = [
   {n:'01', l:'Jan'}, {n:'02', l:'Fev'}, {n:'03', l:'Mar'}, {n:'04', l:'Abr'},
@@ -775,7 +1028,7 @@ window.deleteUsina = async function(codigo){
   const prev = USINAS;
   USINAS = USINAS.filter(u=>u.codigo!==codigo);
   const ok = await deleteUsinaRemote(codigo);
-  if(ok){ toast('Usina removida.'); renderCadastroTable(); populateUsinaSelects(); renderDashboard(); renderGrid(); }
+  if(ok){ toast('Usina removida.'); renderCadastroTable(); populateUsinaSelects(); renderDashboard(); renderGrid(); renderClienteUsinasChips(getSelectedClienteUsinas()); populateInjUsinaFilterSelect(); renderInjGrid(); }
   else USINAS = prev;
 };
 document.getElementById('form-usina').addEventListener('submit', async (e)=>{
@@ -823,7 +1076,7 @@ document.getElementById('form-usina').addEventListener('submit', async (e)=>{
       e.target.reset();
       document.getElementById('u-submit').textContent = 'Adicionar usina';
       document.getElementById('u-cancel').style.display = 'none';
-      renderCadastroTable(); populateUsinaSelects(); renderDashboard(); renderGrid();
+      renderCadastroTable(); populateUsinaSelects(); renderDashboard(); renderGrid(); renderClienteUsinasChips(getSelectedClienteUsinas()); populateInjUsinaFilterSelect(); renderInjGrid();
     }
   }catch(err){
     toast('Erro inesperado ao cadastrar: ' + (err && err.message ? err.message : err), true);
@@ -848,7 +1101,7 @@ document.getElementById('u-batch-submit').addEventListener('click', async ()=>{
   if(ok){
     toast(novas.length + ' usina(s) importada(s).');
     document.getElementById('u-batch').value = '';
-    renderCadastroTable(); populateUsinaSelects(); renderDashboard(); renderGrid();
+    renderCadastroTable(); populateUsinaSelects(); renderDashboard(); renderGrid(); renderClienteUsinasChips(getSelectedClienteUsinas()); populateInjUsinaFilterSelect(); renderInjGrid();
   }
 });
 document.getElementById('cf-search').addEventListener('input', renderCadastroTable);
@@ -874,7 +1127,11 @@ document.getElementById('cf-status-clear').addEventListener('click', ()=>{
 /* ============================================================
    Lançamento diário — grade em massa
    ============================================================ */
-function usinaNome(codigo){ const u = USINAS.find(x=>x.codigo===codigo); return u ? u.nome : '(usina removida)'; }
+function usinaNome(codigo){
+  const target = String(codigo||'').trim();
+  const u = USINAS.find(x=>x.codigo===target);
+  return u ? u.nome : '(usina removida)';
+}
 
 async function renderGrid(){
   const date = document.getElementById('grid-date').value || todayISO();
@@ -883,7 +1140,7 @@ async function renderGrid(){
   tbody.innerHTML = `<tr><td colspan="6" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
 
   if(!USINAS.length){
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">Cadastre usinas na aba "Cadastro" antes de lançar dados.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">Cadastre usinas em Usinas → Cadastro Usinas antes de lançar dados.</div></td></tr>`;
     updateDayTotals();
     return;
   }
@@ -1053,7 +1310,7 @@ async function renderDashboard(){
   const dashUsinas = filteredUsinasForDash();
 
   if(!dashUsinas.length){
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">${USINAS.length ? 'Nenhuma usina cadastrada com o status selecionado.' : 'Cadastre usinas na aba "Cadastro" para começar.'}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">${USINAS.length ? 'Nenhuma usina cadastrada com o status selecionado.' : 'Cadastre usinas em Usinas → Cadastro Usinas para começar.'}</div></td></tr>`;
     ['kpi-geracao','kpi-meta','kpi-abaixo'].forEach(id=>document.getElementById(id).textContent='—');
     setGauge(0);
     document.getElementById('gauge-sub').textContent = 'sem usinas no filtro atual';
@@ -1257,7 +1514,7 @@ async function renderAnnualChart(){
       const div = document.createElement('div');
       div.className='empty-overlay';
       div.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5C6672;font-size:12px;text-align:center;padding:20px;background:rgba(20,28,37,0.85);';
-      div.textContent='Nenhuma geração esperada cadastrada. Preencha os valores mensais na aba Cadastro.';
+      div.textContent='Nenhuma geração esperada cadastrada. Preencha os valores mensais em Usinas → Cadastro Usinas.';
       box.style.position='relative';
       box.appendChild(div);
     }
@@ -1308,7 +1565,98 @@ async function renderCharts(){
       }
     }
   });
+
+  renderCompareChart(month, nDays, labels, entries);
 }
+
+function renderCompareChart(month, nDays, labels, entries){
+  const codA = document.getElementById('compare-usina-a').value;
+  const codB = document.getElementById('compare-usina-b').value;
+  const totalsBox = document.getElementById('compare-totals');
+
+  if(typeof Chart === 'undefined'){ return; }
+
+  if(!codA || !codB){
+    destroyChart('compare');
+    totalsBox.style.display = 'none';
+    document.getElementById('compare-diff').style.display = 'none';
+    const box = document.getElementById('chart-compare').parentElement;
+    if(!box.querySelector('.empty-overlay')){
+      const div = document.createElement('div');
+      div.className = 'empty-overlay';
+      div.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5C6672;font-size:12px;text-align:center;padding:20px;';
+      div.textContent = 'Selecione as duas usinas acima para comparar.';
+      box.style.position = 'relative';
+      box.appendChild(div);
+    }
+    return;
+  }
+  const box = document.getElementById('chart-compare').parentElement;
+  const overlay = box.querySelector('.empty-overlay');
+  if(overlay) overlay.remove();
+
+  const usinaA = USINAS.find(u=>u.codigo===codA);
+  const usinaB = USINAS.find(u=>u.codigo===codB);
+  const capA = (usinaA && usinaA.capacidade) || 0;
+  const capB = (usinaB && usinaB.capacidade) || 0;
+
+  const dailyRealA = Array(nDays).fill(0);
+  const dailyRealB = Array(nDays).fill(0);
+  entries.forEach(en=>{
+    const day = parseInt(en.data.slice(8,10),10) - 1;
+    if(day<0 || day>=nDays) return;
+    if(en.codigo===codA) dailyRealA[day] += en.geracaoReal||0;
+    if(en.codigo===codB) dailyRealB[day] += en.geracaoReal||0;
+  });
+
+  const dailyYieldA = capA ? dailyRealA.map(v=>v/capA) : dailyRealA.map(()=>0);
+  const dailyYieldB = capB ? dailyRealB.map(v=>v/capB) : dailyRealB.map(()=>0);
+
+  destroyChart('compare');
+  CHARTS.compare = new Chart(document.getElementById('chart-compare'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:(usinaA?usinaA.nome:codA) + ' (kWh/kWp)', data:dailyYieldA, borderColor:'#F2A93C', backgroundColor:'rgba(242,169,60,0.10)', fill:true, tension:.35, pointRadius:0, borderWidth:2.5 },
+      { label:(usinaB?usinaB.nome:codB) + ' (kWh/kWp)', data:dailyYieldB, borderColor:'#34D9C4', backgroundColor:'rgba(52,217,196,0.10)', fill:true, tension:.35, pointRadius:0, borderWidth:2.5 }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{ legend:{ labels:{ boxWidth:12, boxHeight:2, padding:16 } } },
+      scales:{
+        x:{ grid:{color:'#1B2530'}, title:{display:true, text:'dia do mês'} },
+        y:{ grid:{color:'#1B2530'}, title:{display:true, text:'kWh gerado por kWp instalado'}, ticks:{ callback:v=>Number(v).toFixed(1) } }
+      }
+    }
+  });
+
+  const totalA = dailyRealA.reduce((s,v)=>s+v,0);
+  const totalB = dailyRealB.reduce((s,v)=>s+v,0);
+  const avgYieldA = dailyYieldA.reduce((s,v)=>s+v,0) / nDays;
+  const avgYieldB = dailyYieldB.reduce((s,v)=>s+v,0) / nDays;
+
+  document.getElementById('cmp-a-total').textContent = fmtNum(totalA) + ' kWh';
+  document.getElementById('cmp-b-total').textContent = fmtNum(totalB) + ' kWh';
+  document.getElementById('cmp-a-avg').textContent = capA ? avgYieldA.toFixed(2) + ' kWh/kWp' : 'sem capacidade cadastrada';
+  document.getElementById('cmp-b-avg').textContent = capB ? avgYieldB.toFixed(2) + ' kWh/kWp' : 'sem capacidade cadastrada';
+  totalsBox.style.display = 'flex';
+
+  const diffEl = document.getElementById('compare-diff');
+  if(capA && capB && avgYieldB > 0){
+    const diffPct = ((avgYieldA - avgYieldB) / avgYieldB) * 100;
+    const nomeA = usinaA ? usinaA.nome : codA;
+    const nomeB = usinaB ? usinaB.nome : codB;
+    const positivo = diffPct >= 0;
+    diffEl.textContent = `${nomeA} gerou ${positivo?'+':''}${diffPct.toFixed(1)}% ${positivo?'a mais':'a menos'} que ${nomeB}, proporcionalmente ao kWp instalado`;
+    diffEl.style.background = positivo ? 'var(--teal-soft)' : 'var(--red-soft)';
+    diffEl.style.color = positivo ? 'var(--teal)' : 'var(--red)';
+    diffEl.style.display = 'block';
+  } else {
+    diffEl.style.display = 'none';
+  }
+}
+document.getElementById('compare-usina-a').addEventListener('change', renderCharts);
+document.getElementById('compare-usina-b').addEventListener('change', renderCharts);
 document.getElementById('chart-month').addEventListener('change', renderCharts);
 document.getElementById('chart-refresh').addEventListener('click', renderCharts);
 document.getElementById('chart-year').addEventListener('change', renderAnnualChart);
@@ -1333,6 +1681,771 @@ document.getElementById('chart-status-clear').addEventListener('click', ()=>{
 });
 
 /* ============================================================
+   Energia injetada mensal (por usina) — lançamento manual
+   ============================================================ */
+let INJETADA = null;
+
+function injRowToObj(row){
+  return { id: row.Id, mes: normalizeMes(row.Mes), codigoUsina: row.CodigoUsina, kwhInjetado: parseFloat(row.KwhInjetado)||0, obs: row.Obs||'' };
+}
+function injObjToRow(i){
+  return { Id:i.id, Mes:i.mes, CodigoUsina:i.codigoUsina, KwhInjetado:i.kwhInjetado, Obs:i.obs||'' };
+}
+async function loadInjetada(force){
+  if(INJETADA && !force) return INJETADA;
+  try{
+    const rows = await sheetGet('EnergiaInjetada');
+    INJETADA = rows.map(injRowToObj);
+  }catch(e){ toast('Erro ao carregar energia injetada da planilha: ' + e.message, true); INJETADA = []; }
+  return INJETADA;
+}
+async function upsertInjetada(list){
+  if(!list.length) return true;
+  try{ await sheetPost({sheet:'EnergiaInjetada', op:'bulkUpsert', key:'Id', rows:list.map(injObjToRow)}); return true; }
+  catch(e){ toast('Erro ao salvar energia injetada na planilha: ' + e.message, true); return false; }
+}
+async function deleteInjetadaRemote(id){
+  try{ await sheetPost({sheet:'EnergiaInjetada', op:'delete', key:'Id', value:id}); return true; }
+  catch(e){ toast('Erro ao excluir energia injetada na planilha: ' + e.message, true); return false; }
+}
+
+async function renderInjGrid(){
+  const month = document.getElementById('inj-month').value || currentMonth();
+  document.getElementById('inj-month').value = month;
+  const tbody = document.getElementById('inj-tbody');
+  tbody.innerHTML = `<tr><td colspan="4" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
+
+  if(!USINAS.length){
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty">Cadastre usinas acima antes de lançar a energia injetada.</div></td></tr>`;
+    updateInjTotals();
+    return;
+  }
+
+  const injetada = await loadInjetada();
+  const byUsina = {};
+  injetada.forEach(i=>{ if(i.mes===month) byUsina[i.codigoUsina]=i; });
+
+  const q = (document.getElementById('inj-search').value||'').toLowerCase().trim();
+  const rows = USINAS.filter(u => !q || u.nome.toLowerCase().includes(q) || u.codigo.toLowerCase().includes(q))
+    .sort((a,b)=>a.codigo.localeCompare(b.codigo));
+
+  tbody.innerHTML = rows.map(u=>{
+    const inj = byUsina[u.codigo];
+    return `
+    <tr data-codigo="${u.codigo}" class="${inj?'row-saved':''}">
+      <td>${u.codigo}</td>
+      <td class="txt">${escapeHtml(u.nome)}</td>
+      <td class="num"><input type="number" class="grid-input g-kwh-inj" step="0.1" min="0" value="${inj?inj.kwhInjetado:''}"></td>
+      <td><input type="text" class="grid-input obs g-obs-inj" value="${inj?escapeHtml(inj.obs||''):''}"></td>
+    </tr>`;
+  }).join('');
+
+  updateInjTotals();
+}
+function updateInjTotals(){
+  const tbody = document.getElementById('inj-tbody');
+  let total=0, count=0, all=0;
+  tbody.querySelectorAll('tr[data-codigo]').forEach(tr=>{
+    all++;
+    const v = parseFloat(tr.querySelector('.g-kwh-inj').value);
+    if(!isNaN(v)){ total+=v; count++; }
+  });
+  document.getElementById('it-total').textContent = fmtNum(total) + ' kWh';
+  document.getElementById('it-count').textContent = count + ' / ' + all;
+}
+document.getElementById('inj-tbody').addEventListener('input', updateInjTotals);
+document.getElementById('inj-month').addEventListener('change', renderInjGrid);
+document.getElementById('inj-search').addEventListener('input', renderInjGrid);
+
+document.getElementById('inj-save').addEventListener('click', async ()=>{
+  const month = document.getElementById('inj-month').value || currentMonth();
+  const btn = document.getElementById('inj-save');
+  btn.disabled = true;
+
+  const injetada = await loadInjetada();
+  const byUsina = {};
+  injetada.forEach(i=>{ if(i.mes===month) byUsina[i.codigoUsina]=i; });
+
+  const changed = [];
+  let saved=0, skipped=0;
+  document.querySelectorAll('#inj-tbody tr[data-codigo]').forEach(tr=>{
+    const cod = tr.dataset.codigo;
+    const kwh = parseFloat(tr.querySelector('.g-kwh-inj').value);
+    const obs = tr.querySelector('.g-obs-inj').value.trim();
+    if(isNaN(kwh)){ skipped++; return; }
+
+    const payload = { mes: month, codigoUsina: cod, kwhInjetado: kwh, obs };
+    const existing = byUsina[cod];
+    if(existing){
+      Object.assign(existing, payload);
+      changed.push(existing);
+    } else {
+      payload.id = Date.now()+'-inj-'+cod+'-'+Math.random().toString(36).slice(2,7);
+      injetada.push(payload);
+      byUsina[cod] = payload;
+      changed.push(payload);
+    }
+    saved++;
+  });
+
+  const ok = await upsertInjetada(changed);
+  btn.disabled = false;
+  if(ok){
+    toast(saved + ' usina(s) salva(s) para ' + new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'}) + '.');
+    document.getElementById('inj-save-hint').textContent = skipped ? (skipped + ' usina(s) sem valor foram ignoradas.') : '';
+    renderInjGrid();
+    document.getElementById('injh-month').value = month;
+    renderInjHistory();
+  }
+});
+
+function populateInjUsinaFilterSelect(){
+  const sel = document.getElementById('injh-usina');
+  const current = sel.value;
+  const opts = USINAS.slice().sort((a,b)=>a.nome.localeCompare(b.nome))
+    .map(u=>`<option value="${u.codigo}">${u.codigo} — ${escapeHtml(u.nome)}</option>`).join('');
+  sel.innerHTML = '<option value="">todas as usinas</option>' + opts;
+  if(current) sel.value = current;
+}
+
+async function renderInjHistory(){
+  const month = document.getElementById('injh-month').value || currentMonth();
+  document.getElementById('injh-month').value = month;
+  const tbody = document.getElementById('injh-tbody');
+  tbody.innerHTML = `<tr><td colspan="6" class="loading-row"><span class="spin"></span>carregando histórico…</td></tr>`;
+
+  const injetada = await loadInjetada();
+  const filterUsina = document.getElementById('injh-usina').value;
+  const rows = injetada.filter(i => i.mes===month && (!filterUsina || i.codigoUsina===filterUsina))
+    .sort((a,b)=> usinaNome(a.codigoUsina).localeCompare(usinaNome(b.codigoUsina)));
+
+  document.getElementById('inj-hist-meta').textContent = rows.length + ' registro(s)';
+
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">Nenhuma energia injetada lançada neste mês${filterUsina?' para esta usina':''} ainda.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(i=>`
+    <tr>
+      <td>${new Date(i.mes+'-02').toLocaleDateString('pt-BR',{month:'short', year:'numeric'})}</td>
+      <td>${i.codigoUsina}</td>
+      <td class="txt">${escapeHtml(usinaNome(i.codigoUsina))}</td>
+      <td class="num">${fmtNum(i.kwhInjetado)}</td>
+      <td class="txt">${escapeHtml(i.obs||'—')}</td>
+      <td><div class="row-actions">
+        <button class="btn-edit-ghost" title="Editar no mês" onclick="editInjInGrid('${i.mes}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+        <button class="btn-danger-ghost" title="Excluir" onclick="deleteInjetadaLinha('${i.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
+      </div></td>
+    </tr>`).join('');
+}
+window.editInjInGrid = function(month){
+  document.getElementById('inj-month').value = month;
+  renderInjGrid();
+  document.getElementById('inj-grid-panel').scrollIntoView({behavior:'smooth', block:'start'});
+};
+window.deleteInjetadaLinha = async function(id){
+  if(!confirm('Excluir este lançamento de energia injetada?')) return;
+  const injetada = await loadInjetada();
+  INJETADA = injetada.filter(i=>i.id!==id);
+  const ok = await deleteInjetadaRemote(id);
+  if(ok){ toast('Lançamento removido.'); renderInjHistory(); renderInjGrid(); }
+};
+document.getElementById('injh-month').addEventListener('change', renderInjHistory);
+document.getElementById('injh-usina').addEventListener('change', renderInjHistory);
+
+/* ============================================================
+   Clientes — cadastro e compensação mensal manual
+   ============================================================ */
+let CLIENTES = [];
+let BASE_DATA_READY = null;
+let COMPENSACOES = null; // carregado sob demanda, cache em memória
+let editingClienteCodigo = null;
+
+function nextClienteCodigo(){
+  let max = 0;
+  CLIENTES.forEach(c=>{ const m = /^CLIENTE-(\d+)$/.exec(c.codigo); if(m) max = Math.max(max, parseInt(m[1],10)); });
+  return 'CLIENTE-' + String(max+1).padStart(3,'0');
+}
+function clienteNome(codigo){
+  const target = String(codigo||'').trim();
+  const c = CLIENTES.find(x=>x.codigo===target);
+  return c ? c.nome : '(cliente removido)';
+}
+function usinasLabel(codigosArr){
+  return (codigosArr||[]).map(cod=>{ const u = USINAS.find(x=>x.codigo===cod); return u ? u.nome : cod; }).join(', ') || '—';
+}
+function usinasDetalheLabel(detalhe){
+  if(!detalhe || !detalhe.length) return '—';
+  return detalhe.map(d=>{
+    const u = USINAS.find(x=>x.codigo===d.codigo);
+    return `${u?u.nome:d.codigo}: ${fmtNum(d.kwh)} kWh`;
+  }).join(', ');
+}
+
+function clienteRowToObj(row){
+  return {
+    codigo: String(row.Codigo||'').trim(), nome: row.Nome, contaContrato: row.ContaContrato||'',
+    usinas: String(row.Usinas||'').split(',').map(s=>s.trim()).filter(Boolean)
+  };
+}
+function clienteObjToRow(c){
+  return { Codigo:c.codigo, Nome:c.nome, ContaContrato:c.contaContrato||'', Usinas:(c.usinas||[]).join(',') };
+}
+function normalizeMes(val){
+  if(val == null) return '';
+  const s = String(val);
+  const m = /^(\d{4})-(\d{2})/.exec(s);
+  return m ? (m[1]+'-'+m[2]) : s;
+}
+function parseUsinasDetalhe(str){
+  return String(str||'').split(',').map(s=>s.trim()).filter(Boolean).map(part=>{
+    const [codigo, kwh] = part.split(':');
+    return { codigo: (codigo||'').trim(), kwh: parseFloat(kwh)||0 };
+  });
+}
+function compRowToObj(row){
+  const detalhe = parseUsinasDetalhe(row.UsinasDetalhe);
+  return {
+    id: row.Id, mes: normalizeMes(row.Mes), codigoCliente: String(row.CodigoCliente||'').trim(),
+    detalhe: detalhe,
+    usinas: detalhe.length ? detalhe.map(d=>d.codigo) : String(row.Usinas||'').split(',').map(s=>s.trim()).filter(Boolean),
+    kwhCompensado: detalhe.length ? detalhe.reduce((s,d)=>s+d.kwh,0) : (parseFloat(row.KwhCompensado)||0),
+    obs: row.Obs||''
+  };
+}
+function compObjToRow(c){
+  const detalhe = c.detalhe || [];
+  const total = detalhe.reduce((s,d)=>s+(d.kwh||0),0);
+  return {
+    Id:c.id, Mes:c.mes, CodigoCliente:c.codigoCliente,
+    KwhCompensado: total,
+    Usinas: detalhe.map(d=>d.codigo).join(','),
+    UsinasDetalhe: detalhe.map(d=>`${d.codigo}:${d.kwh}`).join(','),
+    Obs:c.obs||''
+  };
+}
+
+async function loadClientes(){
+  try{
+    const rows = await sheetGet('Clientes');
+    CLIENTES = rows.map(clienteRowToObj);
+  }catch(e){ toast('Erro ao carregar clientes da planilha: ' + e.message, true); CLIENTES = []; }
+}
+async function upsertCliente(c){
+  try{ await sheetPost({sheet:'Clientes', op:'upsert', key:'Codigo', row:clienteObjToRow(c)}); return true; }
+  catch(e){ toast('Erro ao salvar cliente na planilha: ' + e.message, true); return false; }
+}
+async function deleteClienteRemote(codigo){
+  try{ await sheetPost({sheet:'Clientes', op:'delete', key:'Codigo', value:codigo}); return true; }
+  catch(e){ toast('Erro ao excluir cliente na planilha: ' + e.message, true); return false; }
+}
+
+async function loadCompensacoes(force){
+  if(COMPENSACOES && !force) return COMPENSACOES;
+  try{
+    const rows = await sheetGet('Compensacoes');
+    COMPENSACOES = rows.map(compRowToObj);
+  }catch(e){ toast('Erro ao carregar compensações da planilha: ' + e.message, true); COMPENSACOES = []; }
+  return COMPENSACOES;
+}
+async function upsertCompensacoes(list){
+  if(!list.length) return true;
+  try{ await sheetPost({sheet:'Compensacoes', op:'bulkUpsert', key:'Id', rows:list.map(compObjToRow)}); return true; }
+  catch(e){ toast('Erro ao salvar compensações na planilha: ' + e.message, true); return false; }
+}
+async function deleteCompensacaoRemote(id){
+  try{ await sheetPost({sheet:'Compensacoes', op:'delete', key:'Id', value:id}); return true; }
+  catch(e){ toast('Erro ao excluir compensação na planilha: ' + e.message, true); return false; }
+}
+
+/* ---- Cadastro de clientes ---- */
+function renderClienteUsinasChips(selecionadas){
+  const wrap = document.getElementById('cl-usinas-chips');
+  const sel = new Set(selecionadas||[]);
+  if(!USINAS.length){ wrap.innerHTML = '<span class="hint" style="margin:0;">Cadastre usinas primeiro, em Usinas → Cadastro Usinas.</span>'; return; }
+  wrap.innerHTML = USINAS.slice().sort((a,b)=>a.codigo.localeCompare(b.codigo)).map(u=>
+    `<button type="button" class="chip ${sel.has(u.codigo)?'active':''}" data-codigo="${u.codigo}">${u.codigo} — ${escapeHtml(u.nome)}</button>`
+  ).join('');
+}
+document.getElementById('cl-usinas-chips').addEventListener('click', (e)=>{
+  const chip = e.target.closest('.chip');
+  if(!chip) return;
+  chip.classList.toggle('active');
+});
+function getSelectedClienteUsinas(){
+  return Array.from(document.querySelectorAll('#cl-usinas-chips .chip.active')).map(c=>c.dataset.codigo);
+}
+
+function renderClientesTable(){
+  const tbody = document.getElementById('clientes-tbody');
+  const q = (document.getElementById('clf-search').value||'').toLowerCase().trim();
+  const rows = CLIENTES.filter(c => !q || c.nome.toLowerCase().includes(q) || c.codigo.toLowerCase().includes(q) || (c.contaContrato||'').toLowerCase().includes(q))
+    .sort((a,b)=>a.codigo.localeCompare(b.codigo));
+
+  document.getElementById('clientes-count').textContent = rows.length + ' de ' + CLIENTES.length;
+
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Nenhum cliente cadastrado ainda. Use o formulário acima para começar.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(c => `
+    <tr>
+      <td>${c.codigo}</td>
+      <td class="txt">${escapeHtml(c.nome)}</td>
+      <td class="txt">${escapeHtml(c.contaContrato||'—')}</td>
+      <td class="txt">${escapeHtml(usinasLabel(c.usinas))}</td>
+      <td><div class="row-actions">
+        <button class="btn-edit-ghost" title="Editar" onclick="startEditCliente('${c.codigo}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+        <button class="btn-danger-ghost" title="Excluir" onclick="deleteCliente('${c.codigo}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
+      </div></td>
+    </tr>`).join('');
+}
+window.startEditCliente = function(codigo){
+  const c = CLIENTES.find(x=>x.codigo===codigo);
+  if(!c) return;
+  editingClienteCodigo = codigo;
+  document.getElementById('cl-nome').value = c.nome;
+  document.getElementById('cl-conta').value = c.contaContrato||'';
+  renderClienteUsinasChips(c.usinas);
+  document.getElementById('cl-submit').textContent = 'Salvar alterações (' + codigo + ')';
+  document.getElementById('cl-cancel').style.display = 'inline-flex';
+  document.getElementById('form-cliente').scrollIntoView({behavior:'smooth', block:'center'});
+};
+document.getElementById('cl-cancel').addEventListener('click', ()=>{
+  editingClienteCodigo = null;
+  document.getElementById('form-cliente').reset();
+  renderClienteUsinasChips([]);
+  document.getElementById('cl-submit').textContent = 'Adicionar cliente';
+  document.getElementById('cl-cancel').style.display = 'none';
+});
+window.deleteCliente = async function(codigo){
+  if(!confirm('Excluir o cliente ' + codigo + '? O histórico de compensações já lançado será mantido.')) return;
+  const prev = CLIENTES;
+  CLIENTES = CLIENTES.filter(c=>c.codigo!==codigo);
+  const ok = await deleteClienteRemote(codigo);
+  if(ok){ toast('Cliente removido.'); renderClientesTable(); renderCompGrid(); populateClienteFilterSelect(); }
+  else CLIENTES = prev;
+};
+document.getElementById('form-cliente').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const nomeEl = document.getElementById('cl-nome');
+  const nome = nomeEl.value.trim();
+  if(!nome){ toast('Preencha o nome do cliente.', true); nomeEl.focus(); return; }
+
+  const btn = document.getElementById('cl-submit');
+  btn.disabled = true;
+  try{
+    const data = {
+      codigo: editingClienteCodigo || nextClienteCodigo(),
+      nome,
+      contaContrato: document.getElementById('cl-conta').value.trim(),
+      usinas: getSelectedClienteUsinas()
+    };
+    if(editingClienteCodigo){
+      const idx = CLIENTES.findIndex(c=>c.codigo===editingClienteCodigo);
+      if(idx>-1) CLIENTES[idx] = {...CLIENTES[idx], ...data}; else CLIENTES.push(data);
+    } else {
+      CLIENTES.push(data);
+    }
+    const ok = await upsertCliente(data);
+    if(ok){
+      toast(editingClienteCodigo ? 'Cliente atualizado.' : 'Cliente cadastrado: ' + data.codigo);
+      editingClienteCodigo = null;
+      e.target.reset();
+      renderClienteUsinasChips([]);
+      document.getElementById('cl-submit').textContent = 'Adicionar cliente';
+      document.getElementById('cl-cancel').style.display = 'none';
+      renderClientesTable();
+      renderCompGrid();
+      populateClienteFilterSelect();
+    }
+  }catch(err){
+    toast('Erro inesperado ao cadastrar cliente: ' + (err && err.message ? err.message : err), true);
+  }finally{
+    btn.disabled = false;
+  }
+});
+document.getElementById('clf-search').addEventListener('input', renderClientesTable);
+
+function populateClienteFilterSelect(){
+  const sel = document.getElementById('comph-cliente');
+  const current = sel.value;
+  const opts = CLIENTES.slice().sort((a,b)=>a.nome.localeCompare(b.nome))
+    .map(c=>`<option value="${c.codigo}">${c.codigo} — ${escapeHtml(c.nome)}</option>`).join('');
+  sel.innerHTML = '<option value="">todos os clientes</option>' + opts;
+  if(current) sel.value = current;
+
+  const gcSel = document.getElementById('gc-cliente');
+  const gcCurrent = gcSel.value;
+  gcSel.innerHTML = '<option value="">selecione um cliente…</option>' + opts;
+  if(gcCurrent) gcSel.value = gcCurrent;
+}
+
+/* ---- Compensação mensal (grade em massa) ---- */
+async function renderCompGrid(){
+  const month = document.getElementById('comp-month').value || currentMonth();
+  document.getElementById('comp-month').value = month;
+  const tbody = document.getElementById('comp-tbody');
+  tbody.innerHTML = `<tr><td colspan="5" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
+
+  if(!CLIENTES.length){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Cadastre clientes acima antes de lançar compensações.</div></td></tr>`;
+    updateCompTotals();
+    return;
+  }
+
+  const compensacoes = await loadCompensacoes();
+  const byCliente = {};
+  compensacoes.forEach(c=>{ if(c.mes===month) byCliente[c.codigoCliente]=c; });
+
+  function defaultUsinasFor(codigoCliente){
+    const historico = compensacoes.filter(c=>c.codigoCliente===codigoCliente && c.mes<month).sort((a,b)=>b.mes.localeCompare(a.mes));
+    if(historico.length) return historico[0].usinas;
+    const cli = CLIENTES.find(x=>x.codigo===codigoCliente);
+    return cli ? cli.usinas : [];
+  }
+
+  const usinasOrdenadas = USINAS.slice().sort((a,b)=>a.codigo.localeCompare(b.codigo));
+
+  const q = (document.getElementById('comp-search').value||'').toLowerCase().trim();
+  const rows = CLIENTES.filter(c => !q || c.nome.toLowerCase().includes(q) || c.codigo.toLowerCase().includes(q))
+    .sort((a,b)=>a.codigo.localeCompare(b.codigo));
+
+  tbody.innerHTML = rows.map(c=>{
+    const comp = byCliente[c.codigo];
+    const selectedCodes = comp ? comp.usinas : defaultUsinasFor(c.codigo);
+    const kwhMap = {};
+    if(comp && comp.detalhe) comp.detalhe.forEach(d=>{ kwhMap[d.codigo]=d.kwh; });
+    const selSet = new Set(selectedCodes);
+
+    const chipsHtml = usinasOrdenadas.map(u=>
+      `<button type="button" class="chip small ${selSet.has(u.codigo)?'active':''}" data-codigo="${u.codigo}" title="${escapeHtml(u.nome)}">${u.codigo}</button>`
+    ).join('');
+
+    const kwhListHtml = selectedCodes.map(cod=>{
+      const u = USINAS.find(x=>x.codigo===cod);
+      const label = u ? u.nome : cod;
+      const val = kwhMap[cod] !== undefined ? kwhMap[cod] : '';
+      return `<div class="usina-kwh-row" data-codigo="${cod}"><span class="ukr-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span><input type="number" class="g-usina-kwh" step="0.1" min="0" value="${val}"></div>`;
+    }).join('');
+
+    const totalInicial = selectedCodes.reduce((s,cod)=> s + (kwhMap[cod]||0), 0);
+
+    return `
+    <tr data-codigo="${c.codigo}" class="${comp?'row-saved':''}">
+      <td>${c.codigo}</td>
+      <td class="txt">${escapeHtml(c.nome)}</td>
+      <td class="usina-detail-cell">
+        <div class="usina-row-chips">${chipsHtml}</div>
+        <div class="usina-kwh-list">${kwhListHtml}</div>
+      </td>
+      <td class="num"><div class="g-total-display">${fmtNum(totalInicial)}</div></td>
+      <td><input type="text" class="grid-input obs g-obs" value="${comp?escapeHtml(comp.obs||''):''}"></td>
+    </tr>`;
+  }).join('');
+
+  updateCompTotals();
+}
+
+function syncUsinaKwhList(tr){
+  const activeCodes = Array.from(tr.querySelectorAll('.usina-row-chips .chip.active')).map(c=>c.dataset.codigo);
+  const list = tr.querySelector('.usina-kwh-list');
+  const existingValues = {};
+  list.querySelectorAll('.usina-kwh-row').forEach(row=>{
+    existingValues[row.dataset.codigo] = row.querySelector('input').value;
+  });
+  list.innerHTML = activeCodes.map(cod=>{
+    const u = USINAS.find(x=>x.codigo===cod);
+    const label = u ? u.nome : cod;
+    const val = existingValues[cod] !== undefined ? existingValues[cod] : '';
+    return `<div class="usina-kwh-row" data-codigo="${cod}"><span class="ukr-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span><input type="number" class="g-usina-kwh" step="0.1" min="0" value="${val}"></div>`;
+  }).join('');
+  recalcRowTotal(tr);
+}
+function recalcRowTotal(tr){
+  let total = 0;
+  tr.querySelectorAll('.usina-kwh-row input').forEach(inp=>{
+    const v = parseFloat(inp.value);
+    if(!isNaN(v)) total += v;
+  });
+  const totalEl = tr.querySelector('.g-total-display');
+  if(totalEl) totalEl.textContent = fmtNum(total);
+  updateCompTotals();
+}
+function updateCompTotals(){
+  const tbody = document.getElementById('comp-tbody');
+  let total=0, count=0, all=0;
+  tbody.querySelectorAll('tr[data-codigo]').forEach(tr=>{
+    all++;
+    let rowTotal=0, hasValue=false;
+    tr.querySelectorAll('.usina-kwh-row input').forEach(inp=>{
+      const v = parseFloat(inp.value);
+      if(!isNaN(v)){ rowTotal+=v; hasValue=true; }
+    });
+    if(hasValue){ total+=rowTotal; count++; }
+  });
+  document.getElementById('ct-total').textContent = fmtNum(total) + ' kWh';
+  document.getElementById('ct-count').textContent = count + ' / ' + all;
+}
+document.getElementById('comp-tbody').addEventListener('click', (e)=>{
+  const chip = e.target.closest('.usina-row-chips .chip');
+  if(!chip) return;
+  chip.classList.toggle('active');
+  syncUsinaKwhList(chip.closest('tr'));
+});
+document.getElementById('comp-tbody').addEventListener('input', (e)=>{
+  if(e.target.classList.contains('g-usina-kwh')) recalcRowTotal(e.target.closest('tr'));
+  else updateCompTotals();
+});
+document.getElementById('comp-month').addEventListener('change', renderCompGrid);
+document.getElementById('comp-search').addEventListener('input', renderCompGrid);
+
+document.getElementById('comp-save').addEventListener('click', async ()=>{
+  const month = document.getElementById('comp-month').value || currentMonth();
+  const btn = document.getElementById('comp-save');
+  btn.disabled = true;
+
+  const compensacoes = await loadCompensacoes();
+  const byCliente = {};
+  compensacoes.forEach(c=>{ if(c.mes===month) byCliente[c.codigoCliente]=c; });
+
+  const changed = [];
+  let saved=0, skipped=0;
+  document.querySelectorAll('#comp-tbody tr[data-codigo]').forEach(tr=>{
+    const cod = tr.dataset.codigo;
+    const obs = tr.querySelector('.g-obs').value.trim();
+    const detalhe = [];
+    tr.querySelectorAll('.usina-kwh-row').forEach(row=>{
+      const val = parseFloat(row.querySelector('input').value);
+      if(!isNaN(val)) detalhe.push({ codigo: row.dataset.codigo, kwh: val });
+    });
+    if(!detalhe.length){ skipped++; return; }
+
+    const payload = { mes: month, codigoCliente: cod, detalhe, usinas: detalhe.map(d=>d.codigo), kwhCompensado: detalhe.reduce((s,d)=>s+d.kwh,0), obs };
+    const existing = byCliente[cod];
+    if(existing){
+      Object.assign(existing, payload);
+      changed.push(existing);
+    } else {
+      payload.id = Date.now()+'-comp-'+cod+'-'+Math.random().toString(36).slice(2,7);
+      compensacoes.push(payload);
+      byCliente[cod] = payload;
+      changed.push(payload);
+    }
+    saved++;
+  });
+
+  const ok = await upsertCompensacoes(changed);
+  btn.disabled = false;
+  if(ok){
+    toast(saved + ' cliente(s) salvo(s) para ' + new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'}) + '.');
+    document.getElementById('comp-save-hint').textContent = skipped ? (skipped + ' cliente(s) sem valor foram ignorados.') : '';
+    renderCompGrid();
+    document.getElementById('comph-month').value = month;
+    renderCompHistory();
+  }
+});
+
+/* ---- Histórico de compensações ---- */
+async function renderCompHistory(){
+  const month = document.getElementById('comph-month').value || currentMonth();
+  document.getElementById('comph-month').value = month;
+  const tbody = document.getElementById('comph-tbody');
+  tbody.innerHTML = `<tr><td colspan="7" class="loading-row"><span class="spin"></span>carregando histórico…</td></tr>`;
+
+  const compensacoes = await loadCompensacoes();
+  const filterCli = document.getElementById('comph-cliente').value;
+  const rows = compensacoes.filter(c => c.mes===month && (!filterCli || c.codigoCliente===filterCli))
+    .sort((a,b)=> clienteNome(a.codigoCliente).localeCompare(clienteNome(b.codigoCliente)));
+
+  document.getElementById('comp-hist-meta').textContent = rows.length + ' registro(s)';
+
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty">Nenhuma compensação lançada neste mês${filterCli?' para este cliente':''} ainda.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(c=>`
+    <tr>
+      <td>${new Date(c.mes+'-02').toLocaleDateString('pt-BR',{month:'short', year:'numeric'})}</td>
+      <td>${c.codigoCliente}</td>
+      <td class="txt">${escapeHtml(clienteNome(c.codigoCliente))}</td>
+      <td class="txt">${escapeHtml(usinasDetalheLabel(c.detalhe))}</td>
+      <td class="num">${fmtNum(c.kwhCompensado)}</td>
+      <td class="txt">${escapeHtml(c.obs||'—')}</td>
+      <td><div class="row-actions">
+        <button class="btn-edit-ghost" title="Editar no mês" onclick="editCompInGrid('${c.mes}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+        <button class="btn-danger-ghost" title="Excluir" onclick="deleteCompensacao('${c.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
+      </div></td>
+    </tr>`).join('');
+}
+window.editCompInGrid = function(month){
+  document.getElementById('comp-month').value = month;
+  renderCompGrid();
+  document.getElementById('comp-grid-panel').scrollIntoView({behavior:'smooth', block:'start'});
+};
+window.deleteCompensacao = async function(id){
+  if(!confirm('Excluir esta compensação?')) return;
+  const compensacoes = await loadCompensacoes();
+  COMPENSACOES = compensacoes.filter(c=>c.id!==id);
+  const ok = await deleteCompensacaoRemote(id);
+  if(ok){ toast('Compensação removida.'); renderCompHistory(); renderCompGrid(); }
+};
+document.getElementById('comph-month').addEventListener('change', renderCompHistory);
+document.getElementById('comph-cliente').addEventListener('change', renderCompHistory);
+
+/* ============================================================
+   Gráficos de Clientes
+   ============================================================ */
+const CLIENT_CHART_COLORS = ['#F2A93C','#34D9C4','#8B7FE8','#F2555F','#5EC8F2','#E8A87C','#96E6B3','#D4A5E8','#F2D93C','#7FA8E8'];
+
+function chartsClientesUnavailable(){
+  ['chart-cliente-mensal','chart-cliente-origem'].forEach(id=>{
+    const box = document.getElementById(id).parentElement;
+    if(box.querySelector('.chart-fallback')) return;
+    const div = document.createElement('div');
+    div.className = 'chart-fallback';
+    div.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5C6672;font-size:12px;text-align:center;padding:20px;';
+    div.textContent = 'Não foi possível carregar a biblioteca de gráficos. Recarregue a página.';
+    box.style.position = 'relative';
+    box.appendChild(div);
+  });
+}
+
+function clearEmptyOverlay(box){
+  const o = box.querySelector('.empty-overlay');
+  if(o) o.remove();
+}
+function showEmptyOverlay(box, text){
+  clearEmptyOverlay(box);
+  const div = document.createElement('div');
+  div.className = 'empty-overlay';
+  div.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5C6672;font-size:12px;text-align:center;padding:20px;background:rgba(20,28,37,0.85);';
+  div.textContent = text;
+  box.style.position = 'relative';
+  box.appendChild(div);
+}
+
+async function renderClientesCharts(){
+  if(typeof Chart === 'undefined'){ chartsClientesUnavailable(); return; }
+  await renderClienteMensalECharts();
+}
+
+async function renderClienteMensalECharts(){
+  const year = parseInt(document.getElementById('gc-year').value, 10) || new Date().getFullYear();
+  document.getElementById('gc-year').value = year;
+  const codigoCliente = document.getElementById('gc-cliente').value;
+  const codigoUsina = document.getElementById('gc-usina').value;
+  const cliente = CLIENTES.find(x=>x.codigo===codigoCliente);
+  const usina = USINAS.find(x=>x.codigo===codigoUsina);
+
+  const mensalBox = document.getElementById('chart-cliente-mensal').parentElement;
+  const origemBox = document.getElementById('chart-cliente-origem').parentElement;
+  clearEmptyOverlay(mensalBox);
+  clearEmptyOverlay(origemBox);
+
+  const escopoLabel = (cliente ? cliente.nome : 'Todos os clientes') + (usina ? ' — via ' + usina.nome : '');
+  document.getElementById('gc-mensal-meta').textContent = escopoLabel + ' — ' + year;
+
+  const compensacoes = await loadCompensacoes();
+  const recordsByMonth = MESES.map(m=>{
+    const monthKey = year + '-' + m.n;
+    return compensacoes.filter(c => c.mes === monthKey && (!codigoCliente || c.codigoCliente === codigoCliente));
+  });
+
+  function contrib(record){
+    if(!codigoUsina) return record.kwhCompensado;
+    const d = (record.detalhe||[]).find(x=>x.codigo===codigoUsina);
+    return d ? d.kwh : 0;
+  }
+
+  const totals = recordsByMonth.map(recs => recs.reduce((s,r)=>s+contrib(r),0));
+  const temAlgumDado = totals.some(v=>v>0);
+
+  destroyChart('clienteMensal');
+  if(!temAlgumDado){
+    showEmptyOverlay(mensalBox, 'Nenhuma compensação lançada para ' + escopoLabel.toLowerCase() + ' em ' + year + '.');
+  } else {
+    CHARTS.clienteMensal = new Chart(document.getElementById('chart-cliente-mensal'), {
+      type:'bar',
+      data:{ labels: MESES.map(m=>m.l), datasets:[{ label:'kWh compensado', data: totals, backgroundColor:'#F2A93C', borderRadius:4 }] },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#1B2530'}, ticks:{ callback:v=>fmtNum(v) } } }
+      }
+    });
+  }
+
+  // Se não há cliente específico mas há usina filtrada: agrupa por CLIENTE (quem usou essa usina).
+  // Caso contrário (cliente específico, ou nenhum filtro): agrupa por USINA (de onde veio a energia).
+  const agruparPorCliente = !codigoCliente && !!codigoUsina;
+
+  destroyChart('clienteOrigem');
+  let datasets = [];
+  if(agruparPorCliente){
+    const clienteSet = new Set();
+    recordsByMonth.forEach(recs=>recs.forEach(r=>{
+      const d = (r.detalhe||[]).find(x=>x.codigo===codigoUsina);
+      if(d && d.kwh>0) clienteSet.add(r.codigoCliente);
+    }));
+    const clienteCodes = Array.from(clienteSet).sort((a,b)=>clienteNome(a).localeCompare(clienteNome(b)));
+    datasets = clienteCodes.map((cod,i)=>({
+      label: clienteNome(cod),
+      data: recordsByMonth.map(recs=>{
+        const r = recs.find(x=>x.codigoCliente===cod);
+        if(!r) return 0;
+        const d = (r.detalhe||[]).find(x=>x.codigo===codigoUsina);
+        return d ? d.kwh : 0;
+      }),
+      backgroundColor: CLIENT_CHART_COLORS[i % CLIENT_CHART_COLORS.length],
+      borderRadius:3
+    }));
+    document.getElementById('gc-origem-title').innerHTML = 'Clientes atendidos por ' + escapeHtml(usina?usina.nome:codigoUsina) + '<small id="gc-origem-meta">por mês, quanto cada cliente compensou dessa usina</small>';
+  } else {
+    const usinaSet = new Set();
+    recordsByMonth.forEach(recs=>recs.forEach(r=>(r.detalhe||[]).forEach(d=>{
+      if(!codigoUsina || d.codigo===codigoUsina) usinaSet.add(d.codigo);
+    })));
+    const usinaCodes = Array.from(usinaSet).sort();
+    datasets = usinaCodes.map((cod,i)=>{
+      const u = USINAS.find(x=>x.codigo===cod);
+      return {
+        label: u ? u.nome : cod,
+        data: recordsByMonth.map(recs => recs.reduce((s,r)=>{
+          const d = (r.detalhe||[]).find(x=>x.codigo===cod);
+          return s + (d ? d.kwh : 0);
+        },0)),
+        backgroundColor: CLIENT_CHART_COLORS[i % CLIENT_CHART_COLORS.length],
+        borderRadius:3
+      };
+    });
+    document.getElementById('gc-origem-title').innerHTML = 'Origem da energia por mês<small id="gc-origem-meta">de qual usina veio a compensação, mês a mês</small>';
+  }
+
+  if(!datasets.length){
+    showEmptyOverlay(origemBox, 'Nenhuma compensação lançada para ' + escopoLabel.toLowerCase() + ' em ' + year + '.');
+  } else {
+    CHARTS.clienteOrigem = new Chart(document.getElementById('chart-cliente-origem'), {
+      type:'bar',
+      data:{ labels: MESES.map(m=>m.l), datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ labels:{ boxWidth:12, boxHeight:12, padding:14 } } },
+        scales:{
+          x:{ stacked:true, grid:{display:false} },
+          y:{ stacked:true, grid:{color:'#1B2530'}, ticks:{ callback:v=>fmtNum(v) } }
+        }
+      }
+    });
+  }
+}
+
+document.getElementById('gc-cliente').addEventListener('change', renderClienteMensalECharts);
+document.getElementById('gc-usina').addEventListener('change', renderClienteMensalECharts);
+document.getElementById('gc-year').addEventListener('change', renderClienteMensalECharts);
+document.getElementById('gc-refresh').addEventListener('click', renderClientesCharts);
+
+/* ============================================================
    Init
    ============================================================ */
 async function init(){
@@ -1341,10 +2454,25 @@ async function init(){
   document.getElementById('lf-month').value = currentMonth();
   document.getElementById('chart-month').value = currentMonth();
   document.getElementById('chart-year').value = new Date().getFullYear();
+  document.getElementById('comp-month').value = currentMonth();
+  document.getElementById('comph-month').value = currentMonth();
+  document.getElementById('gc-year').value = new Date().getFullYear();
+  document.getElementById('inj-month').value = currentMonth();
+  document.getElementById('injh-month').value = currentMonth();
 
-  try{ await loadUsinas(); }catch(e){ console.error(e); }
+  // carrega os cadastros base primeiro (em paralelo), antes de desenhar qualquer coisa —
+  // evita que um clique rápido em outra aba (ex: Clientes) renderize com dados ainda vazios
+  BASE_DATA_READY = Promise.all([loadUsinas(), loadClientes()]);
+  try{ await BASE_DATA_READY; }catch(e){ console.error(e); }
+
   try{ populateUsinaSelects(); }catch(e){ console.error(e); }
+  try{ renderClienteUsinasChips([]); }catch(e){ console.error(e); }
   try{ renderCadastroTable(); }catch(e){ console.error(e); }
+  try{ populateInjUsinaFilterSelect(); }catch(e){ console.error(e); }
+  try{ await renderInjGrid(); }catch(e){ console.error(e); }
+  try{ await renderInjHistory(); }catch(e){ console.error(e); }
+  try{ renderClientesTable(); }catch(e){ console.error(e); }
+  try{ populateClienteFilterSelect(); }catch(e){ console.error(e); }
   try{ await renderDashboard(); }catch(e){ console.error(e); }
   try{ await renderGrid(); }catch(e){ console.error(e); }
   try{ await renderLancTable(); }catch(e){ console.error(e); }
