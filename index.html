@@ -291,6 +291,27 @@
 </head>
 <body>
 
+<div id="login-screen" style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;">
+  <form id="login-form" style="width:100%; max-width:360px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:32px 28px;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:24px;">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="4.2" fill="#12100A"/><g stroke="#12100A" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v2.4M12 19.6V22M22 12h-2.4M4.4 12H2M18.7 5.3l-1.7 1.7M7 17l-1.7 1.7M18.7 18.7L17 17M7 7 5.3 5.3"/></g></svg>
+      </div>
+      <div>
+        <h1 style="font-family:var(--font-display); font-size:16px; font-weight:600;">Controle de Geração Solar</h1>
+        <span style="display:block; font-size:11px; color:var(--text-faint); font-family:var(--font-mono);">acesso restrito</span>
+      </div>
+    </div>
+    <div class="field-grid" style="grid-template-columns:1fr; gap:14px;">
+      <div><label for="login-user">Login</label><input type="text" id="login-user" autocomplete="username" required></div>
+      <div><label for="login-pass">Senha</label><input type="password" id="login-pass" autocomplete="current-password" required></div>
+    </div>
+    <div id="login-error" style="color:var(--red); font-size:12.5px; margin-top:12px; min-height:16px;"></div>
+    <button type="submit" class="btn btn-primary" id="login-submit" style="width:100%; justify-content:center; margin-top:8px;">Entrar</button>
+  </form>
+</div>
+
+<div id="app-shell" style="display:none;">
 <header class="top">
   <div class="top-inner">
     <div class="brand">
@@ -314,8 +335,10 @@
       </div>
       <button data-view="clientes">Clientes</button>
       <button data-view="graficos-clientes">Gráf. Clientes</button>
+      <button data-view="usuarios">Usuários</button>
+      <button data-view="faturas">Faturas</button>
     </nav>
-    <div class="sync-pill"><span class="sync-dot"></span>dados compartilhados</div>
+    <div class="sync-pill" id="user-pill" style="cursor:pointer;" title="Sair"><span id="user-name"></span> · Sair</div>
   </div>
 </header>
 
@@ -326,8 +349,22 @@
 
     <div class="subview active" id="subview-dashboard">
     <div class="page-head">
-      <h2>Dashboard mensal da frota</h2>
-      <p>Geração x meta (calculada automaticamente pelo esperado mensal cadastrado) e performance ratio, consolidados por usina no mês selecionado.</p>
+      <h2>Dashboard</h2>
+    </div>
+
+    <div class="panel" id="live-status-panel" style="margin-bottom:18px;">
+      <small id="live-status-meta" style="display:block; margin-bottom:12px; color:var(--text-faint); font-family:var(--font-mono); font-size:11px;">clique em atualizar</small>
+      <div class="btn-row" style="margin-top:0; margin-bottom:14px;">
+        <button class="btn btn-ghost" id="live-status-refresh">Atualizar agora</button>
+        <div class="field grow" style="margin-bottom:0;"><input type="text" id="live-status-search" placeholder="Buscar usina…"></div>
+      </div>
+      <div class="table-wrap" style="max-height:360px;">
+        <table>
+          <thead><tr><th colspan="4" style="text-align:center; font-size:20px; font-weight:700; letter-spacing:1px; color:#4DA3FF; font-family:var(--font-display); text-transform:uppercase; padding:16px; background:transparent;">Status da Usina</th></tr>
+          <tr><th>Usina</th><th>Status</th><th class="num">Potência atual</th><th class="num">Geração hoje</th></tr></thead>
+          <tbody id="live-status-tbody"><tr><td colspan="4" class="empty">Clique em "Atualizar agora" para consultar o SolisCloud.</td></tr></tbody>
+        </table>
+      </div>
     </div>
 
     <div class="panel" style="margin-bottom:18px;">
@@ -338,7 +375,7 @@
         </div>
         <button class="btn btn-ghost" id="dash-refresh">Atualizar</button>
       </div>
-      <div class="field" style="margin-bottom:0;">
+      <div class="field" id="dash-status-filter-field" style="margin-bottom:0;">
         <label>Filtrar usinas por status <span class="hint" style="margin:0;">(nenhum selecionado = todas as usinas)</span></label>
         <div class="status-chips" id="dash-status-chips">
           <button type="button" class="chip" data-status="Operação">Operação</button>
@@ -369,13 +406,13 @@
       </div>
 
       <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
-        <div class="kpi"><div class="lbl">Geração total da frota</div><div class="val amber" id="kpi-geracao">—</div><div class="sub">kWh no mês</div></div>
-        <div class="kpi"><div class="lbl">Meta total da frota</div><div class="val" id="kpi-meta">—</div><div class="sub">kWh no mês (esperado cadastrado)</div></div>
-        <div class="kpi"><div class="lbl">Usinas abaixo de 90% da meta</div><div class="val red" id="kpi-abaixo">—</div><div class="sub" id="kpi-abaixo-sub">de N usinas com meta cadastrada</div></div>
+        <div class="kpi"><div class="lbl">Geração total</div><div class="val amber" id="kpi-geracao">—</div><div class="sub">kWh no mês</div><div class="lbl" style="margin-top:12px;">Potência instalada</div><div class="val" id="kpi-capacidade-mw" style="font-size:18px;">—</div></div>
+        <div class="kpi"><div class="lbl">Meta total</div><div class="val" id="kpi-meta">—</div><div class="sub" id="kpi-meta-sub">kWh no mês (esperado cadastrado)</div></div>
+        <div class="kpi"><div class="lbl">Usinas abaixo de 80% da meta</div><div class="val red" id="kpi-abaixo">—</div><div class="sub" id="kpi-abaixo-sub">de N usinas com meta cadastrada</div></div>
       </div>
     </div>
 
-    <div class="chart-grid two">
+    <div class="chart-grid two" id="top10-panel">
       <div class="panel">
         <div class="panel-title">Top 10 — melhor atingimento da meta<small>frota inteira, sem filtro</small></div>
         <div class="chart-box"><canvas id="chart-top"></canvas></div>
@@ -383,6 +420,16 @@
       <div class="panel">
         <div class="panel-title">Top 10 — pior atingimento da meta<small>frota inteira, sem filtro</small></div>
         <div class="chart-box"><canvas id="chart-bottom"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel" id="clientes-da-usina-panel" style="display:none;">
+      <div class="panel-title">Clientes desta usina<small id="cdu-meta"></small></div>
+      <div class="table-wrap" style="max-height:420px;">
+        <table>
+          <thead><tr><th>Nome</th><th>Conta Contrato</th><th class="num">kWh Compensado no mês</th><th>Fatura</th></tr></thead>
+          <tbody id="cdu-tbody"><tr><td colspan="4" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
+        </table>
       </div>
     </div>
 
@@ -469,7 +516,7 @@
         <div class="field grow"><label for="chart-annual-usina">Usina</label><select id="chart-annual-usina"><option value="">Frota inteira</option></select></div>
         <button class="btn btn-ghost" id="chart-refresh">Atualizar gráficos</button>
       </div>
-      <div class="field" style="margin-bottom:0;">
+      <div class="field" id="chart-status-filter-field" style="margin-bottom:0;">
         <label>Filtrar usinas por status <span class="hint" style="margin:0;">(aplica aos gráficos abaixo; nenhum selecionado = todas as usinas)</span></label>
         <div class="status-chips" id="chart-status-chips">
           <button type="button" class="chip" data-status="Operação">Operação</button>
@@ -492,7 +539,7 @@
     </div>
 
     <div class="panel" style="margin-top:18px;">
-      <div class="panel-title">Geração diária da frota — real x meta<small id="chart-line-meta"></small></div>
+      <div class="panel-title">Geração diária — real x meta<small id="chart-line-meta"></small></div>
       <div class="chart-box tall"><canvas id="chart-line"></canvas></div>
     </div>
 
@@ -638,6 +685,106 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
     </div>
   </section>
 
+  <!-- ================= USUÁRIOS ================= -->
+  <section class="view" id="view-usuarios">
+    <div class="page-head">
+      <h2>Usuários</h2>
+      <p>Crie logins de acesso e vincule quais usinas cada um pode ver. Administradores veem tudo; clientes só veem as usinas vinculadas.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Novo usuário</div>
+      <form id="form-usuario" novalidate>
+        <div class="field-grid">
+          <div><label for="us-login">Login</label><input type="text" id="us-login" autocomplete="off" required></div>
+          <div><label for="us-nome">Nome</label><input type="text" id="us-nome" required></div>
+          <div><label for="us-senha">Senha <span class="hint" id="us-senha-hint" style="margin:0;">(obrigatória para novo usuário)</span></label><input type="password" id="us-senha" autocomplete="new-password"></div>
+          <div>
+            <label for="us-papel">Papel</label>
+            <select id="us-papel">
+              <option value="Cliente">Cliente (só visualiza as usinas vinculadas)</option>
+              <option value="Admin">Admin (vê e edita tudo)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" id="us-usinas-field" style="margin-top:12px;">
+          <label>Usinas permitidas <span class="hint" style="margin:0;">(ignorado se o papel for Admin)</span></label>
+          <div class="status-chips" id="us-usinas-chips"></div>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="us-submit">Adicionar usuário</button>
+          <button type="button" class="btn btn-ghost" id="us-cancel" style="display:none;">Cancelar edição</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Usuários cadastrados<small id="usuarios-count"></small></div>
+      <div class="table-wrap" style="max-height:520px;">
+        <table>
+          <thead><tr><th>Login</th><th>Nome</th><th>Papel</th><th>Usinas permitidas</th><th></th></tr></thead>
+          <tbody id="usuarios-tbody"><tr><td colspan="5" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FATURAS ================= -->
+  <section class="view" id="view-faturas">
+    <div class="page-head">
+      <h2>Faturas</h2>
+      <p>Suba o PDF da fatura de cada cliente — o sistema faz OCR e tenta extrair os principais valores automaticamente. Confira e ajuste antes de salvar.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Nova fatura</div>
+      <form id="form-fatura" novalidate>
+        <div class="field-grid">
+          <div><label for="fat-cliente">Cliente</label><select id="fat-cliente" required><option value="">selecione…</option></select></div>
+          <div><label for="fat-mes">Mês de referência</label><input type="month" id="fat-mes" required></div>
+          <div class="grow"><label for="fat-arquivo">Arquivo PDF</label><input type="file" id="fat-arquivo" accept="application/pdf" required></div>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="fat-submit">Enviar e analisar</button>
+          <span class="hint" id="fat-upload-hint"></span>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel" id="fat-review-panel" style="display:none;">
+      <div class="panel-title">Conferir dados extraídos<small>ajuste o que precisar antes de salvar</small></div>
+      <div class="field-grid">
+        <div><label for="fat-r-valor">Valor total (R$)</label><input type="text" id="fat-r-valor"></div>
+        <div><label for="fat-r-consumo">Consumo (kWh)</label><input type="text" id="fat-r-consumo"></div>
+        <div><label for="fat-r-compensada">Energia compensada (kWh)</label><input type="text" id="fat-r-compensada"></div>
+        <div><label for="fat-r-saldo">Saldo de créditos (kWh)</label><input type="text" id="fat-r-saldo"></div>
+        <div><label for="fat-r-vencimento">Vencimento</label><input type="text" id="fat-r-vencimento" placeholder="dd/mm/aaaa"></div>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label>Texto extraído pelo OCR <span class="hint" style="margin:0;">(confira aqui se algum campo acima não bateu)</span></label>
+        <textarea id="fat-r-texto" rows="8" readonly style="font-family:var(--font-mono); font-size:11.5px;"></textarea>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-primary" id="fat-confirm">Confirmar e salvar</button>
+        <a href="#" target="_blank" id="fat-r-link" class="btn btn-ghost">Abrir PDF original</a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Faturas lançadas<small id="fat-hist-meta"></small></div>
+      <div class="toolbar">
+        <div class="field"><label for="fath-month">Mês</label><input type="month" id="fath-month"></div>
+        <div class="field grow"><label for="fath-cliente">Filtrar por cliente</label><select id="fath-cliente"><option value="">todos os clientes</option></select></div>
+      </div>
+      <div class="table-wrap" style="max-height:520px;">
+        <table>
+          <thead><tr><th>Mês</th><th>Cliente</th><th class="num">Valor (R$)</th><th class="num">Consumo (kWh)</th><th class="num">Compensada (kWh)</th><th class="num">Saldo (kWh)</th><th>Vencimento</th><th></th></tr></thead>
+          <tbody id="fath-tbody"><tr><td colspan="8" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
   <!-- ================= CLIENTES ================= -->
   <section class="view" id="view-clientes">
     <div class="page-head">
@@ -750,6 +897,7 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
 </main>
 
 <div id="toast-host"></div>
+</div>
 
 <script>
 /* ============================================================
@@ -790,24 +938,47 @@ window.addEventListener('unhandledrejection', (e)=>{
    ============================================================ */
 const SHEET_API = 'https://script.google.com/macros/s/AKfycbwzOmUSW3ZJ5U5PV3qo3Ns-VhC40-KcwdZtrdvyJS2DrgDeL37b1rU91e3SXUoOwviv/exec';
 
+let AUTH = null; // { token, nome, papel, usinas }
+
 async function sheetGet(sheet, params){
-  const qs = new URLSearchParams(Object.assign({sheet, _: Date.now()}, params||{})).toString();
+  const qs = new URLSearchParams(Object.assign({sheet, token: AUTH?AUTH.token:'', _: Date.now()}, params||{})).toString();
   const res = await fetch(SHEET_API + '?' + qs, { cache: 'no-store' });
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const json = await res.json();
-  if(!json.ok) throw new Error(json.error || 'erro desconhecido na planilha');
+  if(!json.ok){
+    if(String(json.error||'').indexOf('Sessão') > -1) forceLogout(json.error);
+    throw new Error(json.error || 'erro desconhecido na planilha');
+  }
   return json.rows;
 }
 async function sheetPost(payload){
   const res = await fetch(SHEET_API, {
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'}, // avoids CORS preflight against Apps Script
-    body: JSON.stringify(payload)
+    body: JSON.stringify(Object.assign({token: AUTH?AUTH.token:''}, payload))
   });
   if(!res.ok) throw new Error('HTTP ' + res.status);
   const json = await res.json();
-  if(!json.ok) throw new Error(json.error || 'erro desconhecido na planilha');
+  if(!json.ok){
+    if(String(json.error||'').indexOf('Sessão') > -1) forceLogout(json.error);
+    throw new Error(json.error || 'erro desconhecido na planilha');
+  }
   return json;
+}
+async function doLoginRequest(login, senha){
+  const res = await fetch(SHEET_API, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ op:'login', login, senha })
+  });
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  return await res.json();
+}
+function forceLogout(msg){
+  AUTH = null;
+  document.getElementById('app-shell').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  if(msg) document.getElementById('login-error').textContent = msg;
 }
 
 function usinaRowToObj(row){
@@ -900,6 +1071,8 @@ document.querySelectorAll('nav.tabs > button, nav.tabs > .tab-dropdown > button'
     }
     if(btn.dataset.view === 'clientes'){ renderClientesTable(); renderCompGrid(); renderCompHistory(); }
     if(btn.dataset.view === 'graficos-clientes') renderClientesCharts();
+    if(btn.dataset.view === 'usuarios'){ renderClienteUsinasChipsUsuario([]); await loadUsuarios(); renderUsuariosTable(); }
+    if(btn.dataset.view === 'faturas'){ populateFaturaClienteSelects(); await loadFaturas(); renderFaturasHistory(); }
   });
 });
 
@@ -968,6 +1141,16 @@ function expAnnualTotal(u){
 function metaMensal(u, monthNum){
   if(!u || !u.expectedMonthly) return 0;
   return parseFloat(u.expectedMonthly[monthNum]) || 0;
+}
+function metaMensalProporcional(u, month){
+  const monthNum = month.slice(5,7);
+  const total = metaMensal(u, monthNum);
+  if(!total) return 0;
+  if(month !== currentMonth()) return total; // mês fechado (passado) ou futuro: usa a meta cheia
+  const hoje = new Date();
+  const diasNoMes = daysInMonth(month);
+  const diasPassados = Math.min(hoje.getDate(), diasNoMes);
+  return total * (diasPassados / diasNoMes);
 }
 function metaDiaria(codigo, dateISO){
   const u = USINAS.find(x=>x.codigo===codigo);
@@ -1311,6 +1494,81 @@ document.getElementById('lf-usina').addEventListener('change', renderLancTable);
 /* ============================================================
    Dashboard
    ============================================================ */
+async function liveStatusRequest(codigo){
+  const qs = new URLSearchParams({ action:'liveStatus', codigo, token: AUTH?AUTH.token:'', _: Date.now() }).toString();
+  const res = await fetch(SHEET_API + '?' + qs, { cache:'no-store' });
+  return await res.json();
+}
+let LIVE_STATUS_CACHE = [];
+const STATUS_ORDER = { 2:0, 3:1, 1:2 }; // Offline, Alarme, Online — indefinido/erro fica por último
+
+function renderLiveStatusRow(item){
+  if(!item.ok){
+    return `<td class="txt">${escapeHtml(item.nome)}</td><td colspan="3"><span class="hint" style="margin:0;">${escapeHtml(item.error || 'sem integração SolisCloud')}</span></td>`;
+  }
+  const stateLabel = item.state===1 ? 'Online' : (item.state===2 ? 'Offline' : (item.state===3 ? 'Alarme' : '—'));
+  const stateClass = item.state===1 ? 'ok' : (item.state===3 ? 'bad' : 'warn');
+  return `
+    <td class="txt">${escapeHtml(item.nome)}</td>
+    <td><span class="tag ${stateClass}">${stateLabel}</span></td>
+    <td class="num">${item.power!=null ? fmtNum(item.power) + ' ' + (item.powerStr||'kW') : '—'}</td>
+    <td class="num">${item.dayEnergy!=null ? fmtNum(item.dayEnergy) + ' kWh' : '—'}</td>`;
+}
+function renderLiveStatusTable(){
+  const tbody = document.getElementById('live-status-tbody');
+  const q = (document.getElementById('live-status-search').value||'').toLowerCase().trim();
+  const filtrado = LIVE_STATUS_CACHE.filter(item => !q || item.nome.toLowerCase().includes(q) || item.codigo.toLowerCase().includes(q));
+  const ordenado = filtrado.slice().sort((a,b)=>{
+    const pa = a.ok ? (STATUS_ORDER[a.state] ?? 3) : 4;
+    const pb = b.ok ? (STATUS_ORDER[b.state] ?? 3) : 4;
+    return pa - pb;
+  });
+  if(!ordenado.length){
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">Nenhuma usina encontrada.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = ordenado.map(item=>`<tr data-codigo="${item.codigo}">${renderLiveStatusRow(item)}</tr>`).join('');
+}
+document.getElementById('live-status-search').addEventListener('input', renderLiveStatusTable);
+
+async function refreshLiveStatus(){
+  const tbody = document.getElementById('live-status-tbody');
+  const btn = document.getElementById('live-status-refresh');
+  const usinasVisiveis = USINAS.slice().sort((a,b)=>a.codigo.localeCompare(b.codigo));
+  if(!usinasVisiveis.length){
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">Nenhuma usina disponível.</td></tr>`;
+    return;
+  }
+  btn.disabled = true;
+  LIVE_STATUS_CACHE = usinasVisiveis.map(u=>({ codigo:u.codigo, nome:u.nome, ok:false, error:'consultando…' }));
+  tbody.innerHTML = usinasVisiveis.map(u=>`
+    <tr data-codigo="${u.codigo}">
+      <td class="txt">${escapeHtml(u.nome)}</td>
+      <td colspan="3" class="loading-row"><span class="spin"></span>consultando…</td>
+    </tr>`).join('');
+
+  for(const u of usinasVisiveis){
+    const tr = tbody.querySelector('tr[data-codigo="'+u.codigo+'"]');
+    let item;
+    try{
+      const result = await liveStatusRequest(u.codigo);
+      item = result.ok
+        ? { codigo:u.codigo, nome:u.nome, ok:true, state:result.state, power:result.power, powerStr:result.powerStr, dayEnergy:result.dayEnergy }
+        : { codigo:u.codigo, nome:u.nome, ok:false, error: result.error || 'sem integração SolisCloud' };
+    }catch(err){
+      item = { codigo:u.codigo, nome:u.nome, ok:false, error: 'Erro: ' + (err&&err.message?err.message:String(err)) };
+    }
+    const idx = LIVE_STATUS_CACHE.findIndex(x=>x.codigo===u.codigo);
+    if(idx>-1) LIVE_STATUS_CACHE[idx] = item;
+    if(tr) tr.innerHTML = renderLiveStatusRow(item);
+    await new Promise(r=>setTimeout(r, 400)); // pausa curta entre chamadas pra não sobrecarregar a API do SolisCloud
+  }
+  document.getElementById('live-status-meta').textContent = 'atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+  btn.disabled = false;
+  renderLiveStatusTable(); // reordena Offline → Alarme → Online e reaplica a busca no resultado final
+}
+document.getElementById('live-status-refresh').addEventListener('click', refreshLiveStatus);
+
 function setGauge(pct){
   const total = 270;
   const offset = total - (Math.min(pct,130)/130)*total;
@@ -1332,6 +1590,7 @@ async function renderDashboard(){
   if(!dashUsinas.length){
     tbody.innerHTML = `<tr><td colspan="6"><div class="empty">${USINAS.length ? 'Nenhuma usina cadastrada com o status selecionado.' : 'Cadastre usinas em Usinas → Cadastro Usinas para começar.'}</div></td></tr>`;
     ['kpi-geracao','kpi-meta','kpi-abaixo'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('kpi-capacidade-mw').textContent = '—';
     setGauge(0);
     document.getElementById('gauge-sub').textContent = 'sem usinas no filtro atual';
     return;
@@ -1344,11 +1603,11 @@ async function renderDashboard(){
   const rows = dashUsinas.slice().sort((a,b)=>a.codigo.localeCompare(b.codigo)).map(u=>{
     const list = byCod[u.codigo]||[];
     const real = list.reduce((s,e)=>s+(e.geracaoReal||0),0);
-    const meta = metaMensal(u, monthNum);
+    const meta = metaMensalProporcional(u, month);
     const prAvg = meta ? (real/meta*100) : null;
 
     totalReal += real; totalMeta += meta;
-    if(meta){ usinasComMeta++; if(prAvg!=null && prAvg<90) abaixo90++; }
+    if(meta){ usinasComMeta++; if(prAvg!=null && prAvg<80) abaixo90++; }
     if(list.length) usinasComDado++;
     return {u, real, meta, prAvg, hasData: list.length>0};
   }).sort((a,b)=>{
@@ -1359,14 +1618,19 @@ async function renderDashboard(){
   });
 
   document.getElementById('kpi-geracao').textContent = fmtNum(totalReal);
+  const totalCapacidadeKwp = dashUsinas.reduce((s,u)=>s+(u.capacidade||0), 0);
+  document.getElementById('kpi-capacidade-mw').textContent = (totalCapacidadeKwp/1000).toLocaleString('pt-BR',{minimumFractionDigits:3, maximumFractionDigits:3}) + ' MWp';
   document.getElementById('kpi-meta').textContent = fmtNum(totalMeta);
+  document.getElementById('kpi-meta-sub').textContent = (month === currentMonth())
+    ? 'kWh proporcional aos dias já passados do mês'
+    : 'kWh no mês (esperado cadastrado)';
   document.getElementById('kpi-abaixo').textContent = usinasComMeta ? abaixo90 : '—';
   document.getElementById('kpi-abaixo-sub').textContent = 'de ' + usinasComMeta + ' usina(s) com meta cadastrada';
 
   const fleetPct = totalMeta ? (totalReal/totalMeta*100) : 0;
   setGauge(fleetPct);
   document.getElementById('gauge-sub').textContent = usinasComDado ? (usinasComDado + ' usina(s) com lançamento') : 'sem dados no mês';
-  document.getElementById('dash-table-meta').textContent = new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'});
+  document.getElementById('dash-table-meta').textContent = new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'}) + (month === currentMonth() ? ' — meta proporcional aos dias já passados' : '');
 
   tbody.innerHTML = rows.map(r=>{
     const prClass = r.prAvg==null ? '' : (r.prAvg>=95?'ok':(r.prAvg>=80?'warn':'bad'));
@@ -1389,8 +1653,8 @@ function renderDashboardRanking(month, monthNum, entries){
 
   const realByCod = {};
   entries.forEach(en=>{ realByCod[en.codigo] = (realByCod[en.codigo]||0) + (en.geracaoReal||0); });
-  const ranking = USINAS.filter(u=>metaMensal(u, monthNum)>0).map(u=>{
-    const meta = metaMensal(u, monthNum);
+  const ranking = USINAS.filter(u=>metaMensalProporcional(u, month)>0).map(u=>{
+    const meta = metaMensalProporcional(u, month);
     const real = realByCod[u.codigo] || 0;
     return { codigo:u.codigo, nome:u.nome, pct: real/meta*100 };
   }).sort((a,b)=>b.pct-a.pct);
@@ -1435,8 +1699,8 @@ function renderDashboardRanking(month, monthNum, entries){
     document.querySelectorAll('.empty-overlay').forEach(el=>el.remove());
   }
 }
-document.getElementById('dash-month').addEventListener('change', renderDashboard);
-document.getElementById('dash-refresh').addEventListener('click', renderDashboard);
+document.getElementById('dash-month').addEventListener('change', ()=>{ renderDashboard(); if(AUTH && AUTH.papel!=='Admin') renderClientesDaUsina(); });
+document.getElementById('dash-refresh').addEventListener('click', ()=>{ renderDashboard(); if(AUTH && AUTH.papel!=='Admin') renderClientesDaUsina(); });
 document.getElementById('dash-status-chips').addEventListener('click', (e)=>{
   const chip = e.target.closest('.chip');
   if(!chip) return;
@@ -1879,6 +2143,326 @@ document.getElementById('injh-month').addEventListener('change', renderInjHistor
 document.getElementById('injh-usina').addEventListener('change', renderInjHistory);
 
 /* ============================================================
+   Faturas — upload de PDF, OCR e extração automática
+   ============================================================ */
+let FATURAS = null;
+let pendingFatura = null; // dados extraídos aguardando confirmação
+
+function fileToBase64(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=> resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function normalizeVencimento(val){
+  if(val == null || val === '') return '';
+  const s = String(val);
+  // Se o Sheets converteu pra Date, vem tipo "2026-08-10T03:00:00.000Z" — reformata pra dd/mm/aaaa
+  const iso = /^(\d{4})-(\d{2})-(\d{2})T/.exec(s);
+  if(iso) return iso[3] + '/' + iso[2] + '/' + iso[1];
+  return s;
+}
+function normalizeNumeroPlanilha(val){
+  if(val == null || val === '') return '';
+  // Se o Sheets converteu pra número com formatação regional, garante string simples
+  return String(val).replace(',', '.');
+}
+async function loadFaturas(force){
+  if(FATURAS && !force) return FATURAS;
+  try{
+    const rows = await sheetGet('Faturas');
+    FATURAS = rows.map(r => ({
+      id: r.Id, codigoCliente: r.CodigoCliente, mes: normalizeMes(r.Mes), arquivoUrl: r.ArquivoUrl,
+      valorTotal: normalizeNumeroPlanilha(r.ValorTotal), consumoKwh: normalizeNumeroPlanilha(r.ConsumoKwh),
+      energiaCompensadaKwh: normalizeNumeroPlanilha(r.EnergiaCompensadaKwh), saldoCreditos: normalizeNumeroPlanilha(r.SaldoCreditos),
+      vencimento: normalizeVencimento(r.Vencimento), textoExtraido: r.TextoExtraido, obs: r.Obs||''
+    }));
+  }catch(e){ toast('Erro ao carregar faturas: ' + e.message, true); FATURAS = []; }
+  return FATURAS;
+}
+async function deleteFaturaRemote(id){
+  try{ await sheetPost({op:'delete', sheet:'Faturas', key:'Id', value:id}); return true; }
+  catch(e){ toast('Erro ao excluir fatura: ' + e.message, true); return false; }
+}
+
+function populateFaturaClienteSelects(){
+  const opts = CLIENTES.slice().sort((a,b)=>a.nome.localeCompare(b.nome))
+    .map(c=>`<option value="${c.codigo}">${c.codigo} — ${escapeHtml(c.nome)}</option>`).join('');
+  const selA = document.getElementById('fat-cliente');
+  const curA = selA.value;
+  selA.innerHTML = '<option value="">selecione…</option>' + opts;
+  if(curA) selA.value = curA;
+
+  const selB = document.getElementById('fath-cliente');
+  const curB = selB.value;
+  selB.innerHTML = '<option value="">todos os clientes</option>' + opts;
+  if(curB) selB.value = curB;
+}
+
+document.getElementById('form-fatura').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const codigoCliente = document.getElementById('fat-cliente').value;
+  const mes = document.getElementById('fat-mes').value;
+  const fileInput = document.getElementById('fat-arquivo');
+  const file = fileInput.files[0];
+  const hint = document.getElementById('fat-upload-hint');
+
+  if(!codigoCliente || !mes || !file){ toast('Preencha cliente, mês e escolha o arquivo.', true); return; }
+
+  const btn = document.getElementById('fat-submit');
+  btn.disabled = true;
+  hint.textContent = 'Enviando e lendo o PDF (pode levar alguns segundos)…';
+  try{
+    const base64 = await fileToBase64(file);
+    const result = await sheetPost({
+      op: 'uploadFatura', base64, filename: file.name, mimeType: file.type || 'application/pdf',
+      codigoCliente, mes
+    });
+    pendingFatura = { id: result.id, codigoCliente, mes, arquivoUrl: result.arquivoUrl };
+    document.getElementById('fat-r-valor').value = (result.campos && result.campos.valorTotal) || '';
+    document.getElementById('fat-r-consumo').value = (result.campos && result.campos.consumoKwh) || '';
+    document.getElementById('fat-r-compensada').value = (result.campos && result.campos.energiaCompensadaKwh) || '';
+    document.getElementById('fat-r-saldo').value = (result.campos && result.campos.saldoCreditos) || '';
+    document.getElementById('fat-r-vencimento').value = (result.campos && result.campos.vencimento) || '';
+    document.getElementById('fat-r-texto').value = result.textoExtraido || '(sem texto extraído)';
+    document.getElementById('fat-r-link').href = result.arquivoUrl;
+    document.getElementById('fat-review-panel').style.display = 'block';
+    document.getElementById('fat-review-panel').scrollIntoView({behavior:'smooth', block:'start'});
+    hint.textContent = '';
+    toast('PDF enviado e analisado. Confira os dados abaixo antes de salvar.');
+  }catch(err){
+    hint.textContent = '';
+    toast('Erro ao enviar fatura: ' + (err && err.message ? err.message : err), true);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('fat-confirm').addEventListener('click', async ()=>{
+  if(!pendingFatura) return;
+  const btn = document.getElementById('fat-confirm');
+  btn.disabled = true;
+  const numOrEmpty = (val)=>{
+    const n = parseFloat(String(val).replace(',', '.'));
+    return isNaN(n) ? '' : n;
+  };
+  try{
+    await sheetPost({
+      op:'upsert', sheet:'Faturas', key:'Id',
+      row:{
+        Id: pendingFatura.id, CodigoCliente: pendingFatura.codigoCliente, Mes: pendingFatura.mes,
+        ArquivoUrl: pendingFatura.arquivoUrl,
+        ValorTotal: numOrEmpty(document.getElementById('fat-r-valor').value),
+        ConsumoKwh: numOrEmpty(document.getElementById('fat-r-consumo').value),
+        EnergiaCompensadaKwh: numOrEmpty(document.getElementById('fat-r-compensada').value),
+        SaldoCreditos: numOrEmpty(document.getElementById('fat-r-saldo').value),
+        Vencimento: document.getElementById('fat-r-vencimento').value,
+        TextoExtraido: document.getElementById('fat-r-texto').value,
+        Obs: ''
+      }
+    });
+    toast('Fatura salva.');
+    pendingFatura = null;
+    document.getElementById('fat-review-panel').style.display = 'none';
+    document.getElementById('form-fatura').reset();
+    document.getElementById('fath-month').value = document.getElementById('fat-mes').value || currentMonth();
+    await loadFaturas(true);
+    renderFaturasHistory();
+  }catch(err){
+    toast('Erro ao salvar fatura: ' + (err && err.message ? err.message : err), true);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+async function renderFaturasHistory(){
+  const month = document.getElementById('fath-month').value || currentMonth();
+  document.getElementById('fath-month').value = month;
+  const tbody = document.getElementById('fath-tbody');
+  tbody.innerHTML = `<tr><td colspan="8" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
+
+  const faturas = await loadFaturas();
+  const filterCli = document.getElementById('fath-cliente').value;
+  const rows = faturas.filter(f => f.mes===month && (!filterCli || f.codigoCliente===filterCli))
+    .sort((a,b)=> clienteNome(a.codigoCliente).localeCompare(clienteNome(b.codigoCliente)));
+
+  document.getElementById('fat-hist-meta').textContent = rows.length + ' fatura(s)';
+
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty">Nenhuma fatura lançada neste mês${filterCli?' para este cliente':''} ainda.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(f=>`
+    <tr>
+      <td>${new Date(f.mes+'-02').toLocaleDateString('pt-BR',{month:'short', year:'numeric'})}</td>
+      <td class="txt">${escapeHtml(clienteNome(f.codigoCliente))}</td>
+      <td class="num">${f.valorTotal ? Number(f.valorTotal).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—'}</td>
+      <td class="num">${f.consumoKwh ? fmtNum(f.consumoKwh) : '—'}</td>
+      <td class="num">${f.energiaCompensadaKwh ? fmtNum(f.energiaCompensadaKwh) : '—'}</td>
+      <td class="num">${f.saldoCreditos ? fmtNum(f.saldoCreditos) : '—'}</td>
+      <td class="txt">${escapeHtml(f.vencimento||'—')}</td>
+      <td><div class="row-actions">
+        <a class="btn-edit-ghost" title="Abrir PDF" href="${f.arquivoUrl}" target="_blank" style="display:inline-flex;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 0 0 1 1h4M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg></a>
+        <button class="btn-danger-ghost" title="Excluir" onclick="deleteFatura('${f.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
+      </div></td>
+    </tr>`).join('');
+}
+window.deleteFatura = async function(id){
+  if(!confirm('Excluir esta fatura? O arquivo continua no Google Drive.')) return;
+  const faturas = await loadFaturas();
+  FATURAS = faturas.filter(f=>f.id!==id);
+  const ok = await deleteFaturaRemote(id);
+  if(ok){ toast('Fatura removida.'); renderFaturasHistory(); }
+};
+document.getElementById('fath-month').addEventListener('change', renderFaturasHistory);
+document.getElementById('fath-cliente').addEventListener('change', renderFaturasHistory);
+
+/* ============================================================
+   Usuários (Admin) — login, papel e usinas permitidas
+   ============================================================ */
+let USUARIOS = null;
+let editingUsuarioLogin = null;
+
+async function loadUsuarios(){
+  try{
+    const rows = await sheetGet('Usuarios');
+    USUARIOS = rows.map(r => ({
+      login: r.Login, nome: r.Nome, papel: r.Papel || 'Cliente',
+      usinas: String(r.UsinasPermitidas||'').split(',').map(s=>s.trim()).filter(Boolean)
+    }));
+  }catch(e){ toast('Erro ao carregar usuários: ' + e.message, true); USUARIOS = []; }
+  return USUARIOS;
+}
+async function upsertUsuarioRemote(payload){
+  try{ await sheetPost(Object.assign({op:'upsertUsuario'}, payload)); return true; }
+  catch(e){ toast('Erro ao salvar usuário: ' + e.message, true); return false; }
+}
+async function deleteUsuarioRemote(login){
+  try{ await sheetPost({op:'deleteUsuario', login}); return true; }
+  catch(e){ toast('Erro ao excluir usuário: ' + e.message, true); return false; }
+}
+
+function renderClienteUsinasChipsUsuario(selecionadas){
+  const wrap = document.getElementById('us-usinas-chips');
+  const sel = new Set(selecionadas||[]);
+  if(!USINAS.length){ wrap.innerHTML = '<span class="hint" style="margin:0;">Cadastre usinas primeiro, em Usinas → Cadastro Usinas.</span>'; return; }
+  wrap.innerHTML = USINAS.slice().sort((a,b)=>a.codigo.localeCompare(b.codigo)).map(u=>
+    `<button type="button" class="chip ${sel.has(u.codigo)?'active':''}" data-codigo="${u.codigo}">${u.codigo} — ${escapeHtml(u.nome)}</button>`
+  ).join('');
+}
+document.getElementById('us-usinas-chips').addEventListener('click', (e)=>{
+  const chip = e.target.closest('.chip');
+  if(!chip) return;
+  chip.classList.toggle('active');
+});
+function getSelectedUsuarioUsinas(){
+  return Array.from(document.querySelectorAll('#us-usinas-chips .chip.active')).map(c=>c.dataset.codigo);
+}
+function toggleUsinasFieldByPapel(){
+  const isAdminPapel = document.getElementById('us-papel').value === 'Admin';
+  document.getElementById('us-usinas-field').style.opacity = isAdminPapel ? '.4' : '1';
+  document.getElementById('us-usinas-field').style.pointerEvents = isAdminPapel ? 'none' : 'auto';
+}
+document.getElementById('us-papel').addEventListener('change', toggleUsinasFieldByPapel);
+
+function renderUsuariosTable(){
+  const tbody = document.getElementById('usuarios-tbody');
+  const rows = (USUARIOS||[]).slice().sort((a,b)=>a.login.localeCompare(b.login));
+  document.getElementById('usuarios-count').textContent = rows.length + ' usuário(s)';
+
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Nenhum usuário cadastrado ainda. Use o formulário acima.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(u => `
+    <tr>
+      <td class="txt">${escapeHtml(u.login)}</td>
+      <td class="txt">${escapeHtml(u.nome)}</td>
+      <td><span class="tag ${u.papel==='Admin'?'warn':'ok'}">${escapeHtml(u.papel)}</span></td>
+      <td class="txt">${u.papel==='Admin' ? 'todas' : escapeHtml(usinasLabel(u.usinas))}</td>
+      <td><div class="row-actions">
+        <button class="btn-edit-ghost" title="Editar" onclick="startEditUsuario('${u.login}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+        <button class="btn-danger-ghost" title="Excluir" onclick="deleteUsuario('${u.login}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
+      </div></td>
+    </tr>`).join('');
+}
+window.startEditUsuario = function(login){
+  const u = USUARIOS.find(x=>x.login===login);
+  if(!u) return;
+  editingUsuarioLogin = login;
+  document.getElementById('us-login').value = u.login;
+  document.getElementById('us-login').disabled = true;
+  document.getElementById('us-nome').value = u.nome;
+  document.getElementById('us-senha').value = '';
+  document.getElementById('us-senha-hint').textContent = '(deixe em branco para manter a senha atual)';
+  document.getElementById('us-papel').value = u.papel;
+  renderClienteUsinasChipsUsuario(u.usinas);
+  toggleUsinasFieldByPapel();
+  document.getElementById('us-submit').textContent = 'Salvar alterações (' + login + ')';
+  document.getElementById('us-cancel').style.display = 'inline-flex';
+  document.getElementById('form-usuario').scrollIntoView({behavior:'smooth', block:'center'});
+};
+document.getElementById('us-cancel').addEventListener('click', ()=>{
+  editingUsuarioLogin = null;
+  document.getElementById('form-usuario').reset();
+  document.getElementById('us-login').disabled = false;
+  document.getElementById('us-senha-hint').textContent = '(obrigatória para novo usuário)';
+  renderClienteUsinasChipsUsuario([]);
+  toggleUsinasFieldByPapel();
+  document.getElementById('us-submit').textContent = 'Adicionar usuário';
+  document.getElementById('us-cancel').style.display = 'none';
+});
+window.deleteUsuario = async function(login){
+  if(login === AUTH.login){ toast('Você não pode excluir o próprio usuário logado.', true); return; }
+  if(!confirm('Excluir o usuário ' + login + '?')) return;
+  const prev = USUARIOS;
+  USUARIOS = USUARIOS.filter(u=>u.login!==login);
+  const ok = await deleteUsuarioRemote(login);
+  if(ok){ toast('Usuário removido.'); renderUsuariosTable(); }
+  else USUARIOS = prev;
+};
+document.getElementById('form-usuario').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const loginEl = document.getElementById('us-login');
+  const nomeEl = document.getElementById('us-nome');
+  const login = loginEl.value.trim();
+  const nome = nomeEl.value.trim();
+  const senha = document.getElementById('us-senha').value;
+  const papel = document.getElementById('us-papel').value;
+  const usinasPermitidas = papel === 'Admin' ? '' : getSelectedUsuarioUsinas().join(',');
+
+  if(!login){ toast('Preencha o login.', true); loginEl.focus(); return; }
+  if(!nome){ toast('Preencha o nome.', true); nomeEl.focus(); return; }
+  if(!editingUsuarioLogin && !senha){ toast('Senha é obrigatória para um novo usuário.', true); return; }
+
+  const btn = document.getElementById('us-submit');
+  btn.disabled = true;
+  try{
+    const ok = await upsertUsuarioRemote({ login, senha, nome, papel, usinasPermitidas });
+    if(ok){
+      toast(editingUsuarioLogin ? 'Usuário atualizado.' : 'Usuário criado: ' + login);
+      editingUsuarioLogin = null;
+      e.target.reset();
+      document.getElementById('us-login').disabled = false;
+      document.getElementById('us-senha-hint').textContent = '(obrigatória para novo usuário)';
+      renderClienteUsinasChipsUsuario([]);
+      toggleUsinasFieldByPapel();
+      document.getElementById('us-submit').textContent = 'Adicionar usuário';
+      document.getElementById('us-cancel').style.display = 'none';
+      await loadUsuarios();
+      renderUsuariosTable();
+    }
+  }catch(err){
+    toast('Erro inesperado: ' + (err && err.message ? err.message : err), true);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+/* ============================================================
    Clientes — cadastro e compensação mensal manual
    ============================================================ */
 let CLIENTES = [];
@@ -2048,7 +2632,7 @@ window.deleteCliente = async function(codigo){
   const prev = CLIENTES;
   CLIENTES = CLIENTES.filter(c=>c.codigo!==codigo);
   const ok = await deleteClienteRemote(codigo);
-  if(ok){ toast('Cliente removido.'); renderClientesTable(); renderCompGrid(); populateClienteFilterSelect(); }
+  if(ok){ toast('Cliente removido.'); renderClientesTable(); renderCompGrid(); populateClienteFilterSelect(); populateFaturaClienteSelects(); }
   else CLIENTES = prev;
 };
 document.getElementById('form-cliente').addEventListener('submit', async (e)=>{
@@ -2082,7 +2666,7 @@ document.getElementById('form-cliente').addEventListener('submit', async (e)=>{
       document.getElementById('cl-cancel').style.display = 'none';
       renderClientesTable();
       renderCompGrid();
-      populateClienteFilterSelect();
+      populateClienteFilterSelect(); populateFaturaClienteSelects();
     }
   }catch(err){
     toast('Erro inesperado ao cadastrar cliente: ' + (err && err.message ? err.message : err), true);
@@ -2522,6 +3106,8 @@ async function init(){
   document.getElementById('gc-year').value = new Date().getFullYear();
   document.getElementById('inj-month').value = currentMonth();
   document.getElementById('injh-month').value = currentMonth();
+  document.getElementById('fat-mes').value = currentMonth();
+  document.getElementById('fath-month').value = currentMonth();
 
   // carrega os cadastros base primeiro (em paralelo), antes de desenhar qualquer coisa —
   // evita que um clique rápido em outra aba (ex: Clientes) renderize com dados ainda vazios
@@ -2535,12 +3121,109 @@ async function init(){
   try{ await renderInjGrid(); }catch(e){ console.error(e); }
   try{ await renderInjHistory(); }catch(e){ console.error(e); }
   try{ renderClientesTable(); }catch(e){ console.error(e); }
-  try{ populateClienteFilterSelect(); }catch(e){ console.error(e); }
+  try{ populateClienteFilterSelect(); populateFaturaClienteSelects(); }catch(e){ console.error(e); }
   try{ await renderDashboard(); }catch(e){ console.error(e); }
   try{ await renderGrid(); }catch(e){ console.error(e); }
   try{ await renderLancTable(); }catch(e){ console.error(e); }
 }
-init();
+
+function applyRolePermissions(){
+  if(!AUTH) return;
+  document.getElementById('user-name').textContent = AUTH.nome + (AUTH.papel==='Admin' ? ' (admin)' : '');
+  const clientesBtn = document.querySelector('nav.tabs > button[data-view="clientes"]');
+  const gcBtn = document.querySelector('nav.tabs > button[data-view="graficos-clientes"]');
+  const lancSub = document.querySelector('.tab-dropdown-menu button[data-subview="lancamento"]');
+  const cadSub = document.querySelector('.tab-dropdown-menu button[data-subview="cadastro"]');
+  const usBtn = document.querySelector('nav.tabs > button[data-view="usuarios"]');
+  const fatBtn = document.querySelector('nav.tabs > button[data-view="faturas"]');
+  const isAdmin = AUTH.papel === 'Admin';
+  if(clientesBtn) clientesBtn.style.display = isAdmin ? '' : 'none';
+  if(gcBtn) gcBtn.style.display = isAdmin ? '' : 'none';
+  if(lancSub) lancSub.style.display = isAdmin ? '' : 'none';
+  if(cadSub) cadSub.style.display = isAdmin ? '' : 'none';
+  if(usBtn) usBtn.style.display = isAdmin ? '' : 'none';
+  if(fatBtn) fatBtn.style.display = isAdmin ? '' : 'none';
+
+  document.getElementById('top10-panel').style.display = isAdmin ? '' : 'none';
+  document.getElementById('clientes-da-usina-panel').style.display = isAdmin ? 'none' : '';
+  if(!isAdmin) renderClientesDaUsina();
+
+  const dashStatusField = document.getElementById('dash-status-filter-field');
+  const chartStatusField = document.getElementById('chart-status-filter-field');
+  if(dashStatusField) dashStatusField.style.display = isAdmin ? '' : 'none';
+  if(chartStatusField) chartStatusField.style.display = isAdmin ? '' : 'none';
+}
+
+async function renderClientesDaUsina(){
+  const tbody = document.getElementById('cdu-tbody');
+  const meta = document.getElementById('cdu-meta');
+  const month = document.getElementById('dash-month').value || currentMonth();
+
+  const permitidas = new Set((AUTH && AUTH.usinas) || []);
+  const rows = CLIENTES.filter(c => (c.usinas||[]).some(cod => permitidas.has(cod)))
+    .sort((a,b)=>a.nome.localeCompare(b.nome));
+
+  meta.textContent = rows.length + ' cliente(s)';
+
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty">Nenhum cliente vinculado a esta usina ainda.</div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = `<tr><td colspan="4" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
+  const compensacoes = await loadCompensacoes();
+  const faturas = await loadFaturas();
+
+  tbody.innerHTML = rows.map(c=>{
+    const registro = compensacoes.find(comp => comp.mes===month && comp.codigoCliente===c.codigo);
+    const kwhDestaUsina = registro
+      ? (registro.detalhe||[]).filter(d=>permitidas.has(d.codigo)).reduce((s,d)=>s+(d.kwh||0),0)
+      : 0;
+    const fatura = faturas.find(f => f.mes===month && f.codigoCliente===c.codigo);
+    return `
+    <tr>
+      <td class="txt">${escapeHtml(c.nome)}</td>
+      <td class="txt">${escapeHtml(c.contaContrato||'—')}</td>
+      <td class="num">${registro ? fmtNum(kwhDestaUsina) : '—'}</td>
+      <td>${fatura ? `<a href="${fatura.arquivoUrl}" target="_blank" class="btn btn-ghost" style="padding:6px 12px; font-size:12px;">Abrir fatura</a>` : '<span class="hint" style="margin:0;">sem fatura</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('login-form').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  const btn = document.getElementById('login-submit');
+  btn.disabled = true;
+  try{
+    const result = await doLoginRequest(user, pass);
+    if(!result.ok){
+      errEl.textContent = result.error || 'Login ou senha incorretos.';
+      btn.disabled = false;
+      return;
+    }
+    AUTH = { token: result.token, login: result.login, nome: result.nome, papel: result.papel, usinas: result.usinas };
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-shell').style.display = 'block';
+    await init();
+    applyRolePermissions();
+  }catch(err){
+    errEl.textContent = 'Erro ao conectar: ' + (err && err.message ? err.message : err);
+  }
+  btn.disabled = false;
+});
+
+document.getElementById('user-pill').addEventListener('click', ()=>{
+  if(!confirm('Sair da sua conta?')) return;
+  AUTH = null;
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('app-shell').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+});
 </script>
 </body>
 </html>
