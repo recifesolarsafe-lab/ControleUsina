@@ -1534,7 +1534,8 @@ document.getElementById('live-status-search').addEventListener('input', renderLi
 async function refreshLiveStatus(){
   const tbody = document.getElementById('live-status-tbody');
   const btn = document.getElementById('live-status-refresh');
-  const usinasVisiveis = USINAS.slice().sort((a,b)=>a.codigo.localeCompare(b.codigo));
+  const permitidas = (AUTH && AUTH.papel !== 'Admin') ? new Set(AUTH.usinas||[]) : null;
+  const usinasVisiveis = USINAS.filter(u => !permitidas || permitidas.has(u.codigo)).sort((a,b)=>a.codigo.localeCompare(b.codigo));
   if(!usinasVisiveis.length){
     tbody.innerHTML = `<tr><td colspan="4" class="empty">Nenhuma usina disponível.</td></tr>`;
     return;
