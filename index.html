@@ -3,27 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Controle de Geração — Usinas Solares</title>
+<title>SolarSafe — Controle de Geração</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
 <style>
   :root{
-    --bg:#0E141B;
-    --surface:#141C25;
-    --surface-2:#1B2530;
-    --surface-3:#212C38;
-    --border:#28323E;
-    --amber:#F2A93C;
-    --amber-dim:#C98A2E;
-    --amber-soft:rgba(242,169,60,0.12);
+    --bg:#1B2A45;
+    --surface:#213353;
+    --surface-2:#293D61;
+    --surface-3:#31456D;
+    --border:#3A4F79;
+    --amber:#F2703C;
+    --amber-dim:#C9572A;
+    --amber-soft:rgba(242,112,60,0.14);
     --teal:#34D9C4;
     --teal-soft:rgba(52,217,196,0.12);
     --red:#F2555F;
     --red-soft:rgba(242,85,95,0.12);
-    --text:#E7EAEE;
-    --text-dim:#93A0AD;
-    --text-faint:#5C6672;
+    --text:#EDF0F5;
+    --text-dim:#9CACC9;
+    --text-faint:#6376A0;
     --font-display:'Space Grotesk',sans-serif;
     --font-body:'Inter',sans-serif;
     --font-mono:'IBM Plex Mono',monospace;
@@ -33,7 +33,7 @@
   html,body{height:100%;}
   body{
     background:
-      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(242,169,60,0.07), transparent 60%),
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(242,112,60,0.07), transparent 60%),
       var(--bg);
     color:var(--text);
     font-family:var(--font-body);
@@ -57,13 +57,11 @@
   }
   .brand{display:flex; align-items:center; gap:10px;}
   .brand-mark{
-    width:34px; height:34px; border-radius:8px;
-    background:conic-gradient(from -90deg, var(--amber), #7A5416, var(--amber));
+    width:34px; height:34px;
     display:flex; align-items:center; justify-content:center;
-    box-shadow:0 0 0 1px rgba(242,169,60,0.35), 0 4px 14px rgba(242,169,60,0.18);
     flex-shrink:0;
   }
-  .brand-mark svg{width:18px; height:18px;}
+  .brand-mark svg{width:32px; height:32px;}
   .brand-text h1{font-family:var(--font-display); font-size:16px; font-weight:600; letter-spacing:0.2px;}
   .brand-text span{display:block; font-size:11px; color:var(--text-faint); font-family:var(--font-mono); margin-top:1px; letter-spacing:0.3px;}
   nav.tabs{
@@ -117,7 +115,7 @@
 
   .shared-note{
     display:flex; gap:8px; align-items:flex-start;
-    background:var(--amber-soft); border:1px solid rgba(242,169,60,0.3);
+    background:var(--amber-soft); border:1px solid rgba(242,112,60,0.3);
     border-radius:var(--radius); padding:10px 14px; margin-bottom:22px;
     font-size:12.5px; color:#E8C88A; line-height:1.5;
   }
@@ -251,7 +249,7 @@
   .usina-kwh-row input:focus{outline:none; border-color:var(--amber);}
   .g-total-display{width:104px; padding:6px 8px; font-size:12.5px; font-family:var(--font-mono); text-align:right;
     background:var(--surface-3); border:1px solid var(--border); border-radius:7px; color:var(--amber); font-weight:600;}
-  tr.row-dirty td{background:rgba(242,169,60,0.05);}
+  tr.row-dirty td{background:rgba(242,112,60,0.05);}
   tr.row-saved td{background:rgba(52,217,196,0.04);}
 
   .toolbar{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:16px;}
@@ -287,28 +285,88 @@
   @media (max-width:860px){.chart-grid.two{grid-template-columns:1fr;}}
   .chart-box{position:relative; height:280px;}
   .chart-box.tall{height:340px;}
+
+  /* ---------- login screen ---------- */
+  .login-screen{min-height:100vh; display:grid; grid-template-columns:1.15fr 1fr;}
+  @media (max-width:900px){ .login-screen{grid-template-columns:1fr; grid-template-rows:auto 1fr;} }
+
+  .login-visual{
+    position:relative; overflow:hidden; display:flex; align-items:center;
+    background:
+      radial-gradient(1200px 800px at -10% -10%, rgba(242,112,60,0.10), transparent 55%),
+      linear-gradient(165deg, #141C25 0%, #0E141B 75%);
+    padding:64px 56px; border-right:1px solid var(--border);
+  }
+  @media (max-width:900px){ .login-visual{padding:40px 28px 32px; border-right:none; border-bottom:1px solid var(--border);} }
+  .login-glow{position:absolute; border-radius:50%; filter:blur(40px); pointer-events:none;}
+  .login-glow-amber{width:520px; height:520px; background:radial-gradient(circle, rgba(242,112,60,0.16), transparent 70%); top:-180px; left:-140px;}
+  .login-glow-teal{width:420px; height:420px; background:radial-gradient(circle, rgba(52,217,196,0.10), transparent 70%); bottom:-160px; right:-120px;}
+  .login-visual-content{position:relative; z-index:1; max-width:440px;}
+  .login-brand-mark-lg{
+    width:64px; height:64px; margin-bottom:24px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .login-brand-mark-lg svg{width:60px; height:60px;}
+  .login-visual-title{font-family:var(--font-display); font-size:30px; font-weight:600; line-height:1.25; letter-spacing:-0.3px;}
+  @media (max-width:900px){ .login-visual-title{font-size:22px;} }
+  .login-visual-tagline{color:var(--amber); font-family:var(--font-mono); font-size:13px; letter-spacing:0.3px; margin-top:6px;}
+  .login-visual-sub{color:var(--text-dim); font-size:14px; line-height:1.6; margin-top:14px; max-width:400px;}
+  @media (max-width:900px){ .login-visual-sub{display:none;} }
+  .login-features{list-style:none; margin-top:32px; display:flex; flex-direction:column; gap:16px;}
+  @media (max-width:900px){ .login-features{display:none;} }
+  .login-features li{display:flex; align-items:center; gap:12px; font-size:13px; color:var(--text-dim);}
+  .login-features li svg{width:17px; height:17px; flex-shrink:0; color:var(--amber);}
+
+  .login-form-wrap{display:flex; align-items:center; justify-content:center; padding:32px 24px;}
+  .login-card{
+    width:100%; max-width:380px; background:var(--surface); border:1px solid var(--border);
+    border-radius:16px; padding:36px 32px; box-shadow:0 20px 50px rgba(0,0,0,0.25);
+  }
+  .login-card-header{margin-bottom:28px;}
+  .login-mobile-mark{display:none; margin-bottom:18px;}
+  @media (max-width:900px){ .login-mobile-mark{display:flex;} }
+  .login-card-title{font-family:var(--font-display); font-size:22px; font-weight:600;}
+  .login-card-sub{display:block; font-size:13px; color:var(--text-dim); margin-top:6px;}
+  .login-footnote{text-align:center; font-size:11px; color:var(--text-faint); font-family:var(--font-mono); margin-top:22px; letter-spacing:0.2px;}
 </style>
 </head>
 <body>
 
-<div id="login-screen" style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;">
-  <form id="login-form" style="width:100%; max-width:360px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:32px 28px;">
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:24px;">
-      <div class="brand-mark">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="4.2" fill="#12100A"/><g stroke="#12100A" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v2.4M12 19.6V22M22 12h-2.4M4.4 12H2M18.7 5.3l-1.7 1.7M7 17l-1.7 1.7M18.7 18.7L17 17M7 7 5.3 5.3"/></g></svg>
+<div id="login-screen" class="login-screen">
+  <div class="login-visual">
+    <div class="login-glow login-glow-amber"></div>
+    <div class="login-glow login-glow-teal"></div>
+    <div class="login-visual-content">
+      <div class="login-brand-mark-lg">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g stroke="var(--amber)" stroke-width="1.7" stroke-linecap="round"><path d="M12 2v2.4M12 19.6V22M22 12h-2.4M4.4 12H2M18.7 5.3l-1.7 1.7M7 17l-1.7 1.7M18.7 18.7L17 17M7 7 5.3 5.3"/><circle cx="12" cy="12.6" r="5.2" stroke-dasharray="29 3.7" stroke-dashoffset="6"/><path d="M12 8.4v3.2"/></g></svg>
       </div>
-      <div>
-        <h1 style="font-family:var(--font-display); font-size:16px; font-weight:600;">Controle de Geração Solar</h1>
-        <span style="display:block; font-size:11px; color:var(--text-faint); font-family:var(--font-mono);">acesso restrito</span>
+      <h1 class="login-visual-title">SolarSafe</h1>
+      <p class="login-visual-tagline">tecnologia em energia solar</p>
+      <p class="login-visual-sub">Monitoramento, lançamentos e gestão completa das suas usinas fotovoltaicas — em um só lugar.</p>
+      <ul class="login-features">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h7l-1 8 11-14h-7l1-6z"/></svg>Monitoramento em tempo real</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Acesso controlado</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="login-form-wrap">
+    <form id="login-form" class="login-card">
+      <div class="login-card-header">
+        <div class="brand-mark login-mobile-mark">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g stroke="var(--amber)" stroke-width="1.7" stroke-linecap="round"><path d="M12 2v2.4M12 19.6V22M22 12h-2.4M4.4 12H2M18.7 5.3l-1.7 1.7M7 17l-1.7 1.7M18.7 18.7L17 17M7 7 5.3 5.3"/><circle cx="12" cy="12.6" r="5.2" stroke-dasharray="29 3.7" stroke-dashoffset="6"/><path d="M12 8.4v3.2"/></g></svg>
+        </div>
+        <h2 class="login-card-title">Bem-vindo</h2>
+        <span class="login-card-sub">Entre com seu login e senha para continuar</span>
       </div>
-    </div>
-    <div class="field-grid" style="grid-template-columns:1fr; gap:14px;">
-      <div><label for="login-user">Login</label><input type="text" id="login-user" autocomplete="username" required></div>
-      <div><label for="login-pass">Senha</label><input type="password" id="login-pass" autocomplete="current-password" required></div>
-    </div>
-    <div id="login-error" style="color:var(--red); font-size:12.5px; margin-top:12px; min-height:16px;"></div>
-    <button type="submit" class="btn btn-primary" id="login-submit" style="width:100%; justify-content:center; margin-top:8px;">Entrar</button>
-  </form>
+      <div class="field-grid" style="grid-template-columns:1fr; gap:16px;">
+        <div><label for="login-user">Login</label><input type="text" id="login-user" autocomplete="username" required></div>
+        <div><label for="login-pass">Senha</label><input type="password" id="login-pass" autocomplete="current-password" required></div>
+      </div>
+      <div id="login-error" style="color:var(--red); font-size:12.5px; margin-top:12px; min-height:16px;"></div>
+      <button type="submit" class="btn btn-primary" id="login-submit" style="width:100%; justify-content:center; margin-top:10px;">Entrar</button>
+    </form>
+  </div>
 </div>
 
 <div id="app-shell" style="display:none;">
@@ -316,11 +374,11 @@
   <div class="top-inner">
     <div class="brand">
       <div class="brand-mark">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="4.2" fill="#12100A"/><g stroke="#12100A" stroke-width="1.6" stroke-linecap="round"><path d="M12 2v2.4M12 19.6V22M22 12h-2.4M4.4 12H2M18.7 5.3l-1.7 1.7M7 17l-1.7 1.7M18.7 18.7L17 17M7 7 5.3 5.3"/></g></svg>
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g stroke="var(--amber)" stroke-width="1.7" stroke-linecap="round"><path d="M12 2v2.4M12 19.6V22M22 12h-2.4M4.4 12H2M18.7 5.3l-1.7 1.7M7 17l-1.7 1.7M18.7 18.7L17 17M7 7 5.3 5.3"/><circle cx="12" cy="12.6" r="5.2" stroke-dasharray="29 3.7" stroke-dashoffset="6"/><path d="M12 8.4v3.2"/></g></svg>
       </div>
       <div class="brand-text">
-        <h1>Controle de Geração Solar</h1>
-        <span id="usina-count">carregando frota…</span>
+        <h1>SolarSafe</h1>
+        <span id="usina-count">carregando usinas…</span>
       </div>
     </div>
     <nav class="tabs">
@@ -378,11 +436,8 @@
       <div class="field" id="dash-status-filter-field" style="margin-bottom:0;">
         <label>Filtrar usinas por status <span class="hint" style="margin:0;">(nenhum selecionado = todas as usinas)</span></label>
         <div class="status-chips" id="dash-status-chips">
-          <button type="button" class="chip" data-status="Operação">Operação</button>
-          <button type="button" class="chip" data-status="Comissionamento">Comissionamento</button>
           <button type="button" class="chip" data-status="Manutenção">Manutenção</button>
           <button type="button" class="chip" data-status="Usina Própria">Usina Própria</button>
-          <button type="button" class="chip" data-status="Desativada">Desativada</button>
           <button type="button" class="btn btn-ghost" id="dash-status-clear" style="padding:6px 12px; font-size:12px;">Limpar filtro</button>
         </div>
       </div>
@@ -395,8 +450,8 @@
           <path id="gauge-arc" d="M 14 110 A 86 86 0 0 1 186 110" fill="none" stroke="url(#gaugeGrad)" stroke-width="14" stroke-linecap="round" stroke-dasharray="270 270" stroke-dashoffset="270"/>
           <defs>
             <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#C98A2E"/>
-              <stop offset="100%" stop-color="#F2A93C"/>
+              <stop offset="0%" stop-color="#C9572A"/>
+              <stop offset="100%" stop-color="#F2703C"/>
             </linearGradient>
           </defs>
           <text x="100" y="98" text-anchor="middle" font-family="Space Grotesk" font-size="30" font-weight="600" fill="#E7EAEE" id="gauge-text">—</text>
@@ -414,11 +469,11 @@
 
     <div class="chart-grid two" id="top10-panel">
       <div class="panel">
-        <div class="panel-title">Top 10 — melhor atingimento da meta<small>frota inteira, sem filtro</small></div>
+        <div class="panel-title">Top 10 — melhor atingimento da meta<small>todas as usinas, sem filtro</small></div>
         <div class="chart-box"><canvas id="chart-top"></canvas></div>
       </div>
       <div class="panel">
-        <div class="panel-title">Top 10 — pior atingimento da meta<small>frota inteira, sem filtro</small></div>
+        <div class="panel-title">Top 10 — pior atingimento da meta<small>todas as usinas, sem filtro</small></div>
         <div class="chart-box"><canvas id="chart-bottom"></canvas></div>
       </div>
     </div>
@@ -519,11 +574,8 @@
       <div class="field" id="chart-status-filter-field" style="margin-bottom:0;">
         <label>Filtrar usinas por status <span class="hint" style="margin:0;">(aplica aos gráficos abaixo; nenhum selecionado = todas as usinas)</span></label>
         <div class="status-chips" id="chart-status-chips">
-          <button type="button" class="chip" data-status="Operação">Operação</button>
-          <button type="button" class="chip" data-status="Comissionamento">Comissionamento</button>
           <button type="button" class="chip" data-status="Manutenção">Manutenção</button>
           <button type="button" class="chip" data-status="Usina Própria">Usina Própria</button>
-          <button type="button" class="chip" data-status="Desativada">Desativada</button>
           <button type="button" class="btn btn-ghost" id="chart-status-clear" style="padding:6px 12px; font-size:12px;">Limpar filtro</button>
         </div>
       </div>
@@ -628,11 +680,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
       <div class="field" style="margin-bottom:16px;">
         <label>Filtrar por status <span class="hint" style="margin:0;">(toque para combinar; nenhum selecionado = mostra todas)</span></label>
         <div class="status-chips" id="cf-status-chips">
-          <button type="button" class="chip" data-status="Operação">Operação</button>
-          <button type="button" class="chip" data-status="Comissionamento">Comissionamento</button>
           <button type="button" class="chip" data-status="Manutenção">Manutenção</button>
           <button type="button" class="chip" data-status="Usina Própria">Usina Própria</button>
-          <button type="button" class="chip" data-status="Desativada">Desativada</button>
           <button type="button" class="btn btn-ghost" id="cf-status-clear" style="padding:6px 12px; font-size:12px;">Limpar filtro</button>
         </div>
       </div>
@@ -1052,7 +1101,7 @@ function activateSubview(name){
   if(subBtn) subBtn.classList.add('active');
 }
 async function renderSubview(name){
-  if(name === 'dashboard') renderDashboard();
+  if(name === 'dashboard'){ renderDashboard(); refreshLiveStatus(); }
   if(name === 'lancamento'){ renderGrid(); renderLancTable(); }
   if(name === 'graficos') renderCharts();
   if(name === 'cadastro'){ renderInjGrid(); renderInjHistory(); }
@@ -1183,7 +1232,7 @@ function renderCadastroTable(){
     .filter(u => !STATUS_FILTER.length || STATUS_FILTER.includes(u.status))
     .sort((a,b)=>a.codigo.localeCompare(b.codigo));
 
-  document.getElementById('usina-count').textContent = USINAS.length + ' usina' + (USINAS.length===1?'':'s') + ' na frota';
+  document.getElementById('usina-count').textContent = USINAS.length + ' usina' + (USINAS.length===1?'':'s') + ' cadastradas';
   document.getElementById('cadastro-count').textContent = rows.length + ' de ' + USINAS.length;
 
   if(!rows.length){
@@ -1759,7 +1808,7 @@ async function renderAnnualChart(){
   const baseSet = filteredUsinasForCharts();
   const usinasSet = usinaFilter ? baseSet.filter(u=>u.codigo===usinaFilter) : baseSet;
 
-  document.getElementById('chart-annual-meta').textContent = usinaFilter ? usinaNome(usinaFilter) : (usinasSet.length + ' usina(s)' + (STATUS_FILTER_CHARTS.length ? ' — filtro: ' + STATUS_FILTER_CHARTS.join(', ') : ' — frota inteira'));
+  document.getElementById('chart-annual-meta').textContent = usinaFilter ? usinaNome(usinaFilter) : (usinasSet.length + ' usina(s)' + (STATUS_FILTER_CHARTS.length ? ' — filtro: ' + STATUS_FILTER_CHARTS.join(', ') : ' — todas as usinas'));
 
   const realByMonth = [];
   const expByMonth = [];
@@ -1783,7 +1832,7 @@ async function renderAnnualChart(){
   CHARTS.annual = new Chart(document.getElementById('chart-annual'), {
     type:'bar',
     data:{ labels: MESES.map(m=>m.l), datasets:[
-      { label:'Real (kWh)', data:realByMonth, backgroundColor:'#F2A93C', borderRadius:4 },
+      { label:'Real (kWh)', data:realByMonth, backgroundColor:'#F2703C', borderRadius:4 },
       { label:'Esperado (kWh)', data:expByMonth, backgroundColor:'#3A4453', borderRadius:4 }
     ]},
     options:{
@@ -1842,7 +1891,7 @@ async function renderCharts(){
   CHARTS.line = new Chart(document.getElementById('chart-line'), {
     type:'line',
     data:{ labels, datasets:[
-      { label:'Geração real (kWh)', data:dailyReal, borderColor:'#F2A93C', backgroundColor:'rgba(242,169,60,0.12)', fill:true, tension:.35, pointRadius:0, borderWidth:2.5 },
+      { label:'Geração real (kWh)', data:dailyReal, borderColor:'#F2703C', backgroundColor:'rgba(242,112,60,0.12)', fill:true, tension:.35, pointRadius:0, borderWidth:2.5 },
       { label:'Meta do dia (kWh)', data:dailyMeta, borderColor:'#5C6672', borderDash:[5,4], fill:false, tension:0, pointRadius:0, borderWidth:2 }
     ]},
     options:{
@@ -1906,7 +1955,7 @@ function renderCompareChart(month, nDays, labels, entries){
   CHARTS.compare = new Chart(document.getElementById('chart-compare'), {
     type:'line',
     data:{ labels, datasets:[
-      { label:(usinaA?usinaA.nome:codA) + ' (kWh/kWp)', data:dailyYieldA, borderColor:'#F2A93C', backgroundColor:'rgba(242,169,60,0.10)', fill:true, tension:.35, pointRadius:0, borderWidth:2.5 },
+      { label:(usinaA?usinaA.nome:codA) + ' (kWh/kWp)', data:dailyYieldA, borderColor:'#F2703C', backgroundColor:'rgba(242,112,60,0.10)', fill:true, tension:.35, pointRadius:0, borderWidth:2.5 },
       { label:(usinaB?usinaB.nome:codB) + ' (kWh/kWp)', data:dailyYieldB, borderColor:'#34D9C4', backgroundColor:'rgba(52,217,196,0.10)', fill:true, tension:.35, pointRadius:0, borderWidth:2.5 }
     ]},
     options:{
@@ -2944,7 +2993,7 @@ document.getElementById('comph-cliente').addEventListener('change', renderCompHi
 /* ============================================================
    Gráficos de Clientes
    ============================================================ */
-const CLIENT_CHART_COLORS = ['#F2A93C','#34D9C4','#8B7FE8','#F2555F','#5EC8F2','#E8A87C','#96E6B3','#D4A5E8','#F2D93C','#7FA8E8'];
+const CLIENT_CHART_COLORS = ['#F2703C','#34D9C4','#8B7FE8','#F2555F','#5EC8F2','#E8A87C','#96E6B3','#D4A5E8','#F2D93C','#7FA8E8'];
 
 function chartsClientesUnavailable(){
   ['chart-cliente-mensal','chart-cliente-origem'].forEach(id=>{
@@ -3015,7 +3064,7 @@ async function renderClienteMensalECharts(){
   } else {
     CHARTS.clienteMensal = new Chart(document.getElementById('chart-cliente-mensal'), {
       type:'bar',
-      data:{ labels: MESES.map(m=>m.l), datasets:[{ label:'kWh compensado', data: totals, backgroundColor:'#F2A93C', borderRadius:4 }] },
+      data:{ labels: MESES.map(m=>m.l), datasets:[{ label:'kWh compensado', data: totals, backgroundColor:'#F2703C', borderRadius:4 }] },
       options:{
         responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{ display:false } },
@@ -3124,6 +3173,7 @@ async function init(){
   try{ renderClientesTable(); }catch(e){ console.error(e); }
   try{ populateClienteFilterSelect(); populateFaturaClienteSelects(); }catch(e){ console.error(e); }
   try{ await renderDashboard(); }catch(e){ console.error(e); }
+  try{ refreshLiveStatus(); }catch(e){ console.error(e); }
   try{ await renderGrid(); }catch(e){ console.error(e); }
   try{ await renderLancTable(); }catch(e){ console.error(e); }
 }
