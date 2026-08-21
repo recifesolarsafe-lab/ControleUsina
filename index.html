@@ -286,6 +286,39 @@
   .chart-box{position:relative; height:280px;}
   .chart-box.tall{height:340px;}
 
+  /* ---------- relatório da usina ---------- */
+  .report-hero{
+    position:relative; overflow:hidden; border-radius:16px; padding:32px 36px;
+    background:
+      radial-gradient(700px 420px at 100% -20%, rgba(242,112,60,0.14), transparent 60%),
+      linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border:1px solid var(--border);
+    margin-bottom:20px;
+  }
+  .report-hero-top{display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap;}
+  .report-hero-eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--amber);}
+  .report-hero-name{font-family:var(--font-display); font-size:30px; font-weight:600; margin-top:8px;}
+  .report-hero-sub{font-size:13px; color:var(--text-dim); margin-top:6px;}
+  .report-status-badge{
+    font-family:var(--font-mono); font-size:12px; padding:8px 16px; border-radius:20px;
+    background:var(--surface-3); border:1px solid var(--border); color:var(--text-dim); white-space:nowrap;
+  }
+  .report-status-badge.ok{background:var(--teal-soft); border-color:var(--teal); color:var(--teal);}
+  .report-status-badge.warn{background:var(--amber-soft); border-color:var(--amber); color:var(--amber);}
+  .report-status-badge.bad{background:var(--red-soft); border-color:var(--red); color:var(--red);}
+  .report-hero-foot{margin-top:22px; padding-top:18px; border-top:1px solid var(--border); font-family:var(--font-mono); font-size:12px; color:var(--text-faint);}
+  .report-kpi-grid{margin-bottom:20px;}
+  .report-panel{margin-bottom:18px;}
+  .report-footer{text-align:center; font-family:var(--font-mono); font-size:11px; color:var(--text-faint); padding:24px 0 4px;}
+
+  @media print{
+    header.top, nav.tabs, #rel-toolbar-panel, .btn, .sync-pill{display:none !important;}
+    body, #app-shell, main{background:#fff !important; color:#111 !important;}
+    .report-hero{background:#fff !important; border:1px solid #ccc;}
+    .panel{background:#fff !important; border:1px solid #ddd !important; break-inside:avoid;}
+    .val, .report-hero-name{color:#111 !important;}
+  }
+
   /* ---------- login screen ---------- */
   .login-screen{min-height:100vh; display:grid; grid-template-columns:1.15fr 1fr;}
   @media (max-width:900px){ .login-screen{grid-template-columns:1fr; grid-template-rows:auto 1fr;} }
@@ -393,6 +426,7 @@
       </div>
       <button data-view="clientes">Clientes</button>
       <button data-view="graficos-clientes">Gráf. Clientes</button>
+      <button data-view="relatorio">Relatório</button>
       <button data-view="usuarios">Usuários</button>
     </nav>
     <div class="sync-pill" id="user-pill" style="cursor:pointer;" title="Sair"><span id="user-name"></span> · Sair</div>
@@ -886,6 +920,67 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
     </div>
   </section>
 
+  <!-- ================= RELATÓRIO ================= -->
+  <section class="view" id="view-relatorio">
+    <div class="page-head">
+      <h2>Relatório da usina</h2>
+      <p>Visão completa e consolidada de uma usina específica — pronta para apresentar ou exportar em PDF.</p>
+    </div>
+
+    <div class="panel" id="rel-toolbar-panel" style="margin-bottom:18px;">
+      <div class="toolbar" style="margin-bottom:0;">
+        <div class="field grow"><label for="rel-usina">Usina</label><select id="rel-usina"><option value="">selecione uma usina…</option></select></div>
+        <div class="field"><label for="rel-month">Mês de referência</label><input type="month" id="rel-month"></div>
+        <button class="btn btn-ghost" id="rel-print">🖨 Imprimir / Exportar PDF</button>
+      </div>
+    </div>
+
+    <div id="rel-empty" class="panel"><div class="empty">Selecione uma usina acima para gerar o relatório.</div></div>
+
+    <div id="rel-content" style="display:none;">
+      <div class="report-hero">
+        <div class="report-hero-top">
+          <div>
+            <div class="report-hero-eyebrow">Relatório de desempenho</div>
+            <div class="report-hero-name" id="rel-nome">—</div>
+            <div class="report-hero-sub" id="rel-sub">—</div>
+          </div>
+          <div class="report-status-badge" id="rel-status-badge">—</div>
+        </div>
+        <div class="report-hero-foot" id="rel-periodo">—</div>
+      </div>
+
+      <div class="kpi-grid report-kpi-grid">
+        <div class="kpi"><div class="lbl">Geração no mês</div><div class="val amber" id="rel-kpi-geracao">—</div><div class="sub">kWh gerados</div></div>
+        <div class="kpi"><div class="lbl">Meta no mês</div><div class="val" id="rel-kpi-meta">—</div><div class="sub" id="rel-kpi-meta-sub">kWh esperados</div></div>
+        <div class="kpi"><div class="lbl">Atingimento</div><div class="val" id="rel-kpi-pr">—</div><div class="sub">performance ratio</div></div>
+        <div class="kpi"><div class="lbl">Energia injetada</div><div class="val teal" id="rel-kpi-injetada">—</div><div class="sub">kWh no mês, na rede</div></div>
+      </div>
+
+      <div class="panel report-panel">
+        <div class="panel-title">Geração diária no mês<small id="rel-chart-diario-meta"></small></div>
+        <div class="chart-box tall"><canvas id="rel-chart-diario"></canvas></div>
+      </div>
+
+      <div class="panel report-panel">
+        <div class="panel-title">Geração x esperado no ano<small id="rel-chart-anual-meta"></small></div>
+        <div class="chart-box tall"><canvas id="rel-chart-anual"></canvas></div>
+      </div>
+
+      <div class="panel report-panel">
+        <div class="panel-title">Clientes vinculados a esta usina<small id="rel-clientes-meta"></small></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Cliente</th><th>Conta Contrato</th><th class="num">kWh Compensado no mês</th></tr></thead>
+            <tbody id="rel-clientes-tbody"><tr><td colspan="3" class="empty">Nenhum cliente vinculado a esta usina.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="report-footer">Relatório gerado em <span id="rel-gerado-em"></span> — SolarSafe</div>
+    </div>
+  </section>
+
 </main>
 
 <div id="toast-host"></div>
@@ -1063,6 +1158,7 @@ document.querySelectorAll('nav.tabs > button, nav.tabs > .tab-dropdown > button'
     }
     if(btn.dataset.view === 'clientes'){ renderClientesTable(); renderCompGrid(); renderCompHistory(); }
     if(btn.dataset.view === 'graficos-clientes') renderClientesCharts();
+    if(btn.dataset.view === 'relatorio'){ populateRelatorioUsinaSelect(); renderRelatorio(); }
     if(btn.dataset.view === 'usuarios'){ renderClienteUsinasChipsUsuario([]); await loadUsuarios(); renderUsuariosTable(); }
   });
 });
@@ -2907,6 +3003,141 @@ document.getElementById('gc-year').addEventListener('change', renderClienteMensa
 document.getElementById('gc-refresh').addEventListener('click', renderClientesCharts);
 
 /* ============================================================
+   Relatório da usina
+   ============================================================ */
+function populateRelatorioUsinaSelect(){
+  const sel = document.getElementById('rel-usina');
+  const current = sel.value;
+  const opts = USINAS.slice().sort((a,b)=>a.nome.localeCompare(b.nome))
+    .map(u=>`<option value="${u.codigo}">${u.codigo} — ${escapeHtml(u.nome)}</option>`).join('');
+  sel.innerHTML = '<option value="">selecione uma usina…</option>' + opts;
+  if(current) sel.value = current;
+}
+
+async function renderRelatorio(){
+  const codigo = document.getElementById('rel-usina').value;
+  const month = document.getElementById('rel-month').value || currentMonth();
+  document.getElementById('rel-month').value = month;
+
+  const usina = USINAS.find(u=>u.codigo===codigo);
+  if(!usina){
+    document.getElementById('rel-empty').style.display = 'block';
+    document.getElementById('rel-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('rel-empty').style.display = 'none';
+  document.getElementById('rel-content').style.display = 'block';
+
+  const monthNum = month.slice(5,7);
+  const year = parseInt(month.slice(0,4),10);
+  const nDays = daysInMonth(month);
+  const labels = Array.from({length:nDays}, (_,i)=>String(i+1));
+
+  // --- cabeçalho ---
+  document.getElementById('rel-nome').textContent = usina.nome;
+  document.getElementById('rel-sub').textContent = usina.codigo + (usina.uf ? ' · ' + usina.uf : '') + ' · ' + fmtNum(usina.capacidade) + ' kWp instalados';
+  document.getElementById('rel-periodo').textContent = 'Período de referência: ' + new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'});
+  document.getElementById('rel-gerado-em').textContent = new Date().toLocaleString('pt-BR');
+
+  const badge = document.getElementById('rel-status-badge');
+  const statusClass = usina.status==='Operação' ? 'ok' : (usina.status==='Manutenção' ? 'bad' : 'warn');
+  badge.textContent = usina.status || '—';
+  badge.className = 'report-status-badge ' + statusClass;
+
+  // --- geração, meta, PR ---
+  const entries = await loadMonth(month);
+  const entriesUsina = entries.filter(en=>en.codigo===codigo);
+  const totalReal = entriesUsina.reduce((s,en)=>s+(en.geracaoReal||0),0);
+  const meta = metaMensalProporcional(usina, month);
+  const pr = meta ? (totalReal/meta*100) : null;
+
+  document.getElementById('rel-kpi-geracao').textContent = fmtNum(totalReal);
+  document.getElementById('rel-kpi-meta').textContent = meta ? fmtNum(meta) : '—';
+  document.getElementById('rel-kpi-meta-sub').textContent = (month === currentMonth()) ? 'kWh, proporcional aos dias já passados' : 'kWh esperados';
+  document.getElementById('rel-kpi-pr').textContent = pr!=null ? fmtPct(pr) : '—';
+
+  // --- energia injetada ---
+  const injetada = await loadInjetada();
+  const registroInj = injetada.find(i=>i.mes===month && i.codigoUsina===codigo);
+  document.getElementById('rel-kpi-injetada').textContent = registroInj ? fmtNum(registroInj.kwhInjetado) : '—';
+
+  // --- gráfico diário ---
+  const dailyReal = Array(nDays).fill(0);
+  entriesUsina.forEach(en=>{
+    const day = parseInt(en.data.slice(8,10),10) - 1;
+    if(day>=0 && day<nDays) dailyReal[day] += en.geracaoReal||0;
+  });
+  const dailyMetaFlat = Array(nDays).fill(metaMensal(usina, monthNum) / nDays);
+  document.getElementById('rel-chart-diario-meta').textContent = new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'});
+
+  if(typeof Chart !== 'undefined'){
+    destroyChart('relDiario');
+    CHARTS.relDiario = new Chart(document.getElementById('rel-chart-diario'), {
+      type:'bar',
+      data:{ labels, datasets:[
+        { label:'Geração real (kWh)', data:dailyReal, backgroundColor:'#F2703C', borderRadius:4 },
+        { label:'Meta do dia (kWh)', data:dailyMetaFlat, type:'line', borderColor:'#5C6672', borderDash:[5,4], pointRadius:0, borderWidth:2 }
+      ]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ labels:{ boxWidth:12, boxHeight:2, padding:16 } } },
+        scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#1B2530'}, ticks:{ callback:v=>fmtNum(v) } } }
+      }
+    });
+  }
+
+  // --- gráfico anual (real x esperado) ---
+  document.getElementById('rel-chart-anual-meta').textContent = String(year);
+  const realByMonth = [];
+  const expByMonth = [];
+  for(const m of MESES){
+    const mk = year + '-' + m.n;
+    const mEntries = await loadMonth(mk);
+    realByMonth.push(mEntries.filter(en=>en.codigo===codigo).reduce((s,en)=>s+(en.geracaoReal||0),0));
+    expByMonth.push(metaMensal(usina, m.n));
+  }
+  if(typeof Chart !== 'undefined'){
+    destroyChart('relAnual');
+    CHARTS.relAnual = new Chart(document.getElementById('rel-chart-anual'), {
+      type:'bar',
+      data:{ labels: MESES.map(m=>m.l), datasets:[
+        { label:'Real (kWh)', data:realByMonth, backgroundColor:'#F2703C', borderRadius:4 },
+        { label:'Esperado (kWh)', data:expByMonth, backgroundColor:'#3A4568', borderRadius:4 }
+      ]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ labels:{ boxWidth:12, boxHeight:12, padding:16 } } },
+        scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#1B2530'}, ticks:{ callback:v=>fmtNum(v) } } }
+      }
+    });
+  }
+
+  // --- clientes vinculados ---
+  const clientesVinculados = CLIENTES.filter(c=>(c.usinas||[]).includes(codigo)).sort((a,b)=>a.nome.localeCompare(b.nome));
+  const compensacoes = await loadCompensacoes();
+  const tbodyCli = document.getElementById('rel-clientes-tbody');
+  document.getElementById('rel-clientes-meta').textContent = clientesVinculados.length + ' cliente(s)';
+  if(!clientesVinculados.length){
+    tbodyCli.innerHTML = `<tr><td colspan="3" class="empty">Nenhum cliente vinculado a esta usina.</td></tr>`;
+  } else {
+    tbodyCli.innerHTML = clientesVinculados.map(c=>{
+      const registro = compensacoes.find(comp=>comp.mes===month && comp.codigoCliente===c.codigo);
+      const kwh = registro ? (registro.detalhe||[]).filter(d=>d.codigo===codigo).reduce((s,d)=>s+(d.kwh||0),0) : 0;
+      return `
+      <tr>
+        <td class="txt">${escapeHtml(c.nome)}</td>
+        <td class="txt">${escapeHtml(c.contaContrato||'—')}</td>
+        <td class="num">${registro ? fmtNum(kwh) : '—'}</td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+document.getElementById('rel-usina').addEventListener('change', renderRelatorio);
+document.getElementById('rel-month').addEventListener('change', renderRelatorio);
+document.getElementById('rel-print').addEventListener('click', ()=>window.print());
+
+/* ============================================================
    Init
    ============================================================ */
 async function init(){
@@ -2918,6 +3149,7 @@ async function init(){
   document.getElementById('comp-month').value = currentMonth();
   document.getElementById('comph-month').value = currentMonth();
   document.getElementById('gc-year').value = new Date().getFullYear();
+  document.getElementById('rel-month').value = currentMonth();
   document.getElementById('inj-month').value = currentMonth();
   document.getElementById('injh-month').value = currentMonth();
   document.getElementById('fat-mes').value = currentMonth();
