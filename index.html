@@ -247,6 +247,9 @@
   .usina-kwh-row input{width:90px; padding:5px 7px; font-size:12px; font-family:var(--font-mono); text-align:right;
     background:var(--surface-2); border:1px solid var(--border); border-radius:6px; color:var(--text);}
   .usina-kwh-row input:focus{outline:none; border-color:var(--amber);}
+  .usina-kwh-row-a{flex-wrap:wrap;}
+  .usina-kwh-row-a .ukr-sub{font-family:var(--font-mono); font-size:10px; color:var(--text-faint); flex-shrink:0;}
+  .usina-kwh-row-a input{width:70px;}
   .g-total-display{width:104px; padding:6px 8px; font-size:12.5px; font-family:var(--font-mono); text-align:right;
     background:var(--surface-3); border:1px solid var(--border); border-radius:7px; color:var(--amber); font-weight:600;}
   tr.row-dirty td{background:rgba(242,112,60,0.05);}
@@ -515,8 +518,8 @@
       <div class="panel-title">Clientes desta usina<small id="cdu-meta"></small></div>
       <div class="table-wrap" style="max-height:420px;">
         <table>
-          <thead><tr><th>Nome</th><th>Conta Contrato</th><th class="num">kWh Compensado no mês</th></tr></thead>
-          <tbody id="cdu-tbody"><tr><td colspan="3" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
+          <thead><tr><th>Nome</th><th>Conta Contrato</th><th class="num">kWh Compensado no mês</th><th class="num">Economia no mês (R$)</th></tr></thead>
+          <tbody id="cdu-tbody"><tr><td colspan="4" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -824,6 +827,20 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         <div class="field-grid">
           <div><label for="cl-nome">Nome do cliente</label><input type="text" id="cl-nome" required></div>
           <div><label for="cl-conta">Conta contrato</label><input type="text" id="cl-conta" placeholder="ex: 123456789"></div>
+          <div>
+            <label for="cl-grupo">Grupo tarifário</label>
+            <select id="cl-grupo">
+              <option value="B">Grupo B (tarifa única)</option>
+              <option value="A">Grupo A (ponta / fora ponta)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-grid" id="cl-tarifa-b-field" style="margin-top:12px;">
+          <div><label for="cl-tarifa">Tarifa (R$/kWh)</label><input type="number" id="cl-tarifa" step="0.0001" min="0" placeholder="ex: 0,98"></div>
+        </div>
+        <div class="field-grid" id="cl-tarifa-a-field" style="margin-top:12px; display:none;">
+          <div><label for="cl-tarifa-ponta">Tarifa Ponta (R$/kWh)</label><input type="number" id="cl-tarifa-ponta" step="0.0001" min="0" placeholder="ex: 1,45"></div>
+          <div><label for="cl-tarifa-fora">Tarifa Fora Ponta (R$/kWh)</label><input type="number" id="cl-tarifa-fora" step="0.0001" min="0" placeholder="ex: 0,72"></div>
         </div>
         <div class="field" style="margin-top:12px;">
           <label>Usina(s) padrão <span class="hint" style="margin:0;">(sugestão inicial ao lançar a compensação — pode ser trocada mês a mês, sem afetar meses já lançados)</span></label>
@@ -843,8 +860,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
       </div>
       <div class="table-wrap" style="max-height:420px;">
         <table>
-          <thead><tr><th>Código</th><th>Nome</th><th>Conta Contrato</th><th>Usina(s) padrão</th><th></th></tr></thead>
-          <tbody id="clientes-tbody"><tr><td colspan="5" class="loading-row"><span class="spin"></span>carregando clientes…</td></tr></tbody>
+          <thead><tr><th>Código</th><th>Nome</th><th>Conta Contrato</th><th>Grupo</th><th class="num">Tarifa (R$/kWh)</th><th>Usina(s) padrão</th><th></th></tr></thead>
+          <tbody id="clientes-tbody"><tr><td colspan="7" class="loading-row"><span class="spin"></span>carregando clientes…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -867,8 +884,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
 
       <div class="table-wrap" style="max-height:520px;">
         <table>
-          <thead><tr><th>Código</th><th>Cliente</th><th>Usina(s) do mês</th><th class="num">kWh Compensado</th><th>Obs.</th></tr></thead>
-          <tbody id="comp-tbody"><tr><td colspan="5" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
+          <thead><tr><th>Código</th><th>Cliente</th><th>Usina(s) do mês</th><th class="num">kWh Compensado</th><th class="num">Crédito (kWh)</th><th>Obs.</th></tr></thead>
+          <tbody id="comp-tbody"><tr><td colspan="6" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
         </table>
       </div>
 
@@ -886,8 +903,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
       </div>
       <div class="table-wrap" style="max-height:420px;">
         <table>
-          <thead><tr><th>Mês</th><th>Código</th><th>Cliente</th><th>Usina(s)</th><th class="num">kWh Compensado</th><th class="txt">Obs.</th><th></th></tr></thead>
-          <tbody id="comph-tbody"><tr><td colspan="7" class="loading-row"><span class="spin"></span>carregando histórico…</td></tr></tbody>
+          <thead><tr><th>Mês</th><th>Código</th><th>Cliente</th><th>Usina(s)</th><th class="num">kWh Compensado</th><th class="num">Crédito (kWh)</th><th class="num">Economia (R$)</th><th class="txt">Obs.</th><th></th></tr></thead>
+          <tbody id="comph-tbody"><tr><td colspan="9" class="loading-row"><span class="spin"></span>carregando histórico…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -971,8 +988,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         <div class="panel-title">Clientes vinculados a esta usina<small id="rel-clientes-meta"></small></div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Cliente</th><th>Conta Contrato</th><th class="num">kWh Compensado no mês</th></tr></thead>
-            <tbody id="rel-clientes-tbody"><tr><td colspan="3" class="empty">Nenhum cliente vinculado a esta usina.</td></tr></tbody>
+            <thead><tr><th>Cliente</th><th>Conta Contrato</th><th class="num">kWh Compensado no mês</th><th class="num">Crédito do mês (kWh)</th><th class="num">Crédito Total (kWh)</th><th class="num">Economia no mês (R$)</th></tr></thead>
+            <tbody id="rel-clientes-tbody"><tr><td colspan="6" class="empty">Nenhum cliente vinculado a esta usina.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -998,6 +1015,7 @@ let CHARTS = {};
 const todayISO = () => new Date().toISOString().slice(0,10);
 const currentMonth = () => new Date().toISOString().slice(0,7);
 const fmtNum = n => Number(n||0).toLocaleString('pt-BR', {maximumFractionDigits:0});
+const fmtBRL = n => Number(n||0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 const fmtPct = n => (Number(n||0)).toLocaleString('pt-BR', {maximumFractionDigits:1}) + '%';
 const escapeHtml = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -2397,18 +2415,44 @@ function usinasDetalheLabel(detalhe){
   if(!detalhe || !detalhe.length) return '—';
   return detalhe.map(d=>{
     const u = USINAS.find(x=>x.codigo===d.codigo);
-    return `${u?u.nome:d.codigo}: ${fmtNum(d.kwh)} kWh`;
+    const nome = u?u.nome:d.codigo;
+    if(d.kwhPonta!=null) return `${nome}: ${fmtNum(d.kwh)} kWh (P: ${fmtNum(d.kwhPonta)} / FP: ${fmtNum(d.kwhForaPonta)})`;
+    return `${nome}: ${fmtNum(d.kwh)} kWh`;
   }).join(', ');
 }
 
+function numOrNull(v){
+  if(v===undefined || v===null || v==='') return null;
+  const n = parseFloat(String(v).replace(',', '.'));
+  return isNaN(n) ? null : n;
+}
 function clienteRowToObj(row){
   return {
     codigo: String(row.Codigo||'').trim(), nome: row.Nome, contaContrato: row.ContaContrato||'',
+    grupo: (row.Grupo==='A') ? 'A' : 'B',
+    tarifa: numOrNull(row.TarifaKwh),
+    tarifaPonta: numOrNull(row.TarifaPonta),
+    tarifaForaPonta: numOrNull(row.TarifaForaPonta),
     usinas: String(row.Usinas||'').split(',').map(s=>s.trim()).filter(Boolean)
   };
 }
 function clienteObjToRow(c){
-  return { Codigo:c.codigo, Nome:c.nome, ContaContrato:c.contaContrato||'', Usinas:(c.usinas||[]).join(',') };
+  return {
+    Codigo:c.codigo, Nome:c.nome, ContaContrato:c.contaContrato||'', Grupo: c.grupo==='A' ? 'A' : 'B',
+    TarifaKwh:(c.tarifa!=null) ? c.tarifa : '',
+    TarifaPonta:(c.tarifaPonta!=null) ? c.tarifaPonta : '',
+    TarifaForaPonta:(c.tarifaForaPonta!=null) ? c.tarifaForaPonta : '',
+    Usinas:(c.usinas||[]).join(',')
+  };
+}
+function calcEconomiaCliente(cliente, kwh, kwhPonta, kwhForaPonta){
+  if(!cliente) return null;
+  if(cliente.grupo === 'A'){
+    if(cliente.tarifaPonta==null && cliente.tarifaForaPonta==null) return null;
+    return (kwhPonta||0) * (cliente.tarifaPonta||0) + (kwhForaPonta||0) * (cliente.tarifaForaPonta||0);
+  }
+  if(cliente.tarifa==null) return null;
+  return (kwh||0) * cliente.tarifa;
 }
 function normalizeMes(val){
   if(val == null) return '';
@@ -2418,8 +2462,15 @@ function normalizeMes(val){
 }
 function parseUsinasDetalhe(str){
   return String(str||'').split(',').map(s=>s.trim()).filter(Boolean).map(part=>{
-    const [codigo, kwh] = part.split(':');
-    return { codigo: (codigo||'').trim(), kwh: parseFloat(kwh)||0 };
+    const bits = part.split(':');
+    const codigo = (bits[0]||'').trim();
+    const kwh = parseFloat(bits[1])||0;
+    const obj = { codigo, kwh };
+    if(bits.length >= 4){
+      obj.kwhPonta = parseFloat(bits[2])||0;
+      obj.kwhForaPonta = parseFloat(bits[3])||0;
+    }
+    return obj;
   });
 }
 function compRowToObj(row){
@@ -2429,6 +2480,7 @@ function compRowToObj(row){
     detalhe: detalhe,
     usinas: detalhe.length ? detalhe.map(d=>d.codigo) : String(row.Usinas||'').split(',').map(s=>s.trim()).filter(Boolean),
     kwhCompensado: detalhe.length ? detalhe.reduce((s,d)=>s+d.kwh,0) : (parseFloat(row.KwhCompensado)||0),
+    credito: row.Credito!==undefined && row.Credito!=='' ? parseFloat(String(row.Credito).replace(',', '.')) : null,
     obs: row.Obs||''
   };
 }
@@ -2438,8 +2490,9 @@ function compObjToRow(c){
   return {
     Id:c.id, Mes:c.mes, CodigoCliente:c.codigoCliente,
     KwhCompensado: total,
+    Credito: (c.credito!=null && c.credito!=='') ? c.credito : '',
     Usinas: detalhe.map(d=>d.codigo).join(','),
-    UsinasDetalhe: detalhe.map(d=>`${d.codigo}:${d.kwh}`).join(','),
+    UsinasDetalhe: detalhe.map(d=> d.kwhPonta!=null ? `${d.codigo}:${d.kwh}:${d.kwhPonta}:${d.kwhForaPonta}` : `${d.codigo}:${d.kwh}`).join(','),
     Obs:c.obs||''
   };
 }
@@ -2504,27 +2557,45 @@ function renderClientesTable(){
   document.getElementById('clientes-count').textContent = rows.length + ' de ' + CLIENTES.length;
 
   if(!rows.length){
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Nenhum cliente cadastrado ainda. Use o formulário acima para começar.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty">Nenhum cliente cadastrado ainda. Use o formulário acima para começar.</div></td></tr>`;
     return;
   }
-  tbody.innerHTML = rows.map(c => `
+  tbody.innerHTML = rows.map(c => {
+    const tarifaLabel = c.grupo === 'A'
+      ? `P: ${c.tarifaPonta!=null ? c.tarifaPonta.toLocaleString('pt-BR',{minimumFractionDigits:4}) : '—'} / FP: ${c.tarifaForaPonta!=null ? c.tarifaForaPonta.toLocaleString('pt-BR',{minimumFractionDigits:4}) : '—'}`
+      : (c.tarifa!=null ? c.tarifa.toLocaleString('pt-BR',{minimumFractionDigits:4}) : '—');
+    return `
     <tr>
       <td>${c.codigo}</td>
       <td class="txt">${escapeHtml(c.nome)}</td>
       <td class="txt">${escapeHtml(c.contaContrato||'—')}</td>
+      <td><span class="tag ${c.grupo==='A'?'warn':'ok'}">Grupo ${c.grupo}</span></td>
+      <td class="num">${tarifaLabel}</td>
       <td class="txt">${escapeHtml(usinasLabel(c.usinas))}</td>
       <td><div class="row-actions">
         <button class="btn-edit-ghost" title="Editar" onclick="startEditCliente('${c.codigo}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
         <button class="btn-danger-ghost" title="Excluir" onclick="deleteCliente('${c.codigo}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
       </div></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
+function toggleTarifaFieldsByGrupo(){
+  const isA = document.getElementById('cl-grupo').value === 'A';
+  document.getElementById('cl-tarifa-b-field').style.display = isA ? 'none' : '';
+  document.getElementById('cl-tarifa-a-field').style.display = isA ? '' : 'none';
+}
+document.getElementById('cl-grupo').addEventListener('change', toggleTarifaFieldsByGrupo);
 window.startEditCliente = function(codigo){
   const c = CLIENTES.find(x=>x.codigo===codigo);
   if(!c) return;
   editingClienteCodigo = codigo;
   document.getElementById('cl-nome').value = c.nome;
   document.getElementById('cl-conta').value = c.contaContrato||'';
+  document.getElementById('cl-grupo').value = c.grupo || 'B';
+  document.getElementById('cl-tarifa').value = c.tarifa!=null ? c.tarifa : '';
+  document.getElementById('cl-tarifa-ponta').value = c.tarifaPonta!=null ? c.tarifaPonta : '';
+  document.getElementById('cl-tarifa-fora').value = c.tarifaForaPonta!=null ? c.tarifaForaPonta : '';
+  toggleTarifaFieldsByGrupo();
   renderClienteUsinasChips(c.usinas);
   document.getElementById('cl-submit').textContent = 'Salvar alterações (' + codigo + ')';
   document.getElementById('cl-cancel').style.display = 'inline-flex';
@@ -2533,6 +2604,7 @@ window.startEditCliente = function(codigo){
 document.getElementById('cl-cancel').addEventListener('click', ()=>{
   editingClienteCodigo = null;
   document.getElementById('form-cliente').reset();
+  toggleTarifaFieldsByGrupo();
   renderClienteUsinasChips([]);
   document.getElementById('cl-submit').textContent = 'Adicionar cliente';
   document.getElementById('cl-cancel').style.display = 'none';
@@ -2554,10 +2626,15 @@ document.getElementById('form-cliente').addEventListener('submit', async (e)=>{
   const btn = document.getElementById('cl-submit');
   btn.disabled = true;
   try{
+    const grupo = document.getElementById('cl-grupo').value === 'A' ? 'A' : 'B';
     const data = {
       codigo: editingClienteCodigo || nextClienteCodigo(),
       nome,
       contaContrato: document.getElementById('cl-conta').value.trim(),
+      grupo,
+      tarifa: numOrNull(document.getElementById('cl-tarifa').value),
+      tarifaPonta: numOrNull(document.getElementById('cl-tarifa-ponta').value),
+      tarifaForaPonta: numOrNull(document.getElementById('cl-tarifa-fora').value),
       usinas: getSelectedClienteUsinas()
     };
     if(editingClienteCodigo){
@@ -2571,6 +2648,7 @@ document.getElementById('form-cliente').addEventListener('submit', async (e)=>{
       toast(editingClienteCodigo ? 'Cliente atualizado.' : 'Cliente cadastrado: ' + data.codigo);
       editingClienteCodigo = null;
       e.target.reset();
+      toggleTarifaFieldsByGrupo();
       renderClienteUsinasChips([]);
       document.getElementById('cl-submit').textContent = 'Adicionar cliente';
       document.getElementById('cl-cancel').style.display = 'none';
@@ -2610,10 +2688,10 @@ async function renderCompGrid(){
   const month = document.getElementById('comp-month').value || currentMonth();
   document.getElementById('comp-month').value = month;
   const tbody = document.getElementById('comp-tbody');
-  tbody.innerHTML = `<tr><td colspan="5" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="6" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
 
   if(!CLIENTES.length){
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Cadastre clientes acima antes de lançar compensações.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">Cadastre clientes acima antes de lançar compensações.</div></td></tr>`;
     updateCompTotals();
     return;
   }
@@ -2638,7 +2716,7 @@ async function renderCompGrid(){
     .sort((a,b)=>a.codigo.localeCompare(b.codigo));
 
   if(!rows.length){
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">${onlyPending ? 'Todos os clientes já têm compensação lançada neste mês. Desmarque "Só pendentes" para ver/editar todos.' : 'Nenhum cliente encontrado.'}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">${onlyPending ? 'Todos os clientes já têm compensação lançada neste mês. Desmarque "Só pendentes" para ver/editar todos.' : 'Nenhum cliente encontrado.'}</div></td></tr>`;
     updateCompTotals();
     return;
   }
@@ -2647,7 +2725,7 @@ async function renderCompGrid(){
     const comp = byCliente[c.codigo];
     const selectedCodes = comp ? comp.usinas : defaultUsinasFor(c.codigo);
     const kwhMap = {};
-    if(comp && comp.detalhe) comp.detalhe.forEach(d=>{ kwhMap[d.codigo]=d.kwh; });
+    if(comp && comp.detalhe) comp.detalhe.forEach(d=>{ kwhMap[d.codigo]=d; });
     const selSet = new Set(selectedCodes);
 
     const pickerBtnLabel = usinaPickerSummary(selectedCodes);
@@ -2658,16 +2736,19 @@ async function renderCompGrid(){
     const kwhListHtml = selectedCodes.map(cod=>{
       const u = USINAS.find(x=>x.codigo===cod);
       const label = u ? u.nome : cod;
-      const val = kwhMap[cod] !== undefined ? kwhMap[cod] : '';
-      return `<div class="usina-kwh-row" data-codigo="${cod}"><span class="ukr-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span><input type="number" class="g-usina-kwh" step="0.1" min="0" value="${val}"></div>`;
+      return usinaKwhRowHtml(cod, label, c.grupo, kwhMap[cod]);
     }).join('');
 
-    const totalInicial = selectedCodes.reduce((s,cod)=> s + (kwhMap[cod]||0), 0);
+    const totalInicial = selectedCodes.reduce((s,cod)=>{
+      const d = kwhMap[cod];
+      if(!d) return s;
+      return s + (d.kwh!=null ? d.kwh : ((d.kwhPonta||0)+(d.kwhForaPonta||0)));
+    }, 0);
 
     return `
     <tr data-codigo="${c.codigo}" class="${comp?'row-saved':''}">
       <td>${c.codigo}</td>
-      <td class="txt">${escapeHtml(c.nome)}</td>
+      <td class="txt">${escapeHtml(c.nome)}${c.grupo==='A'?' <span class="tag warn" style="margin-left:4px;">A</span>':''}</td>
       <td class="usina-detail-cell">
         <div class="usina-picker">
           <button type="button" class="usina-picker-btn"><span class="upb-label">${escapeHtml(pickerBtnLabel)}</span><svg class="upb-caret" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -2676,6 +2757,7 @@ async function renderCompGrid(){
         <div class="usina-kwh-list">${kwhListHtml}</div>
       </td>
       <td class="num"><div class="g-total-display">${fmtNum(totalInicial)}</div></td>
+      <td class="num"><input type="number" class="grid-input g-credito" step="0.1" min="0" value="${comp && comp.credito!=null ? comp.credito : ''}"></td>
       <td><input type="text" class="grid-input obs g-obs" value="${comp?escapeHtml(comp.obs||''):''}"></td>
     </tr>`;
   }).join('');
@@ -2683,29 +2765,61 @@ async function renderCompGrid(){
   updateCompTotals();
 }
 
+function usinaKwhRowHtml(cod, label, grupo, existing){
+  if(grupo === 'A'){
+    const p = (existing && existing.kwhPonta!=null && existing.kwhPonta!=='') ? existing.kwhPonta : '';
+    const f = (existing && existing.kwhForaPonta!=null && existing.kwhForaPonta!=='') ? existing.kwhForaPonta : '';
+    return `<div class="usina-kwh-row usina-kwh-row-a" data-codigo="${cod}">
+      <span class="ukr-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>
+      <span class="ukr-sub">Ponta</span><input type="number" class="g-usina-kwh-ponta" step="0.1" min="0" value="${p}">
+      <span class="ukr-sub">Fora ponta</span><input type="number" class="g-usina-kwh-fora" step="0.1" min="0" value="${f}">
+    </div>`;
+  }
+  const val = (existing && existing.kwh!=null && existing.kwh!=='') ? existing.kwh : '';
+  return `<div class="usina-kwh-row" data-codigo="${cod}"><span class="ukr-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span><input type="number" class="g-usina-kwh" step="0.1" min="0" value="${val}"></div>`;
+}
+function rowTotalFromDom(tr){
+  let total = 0;
+  tr.querySelectorAll('.usina-kwh-row').forEach(row=>{
+    const single = row.querySelector('.g-usina-kwh');
+    if(single){ const v = parseFloat(single.value); if(!isNaN(v)) total += v; return; }
+    const p = row.querySelector('.g-usina-kwh-ponta');
+    const f = row.querySelector('.g-usina-kwh-fora');
+    const pv = p ? parseFloat(p.value) : NaN;
+    const fv = f ? parseFloat(f.value) : NaN;
+    if(!isNaN(pv)) total += pv;
+    if(!isNaN(fv)) total += fv;
+  });
+  return total;
+}
+
 function syncUsinaKwhList(tr){
+  const cliente = CLIENTES.find(x=>x.codigo===tr.dataset.codigo);
+  const grupo = cliente ? cliente.grupo : 'B';
   const activeCodes = Array.from(tr.querySelectorAll('.usina-picker-menu .upm-check:checked')).map(c=>c.value);
   const list = tr.querySelector('.usina-kwh-list');
   const existingValues = {};
   list.querySelectorAll('.usina-kwh-row').forEach(row=>{
-    existingValues[row.dataset.codigo] = row.querySelector('input').value;
+    const cod = row.dataset.codigo;
+    const single = row.querySelector('.g-usina-kwh');
+    if(single){ existingValues[cod] = { kwh: single.value }; }
+    else {
+      const p = row.querySelector('.g-usina-kwh-ponta');
+      const f = row.querySelector('.g-usina-kwh-fora');
+      existingValues[cod] = { kwhPonta: p?p.value:'', kwhForaPonta: f?f.value:'' };
+    }
   });
   list.innerHTML = activeCodes.map(cod=>{
     const u = USINAS.find(x=>x.codigo===cod);
     const label = u ? u.nome : cod;
-    const val = existingValues[cod] !== undefined ? existingValues[cod] : '';
-    return `<div class="usina-kwh-row" data-codigo="${cod}"><span class="ukr-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span><input type="number" class="g-usina-kwh" step="0.1" min="0" value="${val}"></div>`;
+    return usinaKwhRowHtml(cod, label, grupo, existingValues[cod]);
   }).join('');
   const btnLabel = tr.querySelector('.usina-picker-btn .upb-label');
   if(btnLabel) btnLabel.textContent = usinaPickerSummary(activeCodes);
   recalcRowTotal(tr);
 }
 function recalcRowTotal(tr){
-  let total = 0;
-  tr.querySelectorAll('.usina-kwh-row input').forEach(inp=>{
-    const v = parseFloat(inp.value);
-    if(!isNaN(v)) total += v;
-  });
+  const total = rowTotalFromDom(tr);
   const totalEl = tr.querySelector('.g-total-display');
   if(totalEl) totalEl.textContent = fmtNum(total);
   updateCompTotals();
@@ -2715,12 +2829,9 @@ function updateCompTotals(){
   let total=0, count=0, all=0;
   tbody.querySelectorAll('tr[data-codigo]').forEach(tr=>{
     all++;
-    let rowTotal=0, hasValue=false;
-    tr.querySelectorAll('.usina-kwh-row input').forEach(inp=>{
-      const v = parseFloat(inp.value);
-      if(!isNaN(v)){ rowTotal+=v; hasValue=true; }
-    });
-    if(hasValue){ total+=rowTotal; count++; }
+    const inputs = tr.querySelectorAll('.usina-kwh-row input');
+    const hasValue = Array.from(inputs).some(inp=>inp.value!=='');
+    if(hasValue){ total += rowTotalFromDom(tr); count++; }
   });
   document.getElementById('ct-total').textContent = fmtNum(total) + ' kWh';
   document.getElementById('ct-count').textContent = count + ' / ' + all;
@@ -2749,7 +2860,7 @@ document.addEventListener('click', (e)=>{
   }
 });
 document.getElementById('comp-tbody').addEventListener('input', (e)=>{
-  if(e.target.classList.contains('g-usina-kwh')) recalcRowTotal(e.target.closest('tr'));
+  if(e.target.classList.contains('g-usina-kwh') || e.target.classList.contains('g-usina-kwh-ponta') || e.target.classList.contains('g-usina-kwh-fora')) recalcRowTotal(e.target.closest('tr'));
   else updateCompTotals();
 });
 document.getElementById('comp-month').addEventListener('change', renderCompGrid);
@@ -2770,14 +2881,28 @@ document.getElementById('comp-save').addEventListener('click', async ()=>{
   document.querySelectorAll('#comp-tbody tr[data-codigo]').forEach(tr=>{
     const cod = tr.dataset.codigo;
     const obs = tr.querySelector('.g-obs').value.trim();
+    const creditoVal = parseFloat(tr.querySelector('.g-credito').value);
+    const credito = isNaN(creditoVal) ? null : creditoVal;
     const detalhe = [];
     tr.querySelectorAll('.usina-kwh-row').forEach(row=>{
-      const val = parseFloat(row.querySelector('input').value);
-      if(!isNaN(val)) detalhe.push({ codigo: row.dataset.codigo, kwh: val });
+      const cod = row.dataset.codigo;
+      const single = row.querySelector('.g-usina-kwh');
+      if(single){
+        const val = parseFloat(single.value);
+        if(!isNaN(val)) detalhe.push({ codigo: cod, kwh: val });
+        return;
+      }
+      const p = row.querySelector('.g-usina-kwh-ponta');
+      const f = row.querySelector('.g-usina-kwh-fora');
+      const pv = p ? parseFloat(p.value) : NaN;
+      const fv = f ? parseFloat(f.value) : NaN;
+      if(!isNaN(pv) || !isNaN(fv)){
+        detalhe.push({ codigo: cod, kwh: (isNaN(pv)?0:pv) + (isNaN(fv)?0:fv), kwhPonta: isNaN(pv)?0:pv, kwhForaPonta: isNaN(fv)?0:fv });
+      }
     });
-    if(!detalhe.length){ skipped++; return; }
+    if(!detalhe.length && credito==null){ skipped++; return; }
 
-    const payload = { mes: month, codigoCliente: cod, detalhe, usinas: detalhe.map(d=>d.codigo), kwhCompensado: detalhe.reduce((s,d)=>s+d.kwh,0), obs };
+    const payload = { mes: month, codigoCliente: cod, detalhe, usinas: detalhe.map(d=>d.codigo), kwhCompensado: detalhe.reduce((s,d)=>s+d.kwh,0), credito, obs };
     const existing = byCliente[cod];
     if(existing){
       Object.assign(existing, payload);
@@ -2807,7 +2932,7 @@ async function renderCompHistory(){
   const month = document.getElementById('comph-month').value || currentMonth();
   document.getElementById('comph-month').value = month;
   const tbody = document.getElementById('comph-tbody');
-  tbody.innerHTML = `<tr><td colspan="7" class="loading-row"><span class="spin"></span>carregando histórico…</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="9" class="loading-row"><span class="spin"></span>carregando histórico…</td></tr>`;
 
   const compensacoes = await loadCompensacoes();
   const filterCli = document.getElementById('comph-cliente').value;
@@ -2817,22 +2942,30 @@ async function renderCompHistory(){
   document.getElementById('comp-hist-meta').textContent = rows.length + ' registro(s)';
 
   if(!rows.length){
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty">Nenhuma compensação lançada neste mês${filterCli?' para este cliente':''} ainda.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty">Nenhuma compensação lançada neste mês${filterCli?' para este cliente':''} ainda.</div></td></tr>`;
     return;
   }
-  tbody.innerHTML = rows.map(c=>`
+  tbody.innerHTML = rows.map(c=>{
+    const cliente = CLIENTES.find(x=>x.codigo===c.codigoCliente);
+    const somaPonta = (c.detalhe||[]).reduce((s,d)=>s+(d.kwhPonta||0),0);
+    const somaFora = (c.detalhe||[]).reduce((s,d)=>s+(d.kwhForaPonta||0),0);
+    const economia = calcEconomiaCliente(cliente, c.kwhCompensado, somaPonta, somaFora);
+    return `
     <tr>
       <td>${new Date(c.mes+'-02').toLocaleDateString('pt-BR',{month:'short', year:'numeric'})}</td>
       <td>${c.codigoCliente}</td>
       <td class="txt">${escapeHtml(clienteNome(c.codigoCliente))}</td>
       <td class="txt">${escapeHtml(usinasDetalheLabel(c.detalhe))}</td>
       <td class="num">${fmtNum(c.kwhCompensado)}</td>
+      <td class="num">${c.credito!=null ? fmtNum(c.credito) : '—'}</td>
+      <td class="num">${economia!=null ? fmtBRL(economia) : '—'}</td>
       <td class="txt">${escapeHtml(c.obs||'—')}</td>
       <td><div class="row-actions">
         <button class="btn-edit-ghost" title="Editar no mês" onclick="editCompInGrid('${c.mes}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
         <button class="btn-danger-ghost" title="Excluir" onclick="deleteCompensacao('${c.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
       </div></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 window.editCompInGrid = function(month){
   document.getElementById('comp-month').value = month;
@@ -3118,16 +3251,26 @@ async function renderRelatorio(){
   const tbodyCli = document.getElementById('rel-clientes-tbody');
   document.getElementById('rel-clientes-meta').textContent = clientesVinculados.length + ' cliente(s)';
   if(!clientesVinculados.length){
-    tbodyCli.innerHTML = `<tr><td colspan="3" class="empty">Nenhum cliente vinculado a esta usina.</td></tr>`;
+    tbodyCli.innerHTML = `<tr><td colspan="6" class="empty">Nenhum cliente vinculado a esta usina.</td></tr>`;
   } else {
     tbodyCli.innerHTML = clientesVinculados.map(c=>{
       const registro = compensacoes.find(comp=>comp.mes===month && comp.codigoCliente===c.codigo);
       const kwh = registro ? (registro.detalhe||[]).filter(d=>d.codigo===codigo).reduce((s,d)=>s+(d.kwh||0),0) : 0;
+      const creditoMes = registro && registro.credito!=null ? registro.credito : null;
+      const creditoTotal = compensacoes
+        .filter(comp=>comp.codigoCliente===c.codigo && comp.credito!=null)
+        .reduce((s,comp)=>s+comp.credito, 0);
+      const temCredito = compensacoes.some(comp=>comp.codigoCliente===c.codigo && comp.credito!=null);
+      const usinaDetalhe = registro ? (registro.detalhe||[]).find(d=>d.codigo===codigo) : null;
+      const economia = registro ? calcEconomiaCliente(c, kwh, usinaDetalhe?usinaDetalhe.kwhPonta:0, usinaDetalhe?usinaDetalhe.kwhForaPonta:0) : null;
       return `
       <tr>
         <td class="txt">${escapeHtml(c.nome)}</td>
         <td class="txt">${escapeHtml(c.contaContrato||'—')}</td>
         <td class="num">${registro ? fmtNum(kwh) : '—'}</td>
+        <td class="num">${creditoMes!=null ? fmtNum(creditoMes) : '—'}</td>
+        <td class="num">${temCredito ? fmtNum(creditoTotal) : '—'}</td>
+        <td class="num">${economia!=null ? fmtBRL(economia) : '—'}</td>
       </tr>`;
     }).join('');
   }
@@ -3209,11 +3352,11 @@ async function renderClientesDaUsina(){
   meta.textContent = rows.length + ' cliente(s)';
 
   if(!rows.length){
-    tbody.innerHTML = `<tr><td colspan="3"><div class="empty">Nenhum cliente vinculado a esta usina ainda.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty">Nenhum cliente vinculado a esta usina ainda.</div></td></tr>`;
     return;
   }
 
-  tbody.innerHTML = `<tr><td colspan="3" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="4" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
   const compensacoes = await loadCompensacoes();
 
   tbody.innerHTML = rows.map(c=>{
@@ -3221,11 +3364,15 @@ async function renderClientesDaUsina(){
     const kwhDestaUsina = registro
       ? (registro.detalhe||[]).filter(d=>permitidas.has(d.codigo)).reduce((s,d)=>s+(d.kwh||0),0)
       : 0;
+    const somaPontaDU = registro ? (registro.detalhe||[]).filter(d=>permitidas.has(d.codigo)).reduce((s,d)=>s+(d.kwhPonta||0),0) : 0;
+    const somaForaDU = registro ? (registro.detalhe||[]).filter(d=>permitidas.has(d.codigo)).reduce((s,d)=>s+(d.kwhForaPonta||0),0) : 0;
+    const economia = registro ? calcEconomiaCliente(c, kwhDestaUsina, somaPontaDU, somaForaDU) : null;
     return `
     <tr>
       <td class="txt">${escapeHtml(c.nome)}</td>
       <td class="txt">${escapeHtml(c.contaContrato||'—')}</td>
       <td class="num">${registro ? fmtNum(kwhDestaUsina) : '—'}</td>
+      <td class="num">${economia!=null ? fmtBRL(economia) : '—'}</td>
     </tr>`;
   }).join('');
 }
