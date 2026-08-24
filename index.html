@@ -899,8 +899,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
 
       <div class="table-wrap" style="max-height:520px;">
         <table>
-          <thead><tr><th>Conta Contrato</th><th>Cliente</th><th>Usina(s) do mês</th><th class="num">kWh Compensado</th><th class="num">Crédito (kWh)</th><th>Obs.</th></tr></thead>
-          <tbody id="comp-tbody"><tr><td colspan="6" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
+          <thead><tr><th>Conta Contrato</th><th>Cliente</th><th>Usina(s) do mês</th><th class="num">kWh Compensado</th><th class="num">Consumo (kWh)</th><th class="num">Crédito (kWh)</th><th>Obs.</th></tr></thead>
+          <tbody id="comp-tbody"><tr><td colspan="7" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
         </table>
       </div>
 
@@ -918,8 +918,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
       </div>
       <div class="table-wrap" style="max-height:420px;">
         <table>
-          <thead><tr><th>Mês</th><th>Conta Contrato</th><th>Cliente</th><th>Usina(s)</th><th class="num">kWh Compensado</th><th class="num">Crédito (kWh)</th><th class="num">Economia (R$)</th><th class="txt">Obs.</th><th></th></tr></thead>
-          <tbody id="comph-tbody"><tr><td colspan="9" class="loading-row"><span class="spin"></span>carregando histórico…</td></tr></tbody>
+          <thead><tr><th>Mês</th><th>Conta Contrato</th><th>Cliente</th><th>Usina(s)</th><th class="num">kWh Compensado</th><th class="num">Consumo (kWh)</th><th class="num">Crédito (kWh)</th><th class="num">Economia (R$)</th><th class="txt">Obs.</th><th></th></tr></thead>
+          <tbody id="comph-tbody"><tr><td colspan="10" class="loading-row"><span class="spin"></span>carregando histórico…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1029,8 +1029,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         <div class="panel-title">Contas vinculadas a esta usina<small id="rel-clientes-meta"></small></div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Cliente</th><th>Conta Contrato</th><th class="num">kWh Compensado no mês</th><th class="num">Crédito do mês (kWh)</th><th class="num">Crédito Total (kWh)</th><th class="num">Economia no mês (R$)</th></tr></thead>
-            <tbody id="rel-clientes-tbody"><tr><td colspan="6" class="empty">Nenhum cliente vinculado a esta usina.</td></tr></tbody>
+            <thead><tr><th>Cliente</th><th>Conta Contrato</th><th class="num">kWh Compensado no mês</th><th class="num">Consumo no mês (kWh)</th><th class="num">Crédito do mês (kWh)</th><th class="num">Crédito Total (kWh)</th><th class="num">Economia no mês (R$)</th></tr></thead>
+            <tbody id="rel-clientes-tbody"><tr><td colspan="7" class="empty">Nenhum cliente vinculado a esta usina.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -2702,6 +2702,7 @@ function compRowToObj(row){
     usinas: row.usinas || [],
     kwhCompensado: parseFloat(row.kwh_compensado)||0,
     credito: row.credito!=null ? parseFloat(row.credito) : null,
+    consumo: row.consumo!=null ? parseFloat(row.consumo) : null,
     obs: row.obs||''
   };
 }
@@ -2712,6 +2713,7 @@ function compObjToRow(c){
     mes:c.mes, codigo_cliente:c.codigoCliente,
     kwh_compensado: total,
     credito: (c.credito!=null && c.credito!=='') ? c.credito : null,
+    consumo: (c.consumo!=null && c.consumo!=='') ? c.consumo : null,
     usinas: detalhe.map(d=>d.codigo),
     detalhe: detalhe,
     obs:c.obs||''
@@ -2923,10 +2925,10 @@ async function renderCompGrid(){
   const month = document.getElementById('comp-month').value || currentMonth();
   document.getElementById('comp-month').value = month;
   const tbody = document.getElementById('comp-tbody');
-  tbody.innerHTML = `<tr><td colspan="6" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="7" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
 
   if(!CLIENTES.length){
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">Cadastre clientes acima antes de lançar compensações.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty">Cadastre clientes acima antes de lançar compensações.</div></td></tr>`;
     updateCompTotals();
     return;
   }
@@ -2949,7 +2951,7 @@ async function renderCompGrid(){
     .sort((a,b)=>a.codigo.localeCompare(b.codigo));
 
   if(!rows.length){
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">${onlyPending ? 'Todos os clientes já têm compensação lançada neste mês. Desmarque "Só pendentes" para ver/editar todos.' : 'Nenhum cliente encontrado.'}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty">${onlyPending ? 'Todos os clientes já têm compensação lançada neste mês. Desmarque "Só pendentes" para ver/editar todos.' : 'Nenhum cliente encontrado.'}</div></td></tr>`;
     updateCompTotals();
     return;
   }
@@ -2990,6 +2992,7 @@ async function renderCompGrid(){
         <div class="usina-kwh-list">${kwhListHtml}</div>
       </td>
       <td class="num"><div class="g-total-display">${fmtNum(totalInicial)}</div></td>
+      <td class="num"><input type="number" class="grid-input g-consumo" step="0.1" min="0" value="${comp && comp.consumo!=null ? comp.consumo : ''}"></td>
       <td class="num"><input type="number" class="grid-input g-credito" step="0.1" min="0" value="${comp && comp.credito!=null ? comp.credito : ''}"></td>
       <td><input type="text" class="grid-input obs g-obs" value="${comp?escapeHtml(comp.obs||''):''}"></td>
     </tr>`;
@@ -3116,6 +3119,8 @@ document.getElementById('comp-save').addEventListener('click', async ()=>{
     const obs = tr.querySelector('.g-obs').value.trim();
     const creditoVal = parseFloat(tr.querySelector('.g-credito').value);
     const credito = isNaN(creditoVal) ? null : creditoVal;
+    const consumoVal = parseFloat(tr.querySelector('.g-consumo').value);
+    const consumo = isNaN(consumoVal) ? null : consumoVal;
     const detalhe = [];
     tr.querySelectorAll('.usina-kwh-row').forEach(row=>{
       const cod = row.dataset.codigo;
@@ -3133,9 +3138,9 @@ document.getElementById('comp-save').addEventListener('click', async ()=>{
         detalhe.push({ codigo: cod, kwh: (isNaN(pv)?0:pv) + (isNaN(fv)?0:fv), kwhPonta: isNaN(pv)?0:pv, kwhForaPonta: isNaN(fv)?0:fv });
       }
     });
-    if(!detalhe.length && credito==null){ skipped++; return; }
+    if(!detalhe.length && credito==null && consumo==null){ skipped++; return; }
 
-    const payload = { mes: month, codigoCliente: cod, detalhe, usinas: detalhe.map(d=>d.codigo), kwhCompensado: detalhe.reduce((s,d)=>s+d.kwh,0), credito, obs };
+    const payload = { mes: month, codigoCliente: cod, detalhe, usinas: detalhe.map(d=>d.codigo), kwhCompensado: detalhe.reduce((s,d)=>s+d.kwh,0), credito, consumo, obs };
     const existing = byCliente[cod];
     if(existing){
       Object.assign(existing, payload);
@@ -3190,6 +3195,7 @@ async function renderCompHistory(){
       <td class="txt">${escapeHtml(clienteNome(c.codigoCliente))}</td>
       <td class="txt">${escapeHtml(usinasDetalheLabel(c.detalhe))}</td>
       <td class="num">${fmtNum(c.kwhCompensado)}</td>
+      <td class="num">${c.consumo!=null ? fmtNum(c.consumo) : '—'}</td>
       <td class="num">${c.credito!=null ? fmtNum(c.credito) : '—'}</td>
       <td class="num">${economia!=null ? fmtBRL(economia) : '—'}</td>
       <td class="txt">${escapeHtml(c.obs||'—')}</td>
@@ -3478,7 +3484,7 @@ async function renderRelatorio(){
   const tbodyCli = document.getElementById('rel-clientes-tbody');
   document.getElementById('rel-clientes-meta').textContent = clientesVinculados.length + ' cliente(s)';
   if(!clientesVinculados.length){
-    tbodyCli.innerHTML = `<tr><td colspan="6" class="empty">Nenhum cliente vinculado a esta usina.</td></tr>`;
+    tbodyCli.innerHTML = `<tr><td colspan="7" class="empty">Nenhum cliente vinculado a esta usina.</td></tr>`;
   } else {
     tbodyCli.innerHTML = clientesVinculados.map(c=>{
       const registro = compensacoes.find(comp=>comp.mes===month && comp.codigoCliente===c.codigo);
@@ -3495,6 +3501,7 @@ async function renderRelatorio(){
         <td class="txt">${escapeHtml(c.nome)}</td>
         <td class="txt">${escapeHtml(c.contaContrato||'—')}</td>
         <td class="num">${registro ? fmtNum(kwh) : '—'}</td>
+        <td class="num">${registro && registro.consumo!=null ? fmtNum(registro.consumo) : '—'}</td>
         <td class="num">${creditoMes!=null ? fmtNum(creditoMes) : '—'}</td>
         <td class="num">${temCredito ? fmtNum(creditoTotal) : '—'}</td>
         <td class="num">${economia!=null ? fmtBRL(economia) : '—'}</td>
