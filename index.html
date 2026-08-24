@@ -2148,27 +2148,34 @@ document.getElementById('chart-status-clear').addEventListener('click', ()=>{
 let INJETADA = null;
 
 function injRowToObj(row){
-  return { id: row.Id, mes: normalizeMes(row.Mes), codigoUsina: row.CodigoUsina, kwhInjetado: parseFloat(row.KwhInjetado)||0, obs: row.Obs||'' };
+  return { id: row.id, mes: normalizeMes(row.mes), codigoUsina: row.codigo_usina, kwhInjetado: parseFloat(row.kwh_injetado)||0, obs: row.obs||'' };
 }
 function injObjToRow(i){
-  return { Id:i.id, Mes:i.mes, CodigoUsina:i.codigoUsina, KwhInjetado:i.kwhInjetado, Obs:i.obs||'' };
+  return { mes:i.mes, codigo_usina:i.codigoUsina, kwh_injetado:i.kwhInjetado, obs:i.obs||'' };
 }
 async function loadInjetada(force){
   if(INJETADA && !force) return INJETADA;
   try{
-    const rows = await sheetGet('EnergiaInjetada');
-    INJETADA = rows.map(injRowToObj);
-  }catch(e){ toast('Erro ao carregar energia injetada da planilha: ' + e.message, true); INJETADA = []; }
+    const { data, error } = await sb.from('energia_injetada').select('*');
+    throwIfSupabaseError(error, 'Energia Injetada');
+    INJETADA = (data||[]).map(injRowToObj);
+  }catch(e){ toast('Erro ao carregar energia injetada: ' + e.message, true); INJETADA = []; }
   return INJETADA;
 }
 async function upsertInjetada(list){
   if(!list.length) return true;
-  try{ await sheetPost({sheet:'EnergiaInjetada', op:'bulkUpsert', key:'Id', rows:list.map(injObjToRow)}); return true; }
-  catch(e){ toast('Erro ao salvar energia injetada na planilha: ' + e.message, true); return false; }
+  try{
+    const { error } = await sb.from('energia_injetada').upsert(list.map(injObjToRow), { onConflict:'mes,codigo_usina' });
+    throwIfSupabaseError(error, 'Energia Injetada');
+    return true;
+  }catch(e){ toast('Erro ao salvar energia injetada: ' + e.message, true); return false; }
 }
 async function deleteInjetadaRemote(id){
-  try{ await sheetPost({sheet:'EnergiaInjetada', op:'delete', key:'Id', value:id}); return true; }
-  catch(e){ toast('Erro ao excluir energia injetada na planilha: ' + e.message, true); return false; }
+  try{
+    const { error } = await sb.from('energia_injetada').delete().eq('id', id);
+    throwIfSupabaseError(error, 'Energia Injetada');
+    return true;
+  }catch(e){ toast('Erro ao excluir energia injetada: ' + e.message, true); return false; }
 }
 
 async function renderInjGrid(){
@@ -2242,7 +2249,6 @@ document.getElementById('inj-save').addEventListener('click', async ()=>{
       Object.assign(existing, payload);
       changed.push(existing);
     } else {
-      payload.id = Date.now()+'-inj-'+cod+'-'+Math.random().toString(36).slice(2,7);
       injetada.push(payload);
       byUsina[cod] = payload;
       changed.push(payload);
@@ -2255,6 +2261,7 @@ document.getElementById('inj-save').addEventListener('click', async ()=>{
   if(ok){
     toast(saved + ' usina(s) salva(s) para ' + new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'}) + '.');
     document.getElementById('inj-save-hint').textContent = skipped ? (skipped + ' usina(s) sem valor foram ignoradas.') : '';
+    await loadInjetada(true);
     renderInjGrid();
     document.getElementById('injh-month').value = month;
     renderInjHistory();
