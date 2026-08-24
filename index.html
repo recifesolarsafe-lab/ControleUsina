@@ -2888,8 +2888,6 @@ async function renderCompGrid(){
   compensacoes.forEach(c=>{ if(c.mes===month) byCliente[c.codigoCliente]=c; });
 
   function defaultUsinasFor(codigoCliente){
-    const historico = compensacoes.filter(c=>c.codigoCliente===codigoCliente && c.mes<month).sort((a,b)=>b.mes.localeCompare(a.mes));
-    if(historico.length) return historico[0].usinas;
     const cli = CLIENTES.find(x=>x.codigo===codigoCliente);
     return cli ? cli.usinas : [];
   }
