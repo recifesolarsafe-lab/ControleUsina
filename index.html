@@ -200,6 +200,9 @@
   .hint{font-size:11px; color:var(--text-faint); margin-top:6px; line-height:1.5;}
 
   .table-wrap{overflow-x:auto; overflow-y:auto; border-radius:8px; border:1px solid var(--border);}
+  #rel-clientes-wrap{overflow-x:visible; overflow-y:visible;}
+  #rel-clientes-wrap table{table-layout:fixed; width:100%;}
+  #rel-clientes-wrap th, #rel-clientes-wrap td{white-space:normal; word-break:break-word; font-size:11.5px; padding:8px 6px;}
   table{width:100%; border-collapse:collapse; font-size:12.8px;}
   thead th{
     text-align:left; font-family:var(--font-mono); font-weight:500; font-size:10.8px;
@@ -992,6 +995,7 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         <div class="field grow"><label for="rel-usina">Usina</label><select id="rel-usina"><option value="">selecione uma usina…</option></select></div>
         <div class="field"><label for="rel-month">Mês de referência</label><input type="month" id="rel-month"></div>
         <button class="btn btn-ghost" id="rel-print">🖨 Imprimir / Exportar PDF</button>
+        <button class="btn btn-primary" id="rel-export-html">📊 Exportar HTML Interativo</button>
       </div>
     </div>
 
@@ -1013,6 +1017,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         <div class="kpi"><div class="lbl">Meta no mês</div><div class="val" id="rel-kpi-meta">—</div><div class="sub" id="rel-kpi-meta-sub">kWh esperados</div></div>
         <div class="kpi"><div class="lbl">Atingimento</div><div class="val" id="rel-kpi-pr">—</div><div class="sub">performance ratio</div></div>
         <div class="kpi"><div class="lbl">Energia injetada</div><div class="val teal" id="rel-kpi-injetada">—</div><div class="sub">kWh no mês, na rede</div></div>
+        <div class="kpi"><div class="lbl">Economia total no mês</div><div class="val amber" id="rel-kpi-economia-mes">—</div><div class="sub">soma de todos os clientes desta usina</div></div>
+        <div class="kpi"><div class="lbl">Economia total desde o início</div><div class="val amber" id="rel-kpi-economia-total">—</div><div class="sub">acumulado desde o funcionamento</div></div>
       </div>
 
       <div class="panel report-panel">
@@ -1027,7 +1033,7 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
 
       <div class="panel report-panel">
         <div class="panel-title">Contas vinculadas a esta usina<small id="rel-clientes-meta"></small></div>
-        <div class="table-wrap">
+        <div class="table-wrap" id="rel-clientes-wrap">
           <table>
             <thead><tr><th>Cliente</th><th>Conta Contrato</th><th class="num">kWh Compensado no mês</th><th class="num">Consumo no mês (kWh)</th><th class="num">Crédito do mês (kWh)</th><th class="num">Crédito Total (kWh)</th><th class="num">Economia no mês (R$)</th></tr></thead>
             <tbody id="rel-clientes-tbody"><tr><td colspan="7" class="empty">Nenhum cliente vinculado a esta usina.</td></tr></tbody>
@@ -3386,6 +3392,7 @@ function populateRelatorioUsinaSelect(){
   if(current) sel.value = current;
 }
 
+let RELATORIO_DATA = null;
 async function renderRelatorio(){
   const codigo = document.getElementById('rel-usina').value;
   const month = document.getElementById('rel-month').value || currentMonth();
@@ -3483,31 +3490,59 @@ async function renderRelatorio(){
   const compensacoes = await loadCompensacoes();
   const tbodyCli = document.getElementById('rel-clientes-tbody');
   document.getElementById('rel-clientes-meta').textContent = clientesVinculados.length + ' cliente(s)';
-  if(!clientesVinculados.length){
+
+  const clientesRows = clientesVinculados.map(c=>{
+    const registro = compensacoes.find(comp=>comp.mes===month && comp.codigoCliente===c.codigo);
+    const kwh = registro ? (registro.detalhe||[]).filter(d=>d.codigo===codigo).reduce((s,d)=>s+(d.kwh||0),0) : 0;
+    const creditoMes = registro && registro.credito!=null ? registro.credito : null;
+    const creditoTotal = compensacoes
+      .filter(comp=>comp.codigoCliente===c.codigo && comp.credito!=null)
+      .reduce((s,comp)=>s+comp.credito, 0);
+    const temCredito = compensacoes.some(comp=>comp.codigoCliente===c.codigo && comp.credito!=null);
+    const usinaDetalhe = registro ? (registro.detalhe||[]).find(d=>d.codigo===codigo) : null;
+    const economia = registro ? calcEconomiaCliente(c, kwh, usinaDetalhe?usinaDetalhe.kwhPonta:0, usinaDetalhe?usinaDetalhe.kwhForaPonta:0) : null;
+    return {
+      nome: c.nome, conta: c.contaContrato||'—',
+      compensado: registro ? fmtNum(kwh) : '—',
+      consumo: registro && registro.consumo!=null ? fmtNum(registro.consumo) : '—',
+      creditoMes: creditoMes!=null ? fmtNum(creditoMes) : '—',
+      creditoTotal: temCredito ? fmtNum(creditoTotal) : '—',
+      economia: economia!=null ? fmtBRL(economia) : '—'
+    };
+  });
+
+  if(!clientesRows.length){
     tbodyCli.innerHTML = `<tr><td colspan="7" class="empty">Nenhum cliente vinculado a esta usina.</td></tr>`;
   } else {
-    tbodyCli.innerHTML = clientesVinculados.map(c=>{
-      const registro = compensacoes.find(comp=>comp.mes===month && comp.codigoCliente===c.codigo);
-      const kwh = registro ? (registro.detalhe||[]).filter(d=>d.codigo===codigo).reduce((s,d)=>s+(d.kwh||0),0) : 0;
-      const creditoMes = registro && registro.credito!=null ? registro.credito : null;
-      const creditoTotal = compensacoes
-        .filter(comp=>comp.codigoCliente===c.codigo && comp.credito!=null)
-        .reduce((s,comp)=>s+comp.credito, 0);
-      const temCredito = compensacoes.some(comp=>comp.codigoCliente===c.codigo && comp.credito!=null);
-      const usinaDetalhe = registro ? (registro.detalhe||[]).find(d=>d.codigo===codigo) : null;
-      const economia = registro ? calcEconomiaCliente(c, kwh, usinaDetalhe?usinaDetalhe.kwhPonta:0, usinaDetalhe?usinaDetalhe.kwhForaPonta:0) : null;
-      return `
+    tbodyCli.innerHTML = clientesRows.map(r=>`
       <tr>
-        <td class="txt">${escapeHtml(c.nome)}</td>
-        <td class="txt">${escapeHtml(c.contaContrato||'—')}</td>
-        <td class="num">${registro ? fmtNum(kwh) : '—'}</td>
-        <td class="num">${registro && registro.consumo!=null ? fmtNum(registro.consumo) : '—'}</td>
-        <td class="num">${creditoMes!=null ? fmtNum(creditoMes) : '—'}</td>
-        <td class="num">${temCredito ? fmtNum(creditoTotal) : '—'}</td>
-        <td class="num">${economia!=null ? fmtBRL(economia) : '—'}</td>
-      </tr>`;
-    }).join('');
+        <td class="txt">${escapeHtml(r.nome)}</td>
+        <td class="txt">${escapeHtml(r.conta)}</td>
+        <td class="num">${r.compensado}</td>
+        <td class="num">${r.consumo}</td>
+        <td class="num">${r.creditoMes}</td>
+        <td class="num">${r.creditoTotal}</td>
+        <td class="num">${r.economia}</td>
+      </tr>`).join('');
   }
+
+  // --- economia total: no mês e desde o início ---
+  const totalEconomiaMes = clientesRows.reduce((sum, r)=>{
+    const v = parseFloat(String(r.economia).replace(/[^\d,.-]/g,'').replace(',', '.'));
+    return sum + (isNaN(v) ? 0 : v);
+  }, 0);
+  const totalEconomiaGeral = clientesVinculados.reduce((sum, c)=>{
+    const registrosCliente = compensacoes.filter(comp=>comp.codigoCliente===c.codigo);
+    const economiaCliente = registrosCliente.reduce((s2, registro)=>{
+      const kwh = (registro.detalhe||[]).filter(dd=>dd.codigo===codigo).reduce((s,dd)=>s+(dd.kwh||0),0);
+      const usinaDetalheG = (registro.detalhe||[]).find(dd=>dd.codigo===codigo);
+      const economia = calcEconomiaCliente(c, kwh, usinaDetalheG?usinaDetalheG.kwhPonta:0, usinaDetalheG?usinaDetalheG.kwhForaPonta:0);
+      return s2 + (economia||0);
+    }, 0);
+    return sum + economiaCliente;
+  }, 0);
+  document.getElementById('rel-kpi-economia-mes').textContent = fmtBRL(totalEconomiaMes);
+  document.getElementById('rel-kpi-economia-total').textContent = fmtBRL(totalEconomiaGeral);
 
   // --- manutenções e ações no mês ---
   const manutencoes = await loadManutencoes();
@@ -3516,23 +3551,127 @@ async function renderRelatorio(){
     .sort((a,b)=> a.data.localeCompare(b.data));
   document.getElementById('rel-man-meta').textContent = manRows.length + ' ação(ões)';
 
+  const manCardsData = manRows.map(m=>({
+    data: m.data ? new Date(m.data+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit', month:'long'}) : '—',
+    cliente: clienteNome(m.codigoCliente),
+    descricao: m.descricao,
+    responsavel: m.responsavel||'—'
+  }));
+
   const manCardsEl = document.getElementById('rel-man-cards');
-  if(!manRows.length){
+  if(!manCardsData.length){
     manCardsEl.innerHTML = `<div class="empty">Nenhuma manutenção registrada neste mês.</div>`;
   } else {
-    manCardsEl.innerHTML = manRows.map(m=>`
+    manCardsEl.innerHTML = manCardsData.map(m=>`
       <div class="man-card">
-        <div class="man-card-date">${m.data ? new Date(m.data+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit', month:'long'}) : '—'}</div>
-        <div class="man-card-cliente">${escapeHtml(clienteNome(m.codigoCliente))}</div>
+        <div class="man-card-date">${escapeHtml(m.data)}</div>
+        <div class="man-card-cliente">${escapeHtml(m.cliente)}</div>
         <div class="man-card-desc">${formatFrases(m.descricao)}</div>
-        <div class="man-card-resp">Responsável: ${escapeHtml(m.responsavel||'—')}</div>
+        <div class="man-card-resp">Responsável: ${escapeHtml(m.responsavel)}</div>
       </div>`).join('');
   }
+
+  RELATORIO_DATA = {
+    usinaNome: usina.nome,
+    periodo: document.getElementById('rel-periodo').textContent,
+    geradoEm: document.getElementById('rel-gerado-em').textContent,
+    kpis: {
+      geracao: fmtNum(totalReal), meta: meta ? fmtNum(meta) : '—',
+      metaSub: document.getElementById('rel-kpi-meta-sub').textContent,
+      pr: pr!=null ? fmtPct(pr) : '—',
+      injetada: registroInj ? fmtNum(registroInj.kwhInjetado) : '—',
+      economiaMes: fmtBRL(totalEconomiaMes),
+      economiaTotal: fmtBRL(totalEconomiaGeral)
+    },
+    chartDiario: { labels, dailyReal, dailyMetaFlat, mesLabel: document.getElementById('rel-chart-diario-meta').textContent },
+    chartAnual: { labels: MESES.map(m=>m.l), realByMonth, expByMonth, ano: year },
+    clientes: clientesRows,
+    manutencoes: manCardsData
+  };
+}
+
+function exportarRelatorioHTML(){
+  if(!RELATORIO_DATA){ toast('Gere o relatório antes de exportar.', true); return; }
+  const d = RELATORIO_DATA;
+
+  const clientesRowsHtml = d.clientes.length ? d.clientes.map(r=>`
+    <tr>
+      <td>${escapeHtml(r.nome)}</td><td>${escapeHtml(r.conta)}</td><td class="num">${r.compensado}</td>
+      <td class="num">${r.consumo}</td><td class="num">${r.creditoMes}</td><td class="num">${r.creditoTotal}</td><td class="num">${r.economia}</td>
+    </tr>`).join('') : `<tr><td colspan="7" style="text-align:center; color:#8091b4; padding:20px;">Nenhum cliente vinculado.</td></tr>`;
+
+  const manCardsHtml = d.manutencoes.length ? d.manutencoes.map(m=>`
+    <div class="man-card">
+      <div class="man-date">${escapeHtml(m.data)}</div>
+      <div class="man-cliente">${escapeHtml(m.cliente)}</div>
+      <div class="man-desc">${escapeHtml(m.descricao)}</div>
+      <div class="man-resp">Responsável: ${escapeHtml(m.responsavel)}</div>
+    </div>`).join('') : `<div style="color:#8091b4;">Nenhuma manutenção registrada neste mês.</div>`;
+
+  const htmlDoc = '<!DOCTYPE html>\n<html lang="pt-BR"><head><meta charset="UTF-8">'
+    + '<title>Relatório — ' + escapeHtml(d.usinaNome) + '</title>'
+    + '<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>'
+    + '<style>'
+    + 'body{background:#1B2A45; color:#EDF0F5; font-family:Arial,Helvetica,sans-serif; margin:0; padding:32px;}'
+    + 'h1{font-size:26px; margin-bottom:4px;} .sub{color:#9CACC9; font-size:13px; margin-bottom:24px;}'
+    + '.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:28px;}'
+    + '.kpi{background:#213353; border:1px solid #3A4F79; border-radius:10px; padding:16px;}'
+    + '.kpi .lbl{font-size:11px; color:#9CACC9; text-transform:uppercase; letter-spacing:0.5px;}'
+    + '.kpi .val{font-size:24px; font-weight:700; margin-top:6px; color:#F2703C;}'
+    + '.kpi .subv{font-size:11px; color:#6376A0; margin-top:4px;}'
+    + '.panel{background:#213353; border:1px solid #3A4F79; border-radius:10px; padding:20px; margin-bottom:24px;}'
+    + '.panel h2{font-size:15px; margin:0 0 14px;} canvas{max-height:340px;}'
+    + 'table{width:100%; border-collapse:collapse; font-size:12.5px;}'
+    + 'th,td{padding:8px 10px; text-align:left; border-bottom:1px solid #3A4F79;}'
+    + 'th{color:#9CACC9; font-size:11px; text-transform:uppercase;} .num{text-align:right; font-family:monospace;}'
+    + '.man-card{background:#1B2A45; border:1px solid #3A4F79; border-radius:8px; padding:12px; margin-bottom:10px;}'
+    + '.man-date{color:#F2703C; font-size:11px; font-family:monospace;} .man-cliente{font-weight:700; margin:4px 0;}'
+    + '.man-desc{color:#9CACC9; font-size:13px;} .man-resp{color:#6376A0; font-size:11px; margin-top:8px;}'
+    + '.footer{text-align:center; color:#6376A0; font-size:11px; padding:20px 0;}'
+    + '</style></head><body>'
+    + '<h1>' + escapeHtml(d.usinaNome) + '</h1>'
+    + '<div class="sub">' + escapeHtml(d.periodo) + ' — gerado em ' + escapeHtml(d.geradoEm) + '</div>'
+    + '<div class="kpis">'
+    + '<div class="kpi"><div class="lbl">Geração no mês</div><div class="val">' + d.kpis.geracao + '</div><div class="subv">kWh gerados</div></div>'
+    + '<div class="kpi"><div class="lbl">Meta no mês</div><div class="val" style="color:#EDF0F5;">' + d.kpis.meta + '</div><div class="subv">' + escapeHtml(d.kpis.metaSub) + '</div></div>'
+    + '<div class="kpi"><div class="lbl">Atingimento</div><div class="val" style="color:#EDF0F5;">' + d.kpis.pr + '</div><div class="subv">performance ratio</div></div>'
+    + '<div class="kpi"><div class="lbl">Energia injetada</div><div class="val" style="color:#34D9C4;">' + d.kpis.injetada + '</div><div class="subv">kWh no mês, na rede</div></div>'
+    + '<div class="kpi"><div class="lbl">Economia total no mês</div><div class="val">' + d.kpis.economiaMes + '</div><div class="subv">soma de todos os clientes desta usina</div></div>'
+    + '<div class="kpi"><div class="lbl">Economia total desde o início</div><div class="val">' + d.kpis.economiaTotal + '</div><div class="subv">acumulado desde o funcionamento</div></div>'
+    + '</div>'
+    + '<div class="panel"><h2>Geração diária — ' + escapeHtml(d.chartDiario.mesLabel) + '</h2><canvas id="chartDiario"></canvas></div>'
+    + '<div class="panel"><h2>Geração x esperado — ' + d.chartAnual.ano + '</h2><canvas id="chartAnual"></canvas></div>'
+    + '<div class="panel"><h2>Contas vinculadas a esta usina</h2><table>'
+    + '<thead><tr><th>Cliente</th><th>Conta Contrato</th><th class="num">Compensado (kWh)</th><th class="num">Consumo (kWh)</th><th class="num">Crédito mês (kWh)</th><th class="num">Crédito total (kWh)</th><th class="num">Economia (R$)</th></tr></thead>'
+    + '<tbody>' + clientesRowsHtml + '</tbody></table></div>'
+    + '<div class="panel"><h2>Manutenções e ações no mês</h2>' + manCardsHtml + '</div>'
+    + '<div class="footer">Relatório interativo — passe o mouse nos gráficos para ver os valores — SolarSafe</div>'
+    + '<script>'
+    + 'new Chart(document.getElementById("chartDiario"), { type:"bar", data:{ labels:' + JSON.stringify(d.chartDiario.labels) + ', datasets:['
+    + '{ label:"Geração real (kWh)", data:' + JSON.stringify(d.chartDiario.dailyReal) + ', backgroundColor:"#F2703C", borderRadius:4 },'
+    + '{ label:"Meta do dia (kWh)", data:' + JSON.stringify(d.chartDiario.dailyMetaFlat) + ', type:"line", borderColor:"#8091b4", borderDash:[5,4], pointRadius:0, borderWidth:2 }'
+    + ']}, options:{ responsive:true, plugins:{legend:{labels:{color:"#EDF0F5"}}}, scales:{ x:{ticks:{color:"#9CACC9"}, grid:{display:false}}, y:{ticks:{color:"#9CACC9"}, grid:{color:"#3A4F79"}} } } });'
+    + 'new Chart(document.getElementById("chartAnual"), { type:"bar", data:{ labels:' + JSON.stringify(d.chartAnual.labels) + ', datasets:['
+    + '{ label:"Real (kWh)", data:' + JSON.stringify(d.chartAnual.realByMonth) + ', backgroundColor:"#F2703C", borderRadius:4 },'
+    + '{ label:"Esperado (kWh)", data:' + JSON.stringify(d.chartAnual.expByMonth) + ', backgroundColor:"#3A4568", borderRadius:4 }'
+    + ']}, options:{ responsive:true, plugins:{legend:{labels:{color:"#EDF0F5"}}}, scales:{ x:{ticks:{color:"#9CACC9"}, grid:{display:false}}, y:{ticks:{color:"#9CACC9"}, grid:{color:"#3A4F79"}} } } });'
+    + '<\/script></body></html>';
+
+  const blob = new Blob([htmlDoc], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'relatorio-' + (d.usinaNome||'usina').toLowerCase().replace(/[^a-z0-9]+/g,'-') + '-' + (document.getElementById('rel-month').value||'') + '.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 document.getElementById('rel-usina').addEventListener('change', renderRelatorio);
 document.getElementById('rel-month').addEventListener('change', renderRelatorio);
 document.getElementById('rel-print').addEventListener('click', ()=>window.print());
+document.getElementById('rel-export-html').addEventListener('click', exportarRelatorioHTML);
 
 /* ============================================================
    Init
