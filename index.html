@@ -3111,7 +3111,6 @@ document.getElementById('comp-save').addEventListener('click', async ()=>{
       Object.assign(existing, payload);
       changed.push(existing);
     } else {
-      payload.id = Date.now()+'-comp-'+cod+'-'+Math.random().toString(36).slice(2,7);
       compensacoes.push(payload);
       byCliente[cod] = payload;
       changed.push(payload);
@@ -3124,6 +3123,7 @@ document.getElementById('comp-save').addEventListener('click', async ()=>{
   if(ok){
     toast(saved + ' cliente(s) salvo(s) para ' + new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'}) + '.');
     document.getElementById('comp-save-hint').textContent = skipped ? (skipped + ' cliente(s) sem valor foram ignorados.') : '';
+    await loadCompensacoes(true);
     renderCompGrid();
     document.getElementById('comph-month').value = month;
     renderCompHistory();
