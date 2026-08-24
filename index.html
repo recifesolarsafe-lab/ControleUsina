@@ -3507,7 +3507,8 @@ async function renderRelatorio(){
       consumo: registro && registro.consumo!=null ? fmtNum(registro.consumo) : '—',
       creditoMes: creditoMes!=null ? fmtNum(creditoMes) : '—',
       creditoTotal: temCredito ? fmtNum(creditoTotal) : '—',
-      economia: economia!=null ? fmtBRL(economia) : '—'
+      economia: economia!=null ? fmtBRL(economia) : '—',
+      economiaRaw: economia||0
     };
   });
 
@@ -3527,10 +3528,7 @@ async function renderRelatorio(){
   }
 
   // --- economia total: no mês e desde o início ---
-  const totalEconomiaMes = clientesRows.reduce((sum, r)=>{
-    const v = parseFloat(String(r.economia).replace(/[^\d,.-]/g,'').replace(',', '.'));
-    return sum + (isNaN(v) ? 0 : v);
-  }, 0);
+  const totalEconomiaMes = clientesRows.reduce((sum, r)=> sum + (r.economiaRaw||0), 0);
   const totalEconomiaGeral = clientesVinculados.reduce((sum, c)=>{
     const registrosCliente = compensacoes.filter(comp=>comp.codigoCliente===c.codigo);
     const economiaCliente = registrosCliente.reduce((s2, registro)=>{
