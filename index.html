@@ -15,6 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <style>
   :root{
     --bg:#1B2A45;
@@ -995,7 +996,6 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         <div class="field grow"><label for="rel-usina">Usina</label><select id="rel-usina"><option value="">selecione uma usina…</option></select></div>
         <div class="field"><label for="rel-month">Mês de referência</label><input type="month" id="rel-month"></div>
         <button class="btn btn-ghost" id="rel-print">🖨 Imprimir / Exportar PDF</button>
-        <button class="btn btn-primary" id="rel-export-html">📊 Exportar HTML Interativo</button>
       </div>
     </div>
 
@@ -3447,12 +3447,16 @@ async function renderRelatorio(){
     destroyChart('relDiario');
     CHARTS.relDiario = new Chart(document.getElementById('rel-chart-diario'), {
       type:'bar',
+      plugins: (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [],
       data:{ labels, datasets:[
-        { label:'Geração real (kWh)', data:dailyReal, backgroundColor:'#F2703C', borderRadius:4 },
-        { label:'Meta do dia (kWh)', data:dailyMetaFlat, type:'line', borderColor:'#5C6672', borderDash:[5,4], pointRadius:0, borderWidth:2 }
+        { label:'Geração real (kWh)', data:dailyReal, backgroundColor:'#F2703C', borderRadius:4,
+          datalabels:{ anchor:'end', align:'top', color:'#EDF0F5', font:{size:9}, rotation:-90, formatter:v=>v?fmtNum(v):'' } },
+        { label:'Meta do dia (kWh)', data:dailyMetaFlat, type:'line', borderColor:'#5C6672', borderDash:[5,4], pointRadius:0, borderWidth:2,
+          datalabels:{ display:false } }
       ]},
       options:{
         responsive:true, maintainAspectRatio:false,
+        layout:{ padding:{ top:24 } },
         plugins:{ legend:{ labels:{ boxWidth:12, boxHeight:2, padding:16 } } },
         scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#1B2530'}, ticks:{ callback:v=>fmtNum(v) } } }
       }
@@ -3473,12 +3477,16 @@ async function renderRelatorio(){
     destroyChart('relAnual');
     CHARTS.relAnual = new Chart(document.getElementById('rel-chart-anual'), {
       type:'bar',
+      plugins: (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [],
       data:{ labels: MESES.map(m=>m.l), datasets:[
-        { label:'Real (kWh)', data:realByMonth, backgroundColor:'#F2703C', borderRadius:4 },
-        { label:'Esperado (kWh)', data:expByMonth, backgroundColor:'#3A4568', borderRadius:4 }
+        { label:'Real (kWh)', data:realByMonth, backgroundColor:'#F2703C', borderRadius:4,
+          datalabels:{ anchor:'end', align:'top', color:'#EDF0F5', font:{size:10}, formatter:v=>v?fmtNum(v):'' } },
+        { label:'Esperado (kWh)', data:expByMonth, backgroundColor:'#3A4568', borderRadius:4,
+          datalabels:{ anchor:'end', align:'top', color:'#9CACC9', font:{size:10}, formatter:v=>v?fmtNum(v):'' } }
       ]},
       options:{
         responsive:true, maintainAspectRatio:false,
+        layout:{ padding:{ top:20 } },
         plugins:{ legend:{ labels:{ boxWidth:12, boxHeight:12, padding:16 } } },
         scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#1B2530'}, ticks:{ callback:v=>fmtNum(v) } } }
       }
@@ -3609,6 +3617,7 @@ function exportarRelatorioHTML(){
   const htmlDoc = '<!DOCTYPE html>\n<html lang="pt-BR"><head><meta charset="UTF-8">'
     + '<title>Relatório — ' + escapeHtml(d.usinaNome) + '</title>'
     + '<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>'
+    + '<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"><\/script>'
     + '<style>'
     + 'body{background:#1B2A45; color:#EDF0F5; font-family:Arial,Helvetica,sans-serif; margin:0; padding:32px;}'
     + 'h1{font-size:26px; margin-bottom:4px;} .sub{color:#9CACC9; font-size:13px; margin-bottom:24px;}'
@@ -3645,14 +3654,14 @@ function exportarRelatorioHTML(){
     + '<div class="panel"><h2>Manutenções e ações no mês</h2>' + manCardsHtml + '</div>'
     + '<div class="footer">Relatório interativo — passe o mouse nos gráficos para ver os valores — SolarSafe</div>'
     + '<script>'
-    + 'new Chart(document.getElementById("chartDiario"), { type:"bar", data:{ labels:' + JSON.stringify(d.chartDiario.labels) + ', datasets:['
-    + '{ label:"Geração real (kWh)", data:' + JSON.stringify(d.chartDiario.dailyReal) + ', backgroundColor:"#F2703C", borderRadius:4 },'
-    + '{ label:"Meta do dia (kWh)", data:' + JSON.stringify(d.chartDiario.dailyMetaFlat) + ', type:"line", borderColor:"#8091b4", borderDash:[5,4], pointRadius:0, borderWidth:2 }'
-    + ']}, options:{ responsive:true, plugins:{legend:{labels:{color:"#EDF0F5"}}}, scales:{ x:{ticks:{color:"#9CACC9"}, grid:{display:false}}, y:{ticks:{color:"#9CACC9"}, grid:{color:"#3A4F79"}} } } });'
-    + 'new Chart(document.getElementById("chartAnual"), { type:"bar", data:{ labels:' + JSON.stringify(d.chartAnual.labels) + ', datasets:['
-    + '{ label:"Real (kWh)", data:' + JSON.stringify(d.chartAnual.realByMonth) + ', backgroundColor:"#F2703C", borderRadius:4 },'
-    + '{ label:"Esperado (kWh)", data:' + JSON.stringify(d.chartAnual.expByMonth) + ', backgroundColor:"#3A4568", borderRadius:4 }'
-    + ']}, options:{ responsive:true, plugins:{legend:{labels:{color:"#EDF0F5"}}}, scales:{ x:{ticks:{color:"#9CACC9"}, grid:{display:false}}, y:{ticks:{color:"#9CACC9"}, grid:{color:"#3A4F79"}} } } });'
+    + 'new Chart(document.getElementById("chartDiario"), { type:"bar", plugins:[ChartDataLabels], data:{ labels:' + JSON.stringify(d.chartDiario.labels) + ', datasets:['
+    + '{ label:"Geração real (kWh)", data:' + JSON.stringify(d.chartDiario.dailyReal) + ', backgroundColor:"#F2703C", borderRadius:4, datalabels:{ anchor:"end", align:"top", color:"#EDF0F5", font:{size:9}, rotation:-90, formatter:v=>v?Math.round(v).toLocaleString("pt-BR"):"" } },'
+    + '{ label:"Meta do dia (kWh)", data:' + JSON.stringify(d.chartDiario.dailyMetaFlat) + ', type:"line", borderColor:"#8091b4", borderDash:[5,4], pointRadius:0, borderWidth:2, datalabels:{ display:false } }'
+    + ']}, options:{ responsive:true, layout:{padding:{top:24}}, plugins:{legend:{labels:{color:"#EDF0F5"}}}, scales:{ x:{ticks:{color:"#9CACC9"}, grid:{display:false}}, y:{ticks:{color:"#9CACC9"}, grid:{color:"#3A4F79"}} } } });'
+    + 'new Chart(document.getElementById("chartAnual"), { type:"bar", plugins:[ChartDataLabels], data:{ labels:' + JSON.stringify(d.chartAnual.labels) + ', datasets:['
+    + '{ label:"Real (kWh)", data:' + JSON.stringify(d.chartAnual.realByMonth) + ', backgroundColor:"#F2703C", borderRadius:4, datalabels:{ anchor:"end", align:"top", color:"#EDF0F5", font:{size:10}, formatter:v=>v?Math.round(v).toLocaleString("pt-BR"):"" } },'
+    + '{ label:"Esperado (kWh)", data:' + JSON.stringify(d.chartAnual.expByMonth) + ', backgroundColor:"#3A4568", borderRadius:4, datalabels:{ anchor:"end", align:"top", color:"#9CACC9", font:{size:10}, formatter:v=>v?Math.round(v).toLocaleString("pt-BR"):"" } }'
+    + ']}, options:{ responsive:true, layout:{padding:{top:20}}, plugins:{legend:{labels:{color:"#EDF0F5"}}}, scales:{ x:{ticks:{color:"#9CACC9"}, grid:{display:false}}, y:{ticks:{color:"#9CACC9"}, grid:{color:"#3A4F79"}} } } });'
     + '<\/script></body></html>';
 
   const blob = new Blob([htmlDoc], {type:'text/html'});
@@ -3669,7 +3678,6 @@ function exportarRelatorioHTML(){
 document.getElementById('rel-usina').addEventListener('change', renderRelatorio);
 document.getElementById('rel-month').addEventListener('change', renderRelatorio);
 document.getElementById('rel-print').addEventListener('click', ()=>window.print());
-document.getElementById('rel-export-html').addEventListener('click', exportarRelatorioHTML);
 
 /* ============================================================
    Init
