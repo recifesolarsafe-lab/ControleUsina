@@ -306,7 +306,7 @@
   .chart-grid.two{grid-template-columns:1fr 1fr;}
   @media (max-width:860px){.chart-grid.two{grid-template-columns:1fr;}}
   .chart-box{position:relative; height:280px;}
-  #rel-chart-diario, #rel-chart-anual{background:var(--bg); border-radius:8px;}
+  #rel-chart-diario-box, #rel-chart-anual-box{background:var(--bg); border-radius:8px; padding:8px;}
   .chart-box.tall{height:340px;}
 
   /* ---------- relatório da usina ---------- */
@@ -1024,12 +1024,12 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
 
       <div class="panel report-panel">
         <div class="panel-title">Geração diária no mês<small id="rel-chart-diario-meta"></small></div>
-        <div class="chart-box tall"><canvas id="rel-chart-diario"></canvas></div>
+        <div class="chart-box tall" id="rel-chart-diario-box"><canvas id="rel-chart-diario"></canvas></div>
       </div>
 
       <div class="panel report-panel">
         <div class="panel-title">Geração x esperado no ano<small id="rel-chart-anual-meta"></small></div>
-        <div class="chart-box tall"><canvas id="rel-chart-anual"></canvas></div>
+        <div class="chart-box tall" id="rel-chart-anual-box"><canvas id="rel-chart-anual"></canvas></div>
       </div>
 
       <div class="panel report-panel">
