@@ -796,7 +796,7 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
       <div class="panel-title">Novo usuário</div>
       <form id="form-usuario" novalidate>
         <div class="field-grid">
-          <div><label for="us-login">Login</label><input type="text" id="us-login" autocomplete="off" required></div>
+          <div><label for="us-login">E-mail</label><input type="email" id="us-login" autocomplete="off" required></div>
           <div><label for="us-nome">Nome</label><input type="text" id="us-nome" required></div>
           <div><label for="us-senha">Senha <span class="hint" id="us-senha-hint" style="margin:0;">(obrigatória para novo usuário)</span></label><input type="password" id="us-senha" autocomplete="new-password"></div>
           <div>
@@ -2336,23 +2336,32 @@ function normalizeDataISO(val){
   return s;
 }
 function manutencaoObjToRow(m){
-  return { Id:m.id, CodigoCliente:m.codigoCliente, Data:m.data, Descricao:m.descricao||'', Responsavel:m.responsavel||'' };
+  const row = { codigo_cliente:m.codigoCliente, data:m.data, descricao:m.descricao||'', responsavel:m.responsavel||'' };
+  if(m.id) row.id = m.id;
+  return row;
 }
 async function loadManutencoes(force){
   if(MANUTENCOES && !force) return MANUTENCOES;
   try{
-    const rows = await sheetGet('Manutencoes');
-    MANUTENCOES = rows.map(r=>({ id:r.Id, codigoCliente:r.CodigoCliente, data: normalizeDataISO(r.Data), descricao:r.Descricao||'', responsavel:r.Responsavel||'' }));
+    const { data, error } = await sb.from('manutencoes').select('*');
+    throwIfSupabaseError(error, 'Manutenções');
+    MANUTENCOES = (data||[]).map(r=>({ id:r.id, codigoCliente:r.codigo_cliente, data: normalizeDataISO(r.data), descricao:r.descricao||'', responsavel:r.responsavel||'' }));
   }catch(e){ toast('Erro ao carregar manutenções: ' + e.message, true); MANUTENCOES = []; }
   return MANUTENCOES;
 }
 async function upsertManutencaoRemote(m){
-  try{ await sheetPost({op:'upsert', sheet:'Manutencoes', key:'Id', row:manutencaoObjToRow(m)}); return true; }
-  catch(e){ toast('Erro ao salvar manutenção: ' + e.message, true); return false; }
+  try{
+    const { error } = await sb.from('manutencoes').upsert(manutencaoObjToRow(m));
+    throwIfSupabaseError(error, 'Manutenções');
+    return true;
+  }catch(e){ toast('Erro ao salvar manutenção: ' + e.message, true); return false; }
 }
 async function deleteManutencaoRemote(id){
-  try{ await sheetPost({op:'delete', sheet:'Manutencoes', key:'Id', value:id}); return true; }
-  catch(e){ toast('Erro ao excluir manutenção: ' + e.message, true); return false; }
+  try{
+    const { error } = await sb.from('manutencoes').delete().eq('id', id);
+    throwIfSupabaseError(error, 'Manutenções');
+    return true;
+  }catch(e){ toast('Erro ao excluir manutenção: ' + e.message, true); return false; }
 }
 function populateManutencaoClienteSelects(){
   const opts = CLIENTES.slice().sort((a,b)=>a.nome.localeCompare(b.nome))
@@ -2379,21 +2388,16 @@ document.getElementById('form-manutencao').addEventListener('submit', async (e)=
   btn.disabled = true;
   try{
     const manutencoes = await loadManutencoes();
-    const payload = { id: editingManutencaoId || (Date.now()+'-man-'+codigoCliente+'-'+Math.random().toString(36).slice(2,7)), codigoCliente, data, descricao, responsavel };
+    const payload = { id: editingManutencaoId || null, codigoCliente, data, descricao, responsavel };
     const ok = await upsertManutencaoRemote(payload);
     if(ok){
-      if(editingManutencaoId){
-        const idx = manutencoes.findIndex(m=>m.id===editingManutencaoId);
-        if(idx>-1) manutencoes[idx] = payload; else manutencoes.push(payload);
-      } else {
-        manutencoes.push(payload);
-      }
       toast(editingManutencaoId ? 'Manutenção atualizada.' : 'Manutenção registrada.');
       editingManutencaoId = null;
       e.target.reset();
       document.getElementById('man-submit').textContent = 'Registrar manutenção';
       document.getElementById('man-cancel').style.display = 'none';
       document.getElementById('manh-month').value = data.slice(0,7);
+      await loadManutencoes(true);
       renderManutencoesHistory();
     }
   }catch(err){
@@ -2461,27 +2465,42 @@ document.getElementById('manh-month').addEventListener('change', renderManutenco
 document.getElementById('manh-cliente').addEventListener('change', renderManutencoesHistory);
 
 /* ============================================================
-   Usuários (Admin) — login, papel e usinas permitidas
+   Usuários (Admin) — login (e-mail), papel e usinas permitidas
    ============================================================ */
 let USUARIOS = null;
-let editingUsuarioLogin = null;
+let editingUsuarioId = null;
 
 async function loadUsuarios(){
   try{
-    const rows = await sheetGet('Usuarios');
-    USUARIOS = rows.map(r => ({
-      login: r.Login, nome: r.Nome, papel: r.Papel || 'Cliente',
-      usinas: String(r.UsinasPermitidas||'').split(',').map(s=>s.trim()).filter(Boolean)
-    }));
+    const { data, error } = await sb.from('usuarios').select('id, email, nome, papel, usinas').order('email');
+    throwIfSupabaseError(error, 'Usuários');
+    USUARIOS = (data||[]).map(r => ({ id:r.id, login:r.email||'(sem e-mail)', nome:r.nome, papel:r.papel||'Cliente', usinas:r.usinas||[] }));
   }catch(e){ toast('Erro ao carregar usuários: ' + e.message, true); USUARIOS = []; }
   return USUARIOS;
 }
-async function upsertUsuarioRemote(payload){
-  try{ await sheetPost(Object.assign({op:'upsertUsuario'}, payload)); return true; }
-  catch(e){ toast('Erro ao salvar usuário: ' + e.message, true); return false; }
+async function chamarManageUser(payload){
+  const { data, error } = await sb.functions.invoke('manage-user', { body: payload });
+  if(error){
+    let msg = error.message;
+    try{ const ctx = await error.context.json(); if(ctx && ctx.error) msg = ctx.error; }catch(_e){}
+    throw new Error(msg);
+  }
+  if(data && data.ok === false) throw new Error(data.error || 'Erro desconhecido.');
+  return data;
 }
-async function deleteUsuarioRemote(login){
-  try{ await sheetPost({op:'deleteUsuario', login}); return true; }
+async function criarUsuarioRemote(email, senha, nome, papel, usinas){
+  try{ await chamarManageUser({ action:'create', email, senha, nome, papel, usinas }); return true; }
+  catch(e){ toast('Erro ao criar usuário: ' + e.message, true); return false; }
+}
+async function atualizarUsuarioRemote(userId, nome, papel, usinas){
+  try{
+    const { error } = await sb.from('usuarios').update({ nome, papel, usinas }).eq('id', userId);
+    throwIfSupabaseError(error, 'Usuários');
+    return true;
+  }catch(e){ toast('Erro ao atualizar usuário: ' + e.message, true); return false; }
+}
+async function deleteUsuarioRemote(userId){
+  try{ await chamarManageUser({ action:'delete', userId }); return true; }
   catch(e){ toast('Erro ao excluir usuário: ' + e.message, true); return false; }
 }
 
@@ -2524,29 +2543,29 @@ function renderUsuariosTable(){
       <td><span class="tag ${u.papel==='Admin'?'warn':'ok'}">${escapeHtml(u.papel)}</span></td>
       <td class="txt">${u.papel==='Admin' ? 'todas' : escapeHtml(usinasLabel(u.usinas))}</td>
       <td><div class="row-actions">
-        <button class="btn-edit-ghost" title="Editar" onclick="startEditUsuario('${u.login}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
-        <button class="btn-danger-ghost" title="Excluir" onclick="deleteUsuario('${u.login}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
+        <button class="btn-edit-ghost" title="Editar" onclick="startEditUsuario('${u.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+        <button class="btn-danger-ghost" title="Excluir" onclick="deleteUsuario('${u.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
       </div></td>
     </tr>`).join('');
 }
-window.startEditUsuario = function(login){
-  const u = USUARIOS.find(x=>x.login===login);
+window.startEditUsuario = function(userId){
+  const u = USUARIOS.find(x=>x.id===userId);
   if(!u) return;
-  editingUsuarioLogin = login;
+  editingUsuarioId = userId;
   document.getElementById('us-login').value = u.login;
   document.getElementById('us-login').disabled = true;
   document.getElementById('us-nome').value = u.nome;
   document.getElementById('us-senha').value = '';
-  document.getElementById('us-senha-hint').textContent = '(deixe em branco para manter a senha atual)';
+  document.getElementById('us-senha-hint').textContent = 'Não editável por aqui — e-mail e senha não mudam ao editar nome/papel/usinas.';
   document.getElementById('us-papel').value = u.papel;
   renderClienteUsinasChipsUsuario(u.usinas);
   toggleUsinasFieldByPapel();
-  document.getElementById('us-submit').textContent = 'Salvar alterações (' + login + ')';
+  document.getElementById('us-submit').textContent = 'Salvar alterações';
   document.getElementById('us-cancel').style.display = 'inline-flex';
   document.getElementById('form-usuario').scrollIntoView({behavior:'smooth', block:'center'});
 };
 document.getElementById('us-cancel').addEventListener('click', ()=>{
-  editingUsuarioLogin = null;
+  editingUsuarioId = null;
   document.getElementById('form-usuario').reset();
   document.getElementById('us-login').disabled = false;
   document.getElementById('us-senha-hint').textContent = '(obrigatória para novo usuário)';
@@ -2555,36 +2574,40 @@ document.getElementById('us-cancel').addEventListener('click', ()=>{
   document.getElementById('us-submit').textContent = 'Adicionar usuário';
   document.getElementById('us-cancel').style.display = 'none';
 });
-window.deleteUsuario = async function(login){
-  if(login === AUTH.login){ toast('Você não pode excluir o próprio usuário logado.', true); return; }
-  if(!confirm('Excluir o usuário ' + login + '?')) return;
+window.deleteUsuario = async function(userId){
+  if(userId === AUTH.userId){ toast('Você não pode excluir o próprio usuário logado.', true); return; }
+  const u = USUARIOS.find(x=>x.id===userId);
+  if(!confirm('Excluir o usuário ' + (u?u.login:userId) + '?')) return;
   const prev = USUARIOS;
-  USUARIOS = USUARIOS.filter(u=>u.login!==login);
-  const ok = await deleteUsuarioRemote(login);
-  if(ok){ toast('Usuário removido.'); renderUsuariosTable(); }
-  else USUARIOS = prev;
+  USUARIOS = USUARIOS.filter(x=>x.id!==userId);
+  renderUsuariosTable();
+  const ok = await deleteUsuarioRemote(userId);
+  if(ok){ toast('Usuário removido.'); }
+  else { USUARIOS = prev; renderUsuariosTable(); }
 };
 document.getElementById('form-usuario').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const loginEl = document.getElementById('us-login');
   const nomeEl = document.getElementById('us-nome');
-  const login = loginEl.value.trim();
+  const email = loginEl.value.trim();
   const nome = nomeEl.value.trim();
   const senha = document.getElementById('us-senha').value;
   const papel = document.getElementById('us-papel').value;
-  const usinasPermitidas = papel === 'Admin' ? '' : getSelectedUsuarioUsinas().join(',');
+  const usinasPermitidas = papel === 'Admin' ? [] : getSelectedUsuarioUsinas();
 
-  if(!login){ toast('Preencha o login.', true); loginEl.focus(); return; }
+  if(!email){ toast('Preencha o e-mail.', true); loginEl.focus(); return; }
   if(!nome){ toast('Preencha o nome.', true); nomeEl.focus(); return; }
-  if(!editingUsuarioLogin && !senha){ toast('Senha é obrigatória para um novo usuário.', true); return; }
+  if(!editingUsuarioId && !senha){ toast('Senha é obrigatória para um novo usuário.', true); return; }
 
   const btn = document.getElementById('us-submit');
   btn.disabled = true;
   try{
-    const ok = await upsertUsuarioRemote({ login, senha, nome, papel, usinasPermitidas });
+    const ok = editingUsuarioId
+      ? await atualizarUsuarioRemote(editingUsuarioId, nome, papel, usinasPermitidas)
+      : await criarUsuarioRemote(email, senha, nome, papel, usinasPermitidas);
     if(ok){
-      toast(editingUsuarioLogin ? 'Usuário atualizado.' : 'Usuário criado: ' + login);
-      editingUsuarioLogin = null;
+      toast(editingUsuarioId ? 'Usuário atualizado.' : 'Usuário criado: ' + email);
+      editingUsuarioId = null;
       e.target.reset();
       document.getElementById('us-login').disabled = false;
       document.getElementById('us-senha-hint').textContent = '(obrigatória para novo usuário)';
