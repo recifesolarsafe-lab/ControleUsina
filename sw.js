@@ -1,4 +1,4 @@
-const CACHE_NAME = 'solarsafe-v1';
+const CACHE_NAME = 'solarsafe-v2';
 const APP_SHELL = [
   './index.html',
   './manifest.json',
@@ -23,27 +23,10 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-
-  // Nunca cachear chamadas à API (Google Apps Script) — sempre busca da rede,
-  // pra nunca mostrar dados de geração/usinas desatualizados.
-  if (url.hostname.includes('script.google.com') || url.hostname.includes('googleusercontent.com')) {
-    return;
-  }
   if (event.request.method !== 'GET') return;
-
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const networkFetch = fetch(event.request)
-        .then((response) => {
-          if (response && response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || networkFetch;
-    })
+    caches.match(event.request).then((cached) => cached || fetch(event.request))
   );
 });
