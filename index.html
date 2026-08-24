@@ -2633,21 +2633,21 @@ function numOrNull(v){
 }
 function clienteRowToObj(row){
   return {
-    codigo: String(row.Codigo||'').trim(), nome: row.Nome, contaContrato: row.ContaContrato||'',
-    grupo: (row.Grupo==='A') ? 'A' : 'B',
-    tarifa: numOrNull(row.TarifaKwh),
-    tarifaPonta: numOrNull(row.TarifaPonta),
-    tarifaForaPonta: numOrNull(row.TarifaForaPonta),
-    usinas: String(row.Usinas||'').split(',').map(s=>s.trim()).filter(Boolean)
+    codigo: row.codigo, nome: row.nome, contaContrato: row.conta_contrato||'',
+    grupo: (row.grupo==='A') ? 'A' : 'B',
+    tarifa: row.tarifa!=null ? parseFloat(row.tarifa) : null,
+    tarifaPonta: row.tarifa_ponta!=null ? parseFloat(row.tarifa_ponta) : null,
+    tarifaForaPonta: row.tarifa_fora_ponta!=null ? parseFloat(row.tarifa_fora_ponta) : null,
+    usinas: row.usinas || []
   };
 }
 function clienteObjToRow(c){
   return {
-    Codigo:c.codigo, Nome:c.nome, ContaContrato:c.contaContrato||'', Grupo: c.grupo==='A' ? 'A' : 'B',
-    TarifaKwh:(c.tarifa!=null) ? c.tarifa : '',
-    TarifaPonta:(c.tarifaPonta!=null) ? c.tarifaPonta : '',
-    TarifaForaPonta:(c.tarifaForaPonta!=null) ? c.tarifaForaPonta : '',
-    Usinas:(c.usinas||[]).join(',')
+    codigo:c.codigo, nome:c.nome, conta_contrato:c.contaContrato||'', grupo: c.grupo==='A' ? 'A' : 'B',
+    tarifa: c.tarifa!=null ? c.tarifa : null,
+    tarifa_ponta: c.tarifaPonta!=null ? c.tarifaPonta : null,
+    tarifa_fora_ponta: c.tarifaForaPonta!=null ? c.tarifaForaPonta : null,
+    usinas: c.usinas || []
   };
 }
 function calcEconomiaCliente(cliente, kwh, kwhPonta, kwhForaPonta){
@@ -2665,74 +2665,74 @@ function normalizeMes(val){
   const m = /^(\d{4})-(\d{2})/.exec(s);
   return m ? (m[1]+'-'+m[2]) : s;
 }
-function parseUsinasDetalhe(str){
-  return String(str||'').split(',').map(s=>s.trim()).filter(Boolean).map(part=>{
-    const bits = part.split(':');
-    const codigo = (bits[0]||'').trim();
-    const kwh = parseFloat(bits[1])||0;
-    const obj = { codigo, kwh };
-    if(bits.length >= 4){
-      obj.kwhPonta = parseFloat(bits[2])||0;
-      obj.kwhForaPonta = parseFloat(bits[3])||0;
-    }
-    return obj;
-  });
-}
 function compRowToObj(row){
-  const detalhe = parseUsinasDetalhe(row.UsinasDetalhe);
   return {
-    id: row.Id, mes: normalizeMes(row.Mes), codigoCliente: String(row.CodigoCliente||'').trim(),
-    detalhe: detalhe,
-    usinas: detalhe.length ? detalhe.map(d=>d.codigo) : String(row.Usinas||'').split(',').map(s=>s.trim()).filter(Boolean),
-    kwhCompensado: detalhe.length ? detalhe.reduce((s,d)=>s+d.kwh,0) : (parseFloat(row.KwhCompensado)||0),
-    credito: row.Credito!==undefined && row.Credito!=='' ? parseFloat(String(row.Credito).replace(',', '.')) : null,
-    obs: row.Obs||''
+    id: row.id, mes: normalizeMes(row.mes), codigoCliente: row.codigo_cliente,
+    detalhe: row.detalhe || [],
+    usinas: row.usinas || [],
+    kwhCompensado: parseFloat(row.kwh_compensado)||0,
+    credito: row.credito!=null ? parseFloat(row.credito) : null,
+    obs: row.obs||''
   };
 }
 function compObjToRow(c){
   const detalhe = c.detalhe || [];
   const total = detalhe.reduce((s,d)=>s+(d.kwh||0),0);
   return {
-    Id:c.id, Mes:c.mes, CodigoCliente:c.codigoCliente,
-    KwhCompensado: total,
-    Credito: (c.credito!=null && c.credito!=='') ? c.credito : '',
-    Usinas: detalhe.map(d=>d.codigo).join(','),
-    UsinasDetalhe: detalhe.map(d=> d.kwhPonta!=null ? `${d.codigo}:${d.kwh}:${d.kwhPonta}:${d.kwhForaPonta}` : `${d.codigo}:${d.kwh}`).join(','),
-    Obs:c.obs||''
+    mes:c.mes, codigo_cliente:c.codigoCliente,
+    kwh_compensado: total,
+    credito: (c.credito!=null && c.credito!=='') ? c.credito : null,
+    usinas: detalhe.map(d=>d.codigo),
+    detalhe: detalhe,
+    obs:c.obs||''
   };
 }
 
 async function loadClientes(){
   try{
-    const rows = await sheetGet('Clientes');
-    CLIENTES = rows.map(clienteRowToObj);
-  }catch(e){ toast('Erro ao carregar clientes da planilha: ' + e.message, true); CLIENTES = []; }
+    const { data, error } = await sb.from('clientes').select('*').order('codigo');
+    throwIfSupabaseError(error, 'Clientes');
+    CLIENTES = (data||[]).map(clienteRowToObj);
+  }catch(e){ toast('Erro ao carregar clientes: ' + e.message, true); CLIENTES = []; }
 }
 async function upsertCliente(c){
-  try{ await sheetPost({sheet:'Clientes', op:'upsert', key:'Codigo', row:clienteObjToRow(c)}); return true; }
-  catch(e){ toast('Erro ao salvar cliente na planilha: ' + e.message, true); return false; }
+  try{
+    const { error } = await sb.from('clientes').upsert(clienteObjToRow(c), { onConflict:'codigo' });
+    throwIfSupabaseError(error, 'Clientes');
+    return true;
+  }catch(e){ toast('Erro ao salvar cliente: ' + e.message, true); return false; }
 }
 async function deleteClienteRemote(codigo){
-  try{ await sheetPost({sheet:'Clientes', op:'delete', key:'Codigo', value:codigo}); return true; }
-  catch(e){ toast('Erro ao excluir cliente na planilha: ' + e.message, true); return false; }
+  try{
+    const { error } = await sb.from('clientes').delete().eq('codigo', codigo);
+    throwIfSupabaseError(error, 'Clientes');
+    return true;
+  }catch(e){ toast('Erro ao excluir cliente: ' + e.message, true); return false; }
 }
 
 async function loadCompensacoes(force){
   if(COMPENSACOES && !force) return COMPENSACOES;
   try{
-    const rows = await sheetGet('Compensacoes');
-    COMPENSACOES = rows.map(compRowToObj);
-  }catch(e){ toast('Erro ao carregar compensações da planilha: ' + e.message, true); COMPENSACOES = []; }
+    const { data, error } = await sb.from('compensacoes').select('*');
+    throwIfSupabaseError(error, 'Compensações');
+    COMPENSACOES = (data||[]).map(compRowToObj);
+  }catch(e){ toast('Erro ao carregar compensações: ' + e.message, true); COMPENSACOES = []; }
   return COMPENSACOES;
 }
 async function upsertCompensacoes(list){
   if(!list.length) return true;
-  try{ await sheetPost({sheet:'Compensacoes', op:'bulkUpsert', key:'Id', rows:list.map(compObjToRow)}); return true; }
-  catch(e){ toast('Erro ao salvar compensações na planilha: ' + e.message, true); return false; }
+  try{
+    const { error } = await sb.from('compensacoes').upsert(list.map(compObjToRow), { onConflict:'mes,codigo_cliente' });
+    throwIfSupabaseError(error, 'Compensações');
+    return true;
+  }catch(e){ toast('Erro ao salvar compensações: ' + e.message, true); return false; }
 }
 async function deleteCompensacaoRemote(id){
-  try{ await sheetPost({sheet:'Compensacoes', op:'delete', key:'Id', value:id}); return true; }
-  catch(e){ toast('Erro ao excluir compensação na planilha: ' + e.message, true); return false; }
+  try{
+    const { error } = await sb.from('compensacoes').delete().eq('id', id);
+    throwIfSupabaseError(error, 'Compensações');
+    return true;
+  }catch(e){ toast('Erro ao excluir compensação: ' + e.message, true); return false; }
 }
 
 /* ---- Cadastro de clientes ---- */
