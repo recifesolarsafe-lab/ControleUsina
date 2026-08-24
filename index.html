@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SolarSafe">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
@@ -410,7 +411,7 @@
         <span class="login-card-sub">Entre com seu login e senha para continuar</span>
       </div>
       <div class="field-grid" style="grid-template-columns:1fr; gap:16px;">
-        <div><label for="login-user">Login</label><input type="text" id="login-user" autocomplete="username" required></div>
+        <div><label for="login-user">E-mail</label><input type="email" id="login-user" autocomplete="username" required></div>
         <div><label for="login-pass">Senha</label><input type="password" id="login-pass" autocomplete="current-password" required></div>
       </div>
       <div id="login-error" style="color:var(--red); font-size:12.5px; margin-top:12px; min-height:16px;"></div>
@@ -898,7 +899,7 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
 
       <div class="table-wrap" style="max-height:520px;">
         <table>
-          <thead><tr><th>Código</th><th>Cliente</th><th>Usina(s) do mês</th><th class="num">kWh Compensado</th><th class="num">Crédito (kWh)</th><th>Obs.</th></tr></thead>
+          <thead><tr><th>Conta Contrato</th><th>Cliente</th><th>Usina(s) do mês</th><th class="num">kWh Compensado</th><th class="num">Crédito (kWh)</th><th>Obs.</th></tr></thead>
           <tbody id="comp-tbody"><tr><td colspan="6" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
         </table>
       </div>
@@ -917,7 +918,7 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
       </div>
       <div class="table-wrap" style="max-height:420px;">
         <table>
-          <thead><tr><th>Mês</th><th>Código</th><th>Cliente</th><th>Usina(s)</th><th class="num">kWh Compensado</th><th class="num">Crédito (kWh)</th><th class="num">Economia (R$)</th><th class="txt">Obs.</th><th></th></tr></thead>
+          <thead><tr><th>Mês</th><th>Conta Contrato</th><th>Cliente</th><th>Usina(s)</th><th class="num">kWh Compensado</th><th class="num">Crédito (kWh)</th><th class="num">Economia (R$)</th><th class="txt">Obs.</th><th></th></tr></thead>
           <tbody id="comph-tbody"><tr><td colspan="9" class="loading-row"><span class="spin"></span>carregando histórico…</td></tr></tbody>
         </table>
       </div>
@@ -1090,109 +1091,124 @@ window.addEventListener('unhandledrejection', (e)=>{
 /* ============================================================
    Google Sheets backend (Apps Script Web App)
    ============================================================ */
-const SHEET_API = 'https://script.google.com/macros/s/AKfycbwzOmUSW3ZJ5U5PV3qo3Ns-VhC40-KcwdZtrdvyJS2DrgDeL37b1rU91e3SXUoOwviv/exec';
+const SUPABASE_URL = 'https://vrkibkamnxfxghdgzgcu.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_eVX5EtPnF1luunX3_bfSNQ_C93R5n0X';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let AUTH = null; // { token, nome, papel, usinas }
+// Endpoint do Apps Script — mantido só para o Status ao vivo (SolisCloud/FusionSolar),
+// que precisa de credenciais que não podem ficar expostas no navegador.
+const LIVE_STATUS_API = 'https://script.google.com/macros/s/AKfycbwzOmUSW3ZJ5U5PV3qo3Ns-VhC40-KcwdZtrdvyJS2DrgDeL37b1rU91e3SXUoOwviv/exec';
 
-async function sheetGet(sheet, params){
-  const qs = new URLSearchParams(Object.assign({sheet, token: AUTH?AUTH.token:'', _: Date.now()}, params||{})).toString();
-  const res = await fetch(SHEET_API + '?' + qs, { cache: 'no-store' });
-  if(!res.ok) throw new Error('HTTP ' + res.status);
-  const json = await res.json();
-  if(!json.ok){
-    if(String(json.error||'').indexOf('Sessão') > -1) forceLogout(json.error);
-    throw new Error(json.error || 'erro desconhecido na planilha');
+let AUTH = null; // { userId, nome, papel, usinas }
+
+async function doLoginRequest(email, senha){
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: senha });
+  if(error){
+    const msg = error.message === 'Invalid login credentials' ? 'Login ou senha incorretos.' : error.message;
+    return { ok:false, error: msg };
   }
-  return json.rows;
-}
-async function sheetPost(payload){
-  const res = await fetch(SHEET_API, {
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'}, // avoids CORS preflight against Apps Script
-    body: JSON.stringify(Object.assign({token: AUTH?AUTH.token:''}, payload))
-  });
-  if(!res.ok) throw new Error('HTTP ' + res.status);
-  const json = await res.json();
-  if(!json.ok){
-    if(String(json.error||'').indexOf('Sessão') > -1) forceLogout(json.error);
-    throw new Error(json.error || 'erro desconhecido na planilha');
+  const { data: perfil, error: perfilErr } = await sb.from('usuarios').select('nome, papel, usinas').eq('id', data.user.id).single();
+  if(perfilErr || !perfil){
+    await sb.auth.signOut();
+    return { ok:false, error: 'Usuário autenticado, mas sem perfil cadastrado na tabela usuarios.' };
   }
-  return json;
-}
-async function doLoginRequest(login, senha){
-  const res = await fetch(SHEET_API, {
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({ op:'login', login, senha })
-  });
-  if(!res.ok) throw new Error('HTTP ' + res.status);
-  return await res.json();
+  return { ok:true, userId: data.user.id, nome: perfil.nome, papel: perfil.papel, usinas: perfil.usinas || [] };
 }
 function forceLogout(msg){
   AUTH = null;
+  sb.auth.signOut();
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   if(msg) document.getElementById('login-error').textContent = msg;
 }
+function throwIfSupabaseError(error, contexto){
+  if(!error) return;
+  if(error.code === 'PGRST301' || /JWT/i.test(error.message||'')) forceLogout('Sessão inválida ou expirada. Faça login novamente.');
+  throw new Error((contexto?contexto+': ':'') + error.message);
+}
 
 function usinaRowToObj(row){
   const expectedMonthly = {};
-  MESES.forEach(m=>{ expectedMonthly[m.n] = parseFloat(row[m.l]) || 0; });
+  MESES.forEach(m=>{ expectedMonthly[m.n] = parseFloat(row[m.l.toLowerCase()]) || 0; });
   return {
-    codigo: String(row.Codigo||'').trim(), nome: row.Nome, capacidade: parseFloat(row.Capacidade)||0,
-    uf: row.UF||'', dataInicio: row.DataInicio||'', status: row.Status||'', expectedMonthly
+    codigo: row.codigo, nome: row.nome, capacidade: parseFloat(row.capacidade)||0,
+    uf: row.uf||'', dataInicio: row.data_inicio||'', status: row.status||'', expectedMonthly
   };
 }
 function usinaObjToRow(u){
-  const row = { Codigo:u.codigo, Nome:u.nome, Capacidade:u.capacidade, UF:u.uf||'', DataInicio:u.dataInicio||'', Status:u.status||'' };
-  MESES.forEach(m=>{ row[m.l] = (u.expectedMonthly && u.expectedMonthly[m.n]) || 0; });
+  const row = { codigo:u.codigo, nome:u.nome, capacidade:u.capacidade, uf:u.uf||'', data_inicio:u.dataInicio||null, status:u.status||'' };
+  MESES.forEach(m=>{ row[m.l.toLowerCase()] = (u.expectedMonthly && u.expectedMonthly[m.n]) || 0; });
   return row;
 }
 function lancRowToObj(row){
   return {
-    id: row.Id, data: row.Data, codigo: row.Codigo,
-    geracaoReal: parseFloat(row.GeracaoReal)||0, obs: row.Obs||''
+    id: row.id, data: row.data, codigo: row.codigo_usina,
+    geracaoReal: parseFloat(row.geracao_real)||0, obs: row.obs||''
   };
 }
 function lancObjToRow(en){
-  return { Id:en.id, Data:en.data, Codigo:en.codigo, GeracaoReal:en.geracaoReal, Obs:en.obs||'' };
+  return { data:en.data, codigo_usina:en.codigo, geracao_real:en.geracaoReal, obs:en.obs||'' };
 }
 
 async function loadUsinas(){
   try{
-    const rows = await sheetGet('Usinas');
-    USINAS = rows.map(usinaRowToObj);
-  }catch(e){ toast('Erro ao carregar cadastro da planilha: ' + e.message, true); USINAS = []; }
+    const { data, error } = await sb.from('usinas').select('*').order('codigo');
+    throwIfSupabaseError(error, 'Usinas');
+    USINAS = (data||[]).map(usinaRowToObj);
+  }catch(e){ toast('Erro ao carregar usinas: ' + e.message, true); USINAS = []; }
 }
 async function upsertUsina(u){
-  try{ await sheetPost({sheet:'Usinas', op:'upsert', key:'Codigo', row:usinaObjToRow(u)}); return true; }
-  catch(e){ toast('Erro ao salvar usina na planilha: ' + e.message, true); return false; }
+  try{
+    const { error } = await sb.from('usinas').upsert(usinaObjToRow(u), { onConflict:'codigo' });
+    throwIfSupabaseError(error, 'Usinas');
+    return true;
+  }catch(e){ toast('Erro ao salvar usina: ' + e.message, true); return false; }
 }
 async function bulkUpsertUsinas(list){
-  try{ await sheetPost({sheet:'Usinas', op:'bulkUpsert', key:'Codigo', rows:list.map(usinaObjToRow)}); return true; }
-  catch(e){ toast('Erro ao importar lista na planilha: ' + e.message, true); return false; }
+  try{
+    const { error } = await sb.from('usinas').upsert(list.map(usinaObjToRow), { onConflict:'codigo' });
+    throwIfSupabaseError(error, 'Usinas');
+    return true;
+  }catch(e){ toast('Erro ao importar lista: ' + e.message, true); return false; }
 }
 async function deleteUsinaRemote(codigo){
-  try{ await sheetPost({sheet:'Usinas', op:'delete', key:'Codigo', value:codigo}); return true; }
-  catch(e){ toast('Erro ao excluir usina na planilha: ' + e.message, true); return false; }
+  try{
+    const { error } = await sb.from('usinas').delete().eq('codigo', codigo);
+    throwIfSupabaseError(error, 'Usinas');
+    return true;
+  }catch(e){ toast('Erro ao excluir usina: ' + e.message, true); return false; }
 }
 
+function nextMonthStr(month){
+  const y = parseInt(month.slice(0,4),10), m = parseInt(month.slice(5,7),10);
+  const ny = m===12 ? y+1 : y;
+  const nm = m===12 ? 1 : m+1;
+  return ny + '-' + String(nm).padStart(2,'0') + '-01';
+}
 async function loadMonth(month){
   if(MONTH_CACHE[month]) return MONTH_CACHE[month];
   try{
-    const rows = await sheetGet('Lancamentos', {month});
-    MONTH_CACHE[month] = rows.map(lancRowToObj);
-  }catch(e){ toast('Erro ao carregar lançamentos da planilha: ' + e.message, true); MONTH_CACHE[month] = []; }
+    const { data, error } = await sb.from('lancamentos').select('*')
+      .gte('data', month+'-01').lt('data', nextMonthStr(month));
+    throwIfSupabaseError(error, 'Lançamentos');
+    MONTH_CACHE[month] = (data||[]).map(lancRowToObj);
+  }catch(e){ toast('Erro ao carregar lançamentos: ' + e.message, true); MONTH_CACHE[month] = []; }
   return MONTH_CACHE[month];
 }
 async function upsertLancamentos(entries){
   if(!entries.length) return true;
-  try{ await sheetPost({sheet:'Lancamentos', op:'bulkUpsert', key:'Id', rows:entries.map(lancObjToRow)}); return true; }
-  catch(e){ toast('Erro ao salvar lançamentos na planilha: ' + e.message, true); return false; }
+  try{
+    const { error } = await sb.from('lancamentos').upsert(entries.map(lancObjToRow), { onConflict:'data,codigo_usina' });
+    throwIfSupabaseError(error, 'Lançamentos');
+    return true;
+  }catch(e){ toast('Erro ao salvar lançamentos: ' + e.message, true); return false; }
 }
 async function deleteLancRemote(id){
-  try{ await sheetPost({sheet:'Lancamentos', op:'delete', key:'Id', value:id}); return true; }
-  catch(e){ toast('Erro ao excluir lançamento na planilha: ' + e.message, true); return false; }
+  try{
+    const { error } = await sb.from('lancamentos').delete().eq('id', id);
+    throwIfSupabaseError(error, 'Lançamentos');
+    return true;
+  }catch(e){ toast('Erro ao excluir lançamento: ' + e.message, true); return false; }
 }
 
 /* ============================================================
@@ -1649,8 +1665,10 @@ document.getElementById('lf-usina').addEventListener('change', renderLancTable);
    Dashboard
    ============================================================ */
 async function liveStatusRequest(codigo){
-  const qs = new URLSearchParams({ action:'liveStatus', codigo, token: AUTH?AUTH.token:'', _: Date.now() }).toString();
-  const res = await fetch(SHEET_API + '?' + qs, { cache:'no-store' });
+  const { data: sessionData } = await sb.auth.getSession();
+  const accessToken = sessionData && sessionData.session ? sessionData.session.access_token : '';
+  const qs = new URLSearchParams({ action:'liveStatus', codigo, token: accessToken, _: Date.now() }).toString();
+  const res = await fetch(LIVE_STATUS_API + '?' + qs, { cache:'no-store' });
   return await res.json();
 }
 let LIVE_STATUS_CACHE = [];
@@ -2932,7 +2950,7 @@ async function renderCompGrid(){
 
     return `
     <tr data-codigo="${c.codigo}" class="${comp?'row-saved':''}">
-      <td>${c.codigo}</td>
+      <td class="txt">${escapeHtml(c.contaContrato||'—')}</td>
       <td class="txt">${escapeHtml(c.nome)}${c.grupo==='A'?' <span class="tag warn" style="margin-left:4px;">A</span>':''}</td>
       <td class="usina-detail-cell">
         <div class="usina-picker">
@@ -3138,7 +3156,7 @@ async function renderCompHistory(){
     return `
     <tr>
       <td>${new Date(c.mes+'-02').toLocaleDateString('pt-BR',{month:'short', year:'numeric'})}</td>
-      <td>${c.codigoCliente}</td>
+      <td class="txt">${escapeHtml(cliente ? (cliente.contaContrato||'—') : '—')}</td>
       <td class="txt">${escapeHtml(clienteNome(c.codigoCliente))}</td>
       <td class="txt">${escapeHtml(usinasDetalheLabel(c.detalhe))}</td>
       <td class="num">${fmtNum(c.kwhCompensado)}</td>
@@ -3593,7 +3611,7 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
       btn.disabled = false;
       return;
     }
-    AUTH = { token: result.token, login: result.login, nome: result.nome, papel: result.papel, usinas: result.usinas };
+    AUTH = { userId: result.userId, nome: result.nome, papel: result.papel, usinas: result.usinas };
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-shell').style.display = 'block';
     await init();
@@ -3604,14 +3622,29 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
   btn.disabled = false;
 });
 
-document.getElementById('user-pill').addEventListener('click', ()=>{
+document.getElementById('user-pill').addEventListener('click', async ()=>{
   if(!confirm('Sair da sua conta?')) return;
+  await sb.auth.signOut();
   AUTH = null;
   document.getElementById('login-pass').value = '';
   document.getElementById('login-error').textContent = '';
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
 });
+
+async function tentarRestaurarSessao(){
+  const { data: sessionData } = await sb.auth.getSession();
+  const session = sessionData && sessionData.session;
+  if(!session) return;
+  const { data: perfil, error: perfilErr } = await sb.from('usuarios').select('nome, papel, usinas').eq('id', session.user.id).single();
+  if(perfilErr || !perfil){ await sb.auth.signOut(); return; }
+  AUTH = { userId: session.user.id, nome: perfil.nome, papel: perfil.papel, usinas: perfil.usinas || [] };
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-shell').style.display = 'block';
+  await init();
+  applyRolePermissions();
+}
+tentarRestaurarSessao();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
