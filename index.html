@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SolarSafe — Controle de Geração</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1B2A45">
+<link rel="icon" href="icon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SolarSafe">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
@@ -146,6 +153,13 @@
   .kpi .val{font-family:var(--font-mono); font-size:22px; font-weight:600;}
   .kpi .val.amber{color:var(--amber);} .kpi .val.teal{color:var(--teal);} .kpi .val.red{color:var(--red);}
   .kpi .sub{font-size:11px; color:var(--text-faint); margin-top:4px;}
+
+  .man-card-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px;}
+  .man-card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px;}
+  .man-card-date{font-family:var(--font-mono); font-size:11px; color:var(--amber); letter-spacing:0.3px; margin-bottom:8px;}
+  .man-card-cliente{font-family:var(--font-display); font-size:16px; font-weight:600; margin-bottom:8px;}
+  .man-card-desc{font-size:13px; color:var(--text-dim); line-height:1.5;}
+  .man-card-resp{font-size:11px; color:var(--text-faint); margin-top:10px; padding-top:10px; border-top:1px solid var(--border);}
 
   .field-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px;}
   .field-grid.compact{grid-template-columns:repeat(auto-fit,minmax(78px,1fr)); gap:8px;}
@@ -908,6 +922,39 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         </table>
       </div>
     </div>
+
+    <div class="panel">
+      <div class="panel-title">Manutenções e ações</div>
+      <form id="form-manutencao" novalidate>
+        <div class="field-grid">
+          <div><label for="man-cliente">Cliente</label><select id="man-cliente" required><option value="">selecione…</option></select></div>
+          <div><label for="man-data">Data</label><input type="date" id="man-data" required></div>
+          <div><label for="man-responsavel">Responsável</label><input type="text" id="man-responsavel" placeholder="opcional"></div>
+        </div>
+        <div class="field" style="margin-top:12px;">
+          <label for="man-descricao">Descrição / ação realizada</label>
+          <textarea id="man-descricao" rows="3" required placeholder="ex: troca de fusível, limpeza dos módulos, verificação de string..."></textarea>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="man-submit">Registrar manutenção</button>
+          <button type="button" class="btn btn-ghost" id="man-cancel" style="display:none;">Cancelar edição</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Histórico de manutenções<small id="man-hist-meta"></small></div>
+      <div class="toolbar">
+        <div class="field"><label for="manh-month">Mês</label><input type="month" id="manh-month"></div>
+        <div class="field grow"><label for="manh-cliente">Filtrar por cliente</label><select id="manh-cliente"><option value="">todos os clientes</option></select></div>
+      </div>
+      <div class="table-wrap" style="max-height:420px;">
+        <table>
+          <thead><tr><th>Data</th><th>Cliente</th><th class="txt">Descrição</th><th>Responsável</th><th></th></tr></thead>
+          <tbody id="manh-tbody"><tr><td colspan="5" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
   <!-- ================= GRÁFICOS DE CLIENTES ================= -->
@@ -939,11 +986,6 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
 
   <!-- ================= RELATÓRIO ================= -->
   <section class="view" id="view-relatorio">
-    <div class="page-head">
-      <h2>Relatório da usina</h2>
-      <p>Visão completa e consolidada de uma usina específica — pronta para apresentar ou exportar em PDF.</p>
-    </div>
-
     <div class="panel" id="rel-toolbar-panel" style="margin-bottom:18px;">
       <div class="toolbar" style="margin-bottom:0;">
         <div class="field grow"><label for="rel-usina">Usina</label><select id="rel-usina"><option value="">selecione uma usina…</option></select></div>
@@ -960,9 +1002,7 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
           <div>
             <div class="report-hero-eyebrow">Relatório de desempenho</div>
             <div class="report-hero-name" id="rel-nome">—</div>
-            <div class="report-hero-sub" id="rel-sub">—</div>
           </div>
-          <div class="report-status-badge" id="rel-status-badge">—</div>
         </div>
         <div class="report-hero-foot" id="rel-periodo">—</div>
       </div>
@@ -985,13 +1025,18 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
       </div>
 
       <div class="panel report-panel">
-        <div class="panel-title">Clientes vinculados a esta usina<small id="rel-clientes-meta"></small></div>
+        <div class="panel-title">Contas vinculadas a esta usina<small id="rel-clientes-meta"></small></div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Cliente</th><th>Conta Contrato</th><th class="num">kWh Compensado no mês</th><th class="num">Crédito do mês (kWh)</th><th class="num">Crédito Total (kWh)</th><th class="num">Economia no mês (R$)</th></tr></thead>
             <tbody id="rel-clientes-tbody"><tr><td colspan="6" class="empty">Nenhum cliente vinculado a esta usina.</td></tr></tbody>
           </table>
         </div>
+      </div>
+
+      <div class="panel report-panel">
+        <div class="panel-title">Manutenções e ações no mês<small id="rel-man-meta"></small></div>
+        <div class="man-card-grid" id="rel-man-cards"><div class="empty">Nenhuma manutenção registrada neste mês.</div></div>
       </div>
 
       <div class="report-footer">Relatório gerado em <span id="rel-gerado-em"></span> — SolarSafe</div>
@@ -1018,6 +1063,10 @@ const fmtNum = n => Number(n||0).toLocaleString('pt-BR', {maximumFractionDigits:
 const fmtBRL = n => Number(n||0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 const fmtPct = n => (Number(n||0)).toLocaleString('pt-BR', {maximumFractionDigits:1}) + '%';
 const escapeHtml = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function formatFrases(texto){
+  return String(texto||'').split('.').map(f=>f.trim()).filter(Boolean)
+    .map(f=>escapeHtml(f)+'.').join('<br>');
+}
 
 /* ============================================================
    Toasts
@@ -1174,7 +1223,7 @@ document.querySelectorAll('nav.tabs > button, nav.tabs > .tab-dropdown > button'
       activateSubview('dashboard'); renderSubview('dashboard');
       document.getElementById('usinas-dropdown').classList.toggle('open');
     }
-    if(btn.dataset.view === 'clientes'){ renderClientesTable(); renderCompGrid(); renderCompHistory(); }
+    if(btn.dataset.view === 'clientes'){ renderClientesTable(); renderCompGrid(); renderCompHistory(); populateManutencaoClienteSelects(); renderManutencoesHistory(); }
     if(btn.dataset.view === 'graficos-clientes') renderClientesCharts();
     if(btn.dataset.view === 'relatorio'){ populateRelatorioUsinaSelect(); renderRelatorio(); }
     if(btn.dataset.view === 'usuarios'){ renderClienteUsinasChipsUsuario([]); await loadUsuarios(); renderUsuariosTable(); }
@@ -2249,6 +2298,144 @@ document.getElementById('injh-month').addEventListener('change', renderInjHistor
 document.getElementById('injh-usina').addEventListener('change', renderInjHistory);
 
 /* ============================================================
+   Manutenções e ações realizadas no cliente
+   ============================================================ */
+let MANUTENCOES = null;
+let editingManutencaoId = null;
+
+function normalizeDataISO(val){
+  if(val==null || val==='') return '';
+  const s = String(val);
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if(iso) return iso[1]+'-'+iso[2]+'-'+iso[3];
+  return s;
+}
+function manutencaoObjToRow(m){
+  return { Id:m.id, CodigoCliente:m.codigoCliente, Data:m.data, Descricao:m.descricao||'', Responsavel:m.responsavel||'' };
+}
+async function loadManutencoes(force){
+  if(MANUTENCOES && !force) return MANUTENCOES;
+  try{
+    const rows = await sheetGet('Manutencoes');
+    MANUTENCOES = rows.map(r=>({ id:r.Id, codigoCliente:r.CodigoCliente, data: normalizeDataISO(r.Data), descricao:r.Descricao||'', responsavel:r.Responsavel||'' }));
+  }catch(e){ toast('Erro ao carregar manutenções: ' + e.message, true); MANUTENCOES = []; }
+  return MANUTENCOES;
+}
+async function upsertManutencaoRemote(m){
+  try{ await sheetPost({op:'upsert', sheet:'Manutencoes', key:'Id', row:manutencaoObjToRow(m)}); return true; }
+  catch(e){ toast('Erro ao salvar manutenção: ' + e.message, true); return false; }
+}
+async function deleteManutencaoRemote(id){
+  try{ await sheetPost({op:'delete', sheet:'Manutencoes', key:'Id', value:id}); return true; }
+  catch(e){ toast('Erro ao excluir manutenção: ' + e.message, true); return false; }
+}
+function populateManutencaoClienteSelects(){
+  const opts = CLIENTES.slice().sort((a,b)=>a.nome.localeCompare(b.nome))
+    .map(c=>`<option value="${c.codigo}">${c.codigo} — ${escapeHtml(c.nome)}</option>`).join('');
+  const selA = document.getElementById('man-cliente');
+  const curA = selA.value;
+  selA.innerHTML = '<option value="">selecione…</option>' + opts;
+  if(curA) selA.value = curA;
+  const selB = document.getElementById('manh-cliente');
+  const curB = selB.value;
+  selB.innerHTML = '<option value="">todos os clientes</option>' + opts;
+  if(curB) selB.value = curB;
+}
+
+document.getElementById('form-manutencao').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const codigoCliente = document.getElementById('man-cliente').value;
+  const data = document.getElementById('man-data').value;
+  const descricao = document.getElementById('man-descricao').value.trim();
+  const responsavel = document.getElementById('man-responsavel').value.trim();
+  if(!codigoCliente || !data || !descricao){ toast('Preencha cliente, data e descrição.', true); return; }
+
+  const btn = document.getElementById('man-submit');
+  btn.disabled = true;
+  try{
+    const manutencoes = await loadManutencoes();
+    const payload = { id: editingManutencaoId || (Date.now()+'-man-'+codigoCliente+'-'+Math.random().toString(36).slice(2,7)), codigoCliente, data, descricao, responsavel };
+    const ok = await upsertManutencaoRemote(payload);
+    if(ok){
+      if(editingManutencaoId){
+        const idx = manutencoes.findIndex(m=>m.id===editingManutencaoId);
+        if(idx>-1) manutencoes[idx] = payload; else manutencoes.push(payload);
+      } else {
+        manutencoes.push(payload);
+      }
+      toast(editingManutencaoId ? 'Manutenção atualizada.' : 'Manutenção registrada.');
+      editingManutencaoId = null;
+      e.target.reset();
+      document.getElementById('man-submit').textContent = 'Registrar manutenção';
+      document.getElementById('man-cancel').style.display = 'none';
+      document.getElementById('manh-month').value = data.slice(0,7);
+      renderManutencoesHistory();
+    }
+  }catch(err){
+    toast('Erro inesperado: ' + (err && err.message ? err.message : err), true);
+  }finally{
+    btn.disabled = false;
+  }
+});
+document.getElementById('man-cancel').addEventListener('click', ()=>{
+  editingManutencaoId = null;
+  document.getElementById('form-manutencao').reset();
+  document.getElementById('man-submit').textContent = 'Registrar manutenção';
+  document.getElementById('man-cancel').style.display = 'none';
+});
+window.startEditManutencao = async function(id){
+  const manutencoes = await loadManutencoes();
+  const m = manutencoes.find(x=>x.id===id);
+  if(!m) return;
+  editingManutencaoId = id;
+  document.getElementById('man-cliente').value = m.codigoCliente;
+  document.getElementById('man-data').value = m.data;
+  document.getElementById('man-descricao').value = m.descricao;
+  document.getElementById('man-responsavel').value = m.responsavel;
+  document.getElementById('man-submit').textContent = 'Salvar alterações';
+  document.getElementById('man-cancel').style.display = 'inline-flex';
+  document.getElementById('form-manutencao').scrollIntoView({behavior:'smooth', block:'center'});
+};
+window.deleteManutencao = async function(id){
+  if(!confirm('Excluir este registro de manutenção?')) return;
+  const manutencoes = await loadManutencoes();
+  MANUTENCOES = manutencoes.filter(m=>m.id!==id);
+  const ok = await deleteManutencaoRemote(id);
+  if(ok){ toast('Manutenção removida.'); renderManutencoesHistory(); }
+};
+
+async function renderManutencoesHistory(){
+  const month = document.getElementById('manh-month').value;
+  const filterCli = document.getElementById('manh-cliente').value;
+  const tbody = document.getElementById('manh-tbody');
+  tbody.innerHTML = `<tr><td colspan="5" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
+
+  const manutencoes = await loadManutencoes();
+  const rows = manutencoes.filter(m => (!month || m.data.slice(0,7)===month) && (!filterCli || m.codigoCliente===filterCli))
+    .sort((a,b)=> b.data.localeCompare(a.data));
+
+  document.getElementById('man-hist-meta').textContent = rows.length + ' registro(s)';
+
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Nenhuma manutenção registrada${month?' neste mês':''}${filterCli?' para este cliente':''}.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(m=>`
+    <tr>
+      <td>${m.data ? new Date(m.data+'T00:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+      <td class="txt">${escapeHtml(clienteNome(m.codigoCliente))}</td>
+      <td class="txt">${formatFrases(m.descricao)}</td>
+      <td class="txt">${escapeHtml(m.responsavel||'—')}</td>
+      <td><div class="row-actions">
+        <button class="btn-edit-ghost" title="Editar" onclick="startEditManutencao('${m.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+        <button class="btn-danger-ghost" title="Excluir" onclick="deleteManutencao('${m.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
+      </div></td>
+    </tr>`).join('');
+}
+document.getElementById('manh-month').addEventListener('change', renderManutencoesHistory);
+document.getElementById('manh-cliente').addEventListener('change', renderManutencoesHistory);
+
+/* ============================================================
    Usuários (Admin) — login, papel e usinas permitidas
    ============================================================ */
 let USUARIOS = null;
@@ -2614,7 +2801,7 @@ window.deleteCliente = async function(codigo){
   const prev = CLIENTES;
   CLIENTES = CLIENTES.filter(c=>c.codigo!==codigo);
   const ok = await deleteClienteRemote(codigo);
-  if(ok){ toast('Cliente removido.'); renderClientesTable(); renderCompGrid(); populateClienteFilterSelect(); }
+  if(ok){ toast('Cliente removido.'); renderClientesTable(); renderCompGrid(); populateClienteFilterSelect(); populateManutencaoClienteSelects(); }
   else CLIENTES = prev;
 };
 document.getElementById('form-cliente').addEventListener('submit', async (e)=>{
@@ -2654,7 +2841,7 @@ document.getElementById('form-cliente').addEventListener('submit', async (e)=>{
       document.getElementById('cl-cancel').style.display = 'none';
       renderClientesTable();
       renderCompGrid();
-      populateClienteFilterSelect();
+      populateClienteFilterSelect(); populateManutencaoClienteSelects();
     }
   }catch(err){
     toast('Erro inesperado ao cadastrar cliente: ' + (err && err.message ? err.message : err), true);
@@ -3168,14 +3355,8 @@ async function renderRelatorio(){
 
   // --- cabeçalho ---
   document.getElementById('rel-nome').textContent = usina.nome;
-  document.getElementById('rel-sub').textContent = usina.codigo + (usina.uf ? ' · ' + usina.uf : '') + ' · ' + fmtNum(usina.capacidade) + ' kWp instalados';
   document.getElementById('rel-periodo').textContent = 'Período de referência: ' + new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'});
   document.getElementById('rel-gerado-em').textContent = new Date().toLocaleString('pt-BR');
-
-  const badge = document.getElementById('rel-status-badge');
-  const statusClass = usina.status==='Operação' ? 'ok' : (usina.status==='Manutenção' ? 'bad' : 'warn');
-  badge.textContent = usina.status || '—';
-  badge.className = 'report-status-badge ' + statusClass;
 
   // --- geração, meta, PR ---
   const entries = await loadMonth(month);
@@ -3274,6 +3455,26 @@ async function renderRelatorio(){
       </tr>`;
     }).join('');
   }
+
+  // --- manutenções e ações no mês ---
+  const manutencoes = await loadManutencoes();
+  const clientesVinculadosCodigos = new Set(clientesVinculados.map(c=>c.codigo));
+  const manRows = manutencoes.filter(m => clientesVinculadosCodigos.has(m.codigoCliente) && m.data.slice(0,7)===month)
+    .sort((a,b)=> a.data.localeCompare(b.data));
+  document.getElementById('rel-man-meta').textContent = manRows.length + ' ação(ões)';
+
+  const manCardsEl = document.getElementById('rel-man-cards');
+  if(!manRows.length){
+    manCardsEl.innerHTML = `<div class="empty">Nenhuma manutenção registrada neste mês.</div>`;
+  } else {
+    manCardsEl.innerHTML = manRows.map(m=>`
+      <div class="man-card">
+        <div class="man-card-date">${m.data ? new Date(m.data+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit', month:'long'}) : '—'}</div>
+        <div class="man-card-cliente">${escapeHtml(clienteNome(m.codigoCliente))}</div>
+        <div class="man-card-desc">${formatFrases(m.descricao)}</div>
+        <div class="man-card-resp">Responsável: ${escapeHtml(m.responsavel||'—')}</div>
+      </div>`).join('');
+  }
 }
 
 document.getElementById('rel-usina').addEventListener('change', renderRelatorio);
@@ -3295,6 +3496,8 @@ async function init(){
   document.getElementById('rel-month').value = currentMonth();
   document.getElementById('inj-month').value = currentMonth();
   document.getElementById('injh-month').value = currentMonth();
+  document.getElementById('manh-month').value = currentMonth();
+  document.getElementById('man-data').value = todayISO();
 
   // carrega os cadastros base primeiro (em paralelo), antes de desenhar qualquer coisa —
   // evita que um clique rápido em outra aba (ex: Clientes) renderize com dados ainda vazios
@@ -3308,7 +3511,7 @@ async function init(){
   try{ await renderInjGrid(); }catch(e){ console.error(e); }
   try{ await renderInjHistory(); }catch(e){ console.error(e); }
   try{ renderClientesTable(); }catch(e){ console.error(e); }
-  try{ populateClienteFilterSelect(); }catch(e){ console.error(e); }
+  try{ populateClienteFilterSelect(); populateManutencaoClienteSelects(); }catch(e){ console.error(e); }
   try{ await renderDashboard(); }catch(e){ console.error(e); }
   try{ refreshLiveStatus(); }catch(e){ console.error(e); }
   try{ await renderGrid(); }catch(e){ console.error(e); }
@@ -3411,6 +3614,12 @@ document.getElementById('user-pill').addEventListener('click', ()=>{
   document.getElementById('app-shell').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
 });
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(err=>console.error('Falha ao registrar service worker:', err));
+  });
+}
 </script>
 </body>
 </html>
