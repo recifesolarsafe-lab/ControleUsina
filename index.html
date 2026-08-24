@@ -306,6 +306,7 @@
   .chart-grid.two{grid-template-columns:1fr 1fr;}
   @media (max-width:860px){.chart-grid.two{grid-template-columns:1fr;}}
   .chart-box{position:relative; height:280px;}
+  #rel-chart-diario, #rel-chart-anual{background:var(--bg); border-radius:8px;}
   .chart-box.tall{height:340px;}
 
   /* ---------- relatório da usina ---------- */
@@ -3450,7 +3451,7 @@ async function renderRelatorio(){
       plugins: (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [],
       data:{ labels, datasets:[
         { label:'Geração real (kWh)', data:dailyReal, backgroundColor:'#F2703C', borderRadius:4,
-          datalabels:{ anchor:'end', align:'top', color:'#FFFFFF', textStrokeColor:'#12100A', textStrokeWidth:3, font:{size:9, weight:'bold'}, rotation:-90, formatter:v=>v?fmtNum(v):'' } },
+          datalabels:{ anchor:'end', align:'top', color:'#EDF0F5', font:{size:9, weight:'bold'}, rotation:-90, formatter:v=>v?fmtNum(v):'' } },
         { label:'Meta do dia (kWh)', data:dailyMetaFlat, type:'line', borderColor:'#5C6672', borderDash:[5,4], pointRadius:0, borderWidth:2,
           datalabels:{ display:false } }
       ]},
@@ -3480,9 +3481,9 @@ async function renderRelatorio(){
       plugins: (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [],
       data:{ labels: MESES.map(m=>m.l), datasets:[
         { label:'Real (kWh)', data:realByMonth, backgroundColor:'#F2703C', borderRadius:4,
-          datalabels:{ anchor:'end', align:'top', color:'#FFFFFF', textStrokeColor:'#12100A', textStrokeWidth:3, font:{size:10, weight:'bold'}, formatter:v=>v?fmtNum(v):'' } },
+          datalabels:{ anchor:'end', align:'top', color:'#EDF0F5', font:{size:10, weight:'bold'}, formatter:v=>v?fmtNum(v):'' } },
         { label:'Esperado (kWh)', data:expByMonth, backgroundColor:'#3A4568', borderRadius:4,
-          datalabels:{ anchor:'end', align:'top', color:'#FFFFFF', textStrokeColor:'#12100A', textStrokeWidth:3, font:{size:10, weight:'bold'}, formatter:v=>v?fmtNum(v):'' } }
+          datalabels:{ anchor:'end', align:'top', color:'#9CACC9', font:{size:10, weight:'bold'}, formatter:v=>v?fmtNum(v):'' } }
       ]},
       options:{
         responsive:true, maintainAspectRatio:false,
