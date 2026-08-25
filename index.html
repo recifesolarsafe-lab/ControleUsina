@@ -306,7 +306,7 @@
   .chart-grid.two{grid-template-columns:1fr 1fr;}
   @media (max-width:860px){.chart-grid.two{grid-template-columns:1fr;}}
   .chart-box{position:relative; height:280px;}
-  #rel-chart-diario-box, #rel-chart-anual-box{background:var(--bg); border-radius:8px; padding:8px;}
+  #rel-chart-diario-box, #rel-chart-anual-box{background:var(--bg); border-radius:8px;}
   .chart-box.tall{height:340px;}
 
   /* ---------- relatório da usina ---------- */
@@ -340,7 +340,10 @@
     .report-hero{background:#213353 !important; border:1px solid #3A4F79;}
     .panel{background:#213353 !important; border:1px solid #3A4F79 !important; break-inside:avoid;}
     .val, .report-hero-name{color:#EDF0F5 !important;}
-    #rel-chart-diario-box, #rel-chart-anual-box{background:#1B2A45 !important;}
+    #rel-hero-geracao{color:#F2703C !important;}
+    #rel-chart-diario-box, #rel-chart-anual-box{background:#1B2A45 !important; overflow:hidden; width:100%; box-sizing:border-box;}
+    .chart-box{max-width:100%;}
+    canvas{max-width:100% !important;}
   }
 
   /* ---------- login screen ---------- */
@@ -1010,15 +1013,19 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
             <div class="report-hero-eyebrow">Relatório de desempenho</div>
             <div class="report-hero-name" id="rel-nome">—</div>
           </div>
+          <div style="text-align:right;">
+            <div class="report-hero-eyebrow">Geração no mês</div>
+            <div class="report-hero-name" id="rel-hero-geracao" style="color:var(--amber);">—</div>
+          </div>
         </div>
         <div class="report-hero-foot" id="rel-periodo">—</div>
       </div>
 
       <div class="kpi-grid report-kpi-grid">
-        <div class="kpi"><div class="lbl">Geração no mês</div><div class="val amber" id="rel-kpi-geracao">—</div><div class="sub">kWh gerados</div></div>
         <div class="kpi"><div class="lbl">Meta no mês</div><div class="val" id="rel-kpi-meta">—</div><div class="sub" id="rel-kpi-meta-sub">kWh esperados</div></div>
         <div class="kpi"><div class="lbl">Atingimento</div><div class="val" id="rel-kpi-pr">—</div><div class="sub">performance ratio</div></div>
         <div class="kpi"><div class="lbl">Energia injetada</div><div class="val teal" id="rel-kpi-injetada">—</div><div class="sub">kWh no mês, na rede</div></div>
+        <div class="kpi"><div class="lbl">Consumo interno</div><div class="val" id="rel-kpi-consumo-interno">—</div><div class="sub">Geração − Injetado</div></div>
         <div class="kpi"><div class="lbl">Economia total no mês</div><div class="val amber" id="rel-kpi-economia-mes">—</div><div class="sub">soma de todos os clientes desta usina</div></div>
         <div class="kpi"><div class="lbl">Economia total desde o início</div><div class="val amber" id="rel-kpi-economia-total">—</div><div class="sub">acumulado desde o funcionamento</div></div>
       </div>
@@ -3426,7 +3433,7 @@ async function renderRelatorio(){
   const meta = metaMensalProporcional(usina, month);
   const pr = meta ? (totalReal/meta*100) : null;
 
-  document.getElementById('rel-kpi-geracao').textContent = fmtNum(totalReal);
+  document.getElementById('rel-hero-geracao').textContent = fmtNum(totalReal) + ' kWh';
   document.getElementById('rel-kpi-meta').textContent = meta ? fmtNum(meta) : '—';
   document.getElementById('rel-kpi-meta-sub').textContent = (month === currentMonth()) ? 'kWh, proporcional aos dias já passados' : 'kWh esperados';
   document.getElementById('rel-kpi-pr').textContent = pr!=null ? fmtPct(pr) : '—';
@@ -3435,6 +3442,10 @@ async function renderRelatorio(){
   const injetada = await loadInjetada();
   const registroInj = injetada.find(i=>i.mes===month && i.codigoUsina===codigo);
   document.getElementById('rel-kpi-injetada').textContent = registroInj ? fmtNum(registroInj.kwhInjetado) : '—';
+
+  // --- consumo interno: geração - injetado ---
+  const consumoInterno = registroInj ? (totalReal - registroInj.kwhInjetado) : null;
+  document.getElementById('rel-kpi-consumo-interno').textContent = consumoInterno!=null ? fmtNum(consumoInterno) : '—';
 
   // --- gráfico diário ---
   const dailyReal = Array(nDays).fill(0);
@@ -3680,6 +3691,10 @@ function exportarRelatorioHTML(){
 document.getElementById('rel-usina').addEventListener('change', renderRelatorio);
 document.getElementById('rel-month').addEventListener('change', renderRelatorio);
 document.getElementById('rel-print').addEventListener('click', ()=>window.print());
+window.addEventListener('beforeprint', ()=>{
+  if(CHARTS.relDiario) CHARTS.relDiario.resize();
+  if(CHARTS.relAnual) CHARTS.relAnual.resize();
+});
 
 /* ============================================================
    Init
