@@ -92,6 +92,41 @@
   }
   .sync-dot{width:6px; height:6px; border-radius:50%; background:var(--teal); box-shadow:0 0 8px var(--teal);}
 
+  .global-search{position:relative; display:flex; align-items:center; gap:8px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px 12px; min-width:220px; color:var(--text-faint);}
+  .global-search input{background:transparent; border:none; outline:none; color:var(--text); font-family:var(--font-body); font-size:13px; width:100%;}
+  .global-search input::placeholder{color:var(--text-faint);}
+  .global-search-results{
+    position:absolute; top:calc(100% + 6px); left:0; right:0;
+    background:var(--surface-3); border:1px solid var(--border); border-radius:10px;
+    box-shadow:0 10px 28px rgba(0,0,0,0.4); z-index:70;
+    max-height:360px; overflow-y:auto; display:none;
+  }
+  .global-search-results.open{display:block;}
+  .gsr-group-label{font-family:var(--font-mono); font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.5px; padding:10px 14px 4px;}
+  .gsr-item{display:flex; flex-direction:column; gap:2px; padding:9px 14px; cursor:pointer; transition:background .12s ease;}
+  .gsr-item:hover{background:var(--surface-2);}
+  .gsr-item-title{font-size:13px; color:var(--text); font-weight:500;}
+  .gsr-item-sub{font-size:11px; color:var(--text-faint); font-family:var(--font-mono);}
+  .gsr-empty{padding:14px; font-size:12.5px; color:var(--text-faint); text-align:center;}
+
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(10,14,20,0.72);
+    z-index:200; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:24px; max-width:640px; width:100%; max-height:86vh; overflow-y:auto;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-head{display:flex; align-items:flex-start; justify-content:space-between; gap:16px;}
+  .modal-title{font-family:var(--font-display); font-size:18px; font-weight:600;}
+  .modal-close{
+    background:transparent; border:none; color:var(--text-faint); font-size:24px; line-height:1;
+    cursor:pointer; padding:2px 6px; border-radius:6px; flex-shrink:0;
+  }
+  .modal-close:hover{color:var(--text); background:var(--surface-2);}
+
   main{max-width:1320px; margin:0 auto; padding:28px 24px 80px;}
   .view{display:none; animation:fadeIn .3s ease;}
   .view.active{display:block;}
@@ -219,6 +254,7 @@
   .tag{display:inline-block; padding:3px 8px; border-radius:20px; font-size:10.5px; font-family:var(--font-mono);}
   .tag.ok{background:var(--teal-soft); color:var(--teal);}
   .tag.warn{background:var(--amber-soft); color:var(--amber);}
+  .tag.danger{background:var(--red-soft); color:var(--red);}
   .tag.bad{background:var(--red-soft); color:var(--red);}
   .tag.teal-tag{background:var(--teal-soft); color:var(--teal);}
   .row-actions{display:flex; gap:2px;}
@@ -290,7 +326,26 @@
   .toast.err{border-left-color:var(--red);}
   @keyframes slideIn{from{opacity:0; transform:translateX(16px);} to{opacity:1; transform:translateX(0);}}
 
-  .loading-row{padding:30px; text-align:center; color:var(--text-faint); font-size:12.5px; font-family:var(--font-mono);}
+  .loading-row{padding:30px; text-align:center; color:transparent; font-size:12.5px; font-family:var(--font-mono); position:relative; overflow:hidden;}
+  .loading-row .spin{display:none;}
+  .loading-row::before{
+    content:''; position:absolute; left:20px; right:20px; top:50%; transform:translateY(-50%);
+    height:14px; border-radius:6px;
+    background:linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+    background-size:200% 100%;
+    animation:skeleton-shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes skeleton-shimmer{ 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+
+  .platform-badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:17px; height:17px; border-radius:5px; font-size:9px; font-weight:700;
+    font-family:var(--font-mono); color:#fff; margin-right:3px; flex-shrink:0; vertical-align:middle;
+  }
+  .platform-badge.solis{background:#F2703C;}
+  .platform-badge.fusion{background:#E23744;}
+  .platform-badge.apsystems{background:#00B8A9;}
+  .platform-badge.isolar{background:#2F6FED;}
   .spin{display:inline-block; width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--amber); border-radius:50%; animation:spin .7s linear infinite; margin-right:8px; vertical-align:-2px;}
   @keyframes spin{to{transform:rotate(360deg);}}
 
@@ -430,6 +485,27 @@
 </div>
 
 <div id="app-shell" style="display:none;">
+  <div class="modal-overlay" id="popup-atraso-overlay">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">Faturas em atraso</div>
+          <div class="hint" style="margin:4px 0 0;">Clientes que ainda não subiram a fatura do mês, com base na próxima leitura informada na conta anterior.</div>
+        </div>
+        <button type="button" class="modal-close" id="popup-atraso-fechar" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="table-wrap" style="max-height:360px; margin-top:14px;">
+        <table>
+          <thead><tr><th>Cliente</th><th>Próxima leitura esperada</th><th class="num">Atraso</th></tr></thead>
+          <tbody id="popup-atraso-tbody"></tbody>
+        </table>
+      </div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button type="button" class="btn btn-primary" id="popup-atraso-ir">Ir para Faturas</button>
+        <button type="button" class="btn btn-ghost" id="popup-atraso-fechar-2">Fechar</button>
+      </div>
+    </div>
+  </div>
 <header class="top">
   <div class="top-inner">
     <div class="brand">
@@ -440,6 +516,11 @@
         <h1>SolarSafe</h1>
         <span id="usina-count">carregando usinas…</span>
       </div>
+    </div>
+    <div class="global-search" id="global-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" id="global-search-input" placeholder="Buscar usina ou cliente…" autocomplete="off">
+      <div class="global-search-results" id="global-search-results"></div>
     </div>
     <nav class="tabs">
       <div class="tab-dropdown" id="usinas-dropdown">
@@ -452,6 +533,7 @@
         </div>
       </div>
       <button data-view="clientes">Clientes</button>
+      <button data-view="faturas">Faturas</button>
       <button data-view="graficos-clientes">Gráf. Clientes</button>
       <button data-view="relatorio">Relatório</button>
       <button data-view="usuarios">Usuários</button>
@@ -647,6 +729,12 @@
         <div class="field"><label for="chart-year">Ano</label><input type="number" id="chart-year" step="1"></div>
       </div>
       <div class="chart-box tall"><canvas id="chart-annual"></canvas></div>
+      <div class="table-wrap" style="margin-top:14px;">
+        <table>
+          <thead><tr id="chart-annual-pct-head"></tr></thead>
+          <tbody><tr id="chart-annual-pct-body"></tr></tbody>
+        </table>
+      </div>
       <div class="hint">Esperado vem do cadastro de cada usina (Usinas → Cadastro Usinas). Real é a soma dos lançamentos diários de cada mês.</div>
     </div>
 
@@ -788,6 +876,45 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         <table>
           <thead><tr><th>Mês</th><th>Código</th><th>Usina</th><th class="num">kWh Injetado</th><th class="txt">Obs.</th><th></th></tr></thead>
           <tbody id="injh-tbody"><tr><td colspan="6" class="loading-row"><span class="spin"></span>carregando histórico…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Integrações de monitoramento<small>SolisCloud, FusionSolar, APsystems</small></div>
+      <p class="hint" style="margin-bottom:14px;">Vincule os IDs de cada plataforma de monitoramento a uma usina. A sincronização diária, o Status ao vivo e os alertas passam a reconhecer a usina automaticamente — sem precisar mexer em código.</p>
+      <form id="form-integracao" novalidate>
+        <div class="field-grid">
+          <div><label for="ig-usina">Usina</label><select id="ig-usina" required></select></div>
+          <div>
+            <label for="ig-plataforma">Plataforma</label>
+            <select id="ig-plataforma">
+              <option value="solis">SolisCloud</option>
+              <option value="fusion">FusionSolar</option>
+              <option value="apsystems">APsystems</option>
+              <option value="isolar">iSolarCloud (Sungrow)</option>
+            </select>
+          </div>
+          <div><label for="ig-station-id" id="ig-station-id-label">Station ID</label><input type="text" id="ig-station-id" required></div>
+          <div id="ig-eid-field" style="display:none;"><label for="ig-eid">ECU ID</label><input type="text" id="ig-eid"></div>
+          <div id="ig-conta-fusion-field" style="display:none;">
+            <label for="ig-conta-fusion">Conta FusionSolar <span class="hint" style="margin:0;">(deixe "padrao" se for a única)</span></label>
+            <input type="text" id="ig-conta-fusion" value="padrao">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="ig-submit">Adicionar integração</button>
+          <button type="button" class="btn btn-ghost" id="ig-cancel" style="display:none;">Cancelar edição</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Integrações cadastradas<small id="ig-count"></small></div>
+      <div class="table-wrap" style="max-height:420px;">
+        <table>
+          <thead><tr><th>Usina</th><th>Plataforma</th><th>Station ID</th><th>ECU ID</th><th></th></tr></thead>
+          <tbody id="ig-tbody"><tr><td colspan="5" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -945,6 +1072,11 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
           <label for="man-descricao">Descrição / ação realizada</label>
           <textarea id="man-descricao" rows="3" required placeholder="ex: troca de fusível, limpeza dos módulos, verificação de string..."></textarea>
         </div>
+        <div class="field" style="margin-top:12px;">
+          <label for="man-fotos">Fotos <span class="hint" style="margin:0;">(antes/depois, opcional — pode escolher várias)</span></label>
+          <input type="file" id="man-fotos" accept="image/*" multiple>
+          <div id="man-fotos-preview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
+        </div>
         <div class="btn-row">
           <button type="submit" class="btn btn-primary" id="man-submit">Registrar manutenção</button>
           <button type="button" class="btn btn-ghost" id="man-cancel" style="display:none;">Cancelar edição</button>
@@ -960,8 +1092,67 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
       </div>
       <div class="table-wrap" style="max-height:420px;">
         <table>
-          <thead><tr><th>Data</th><th>Cliente</th><th class="txt">Descrição</th><th>Responsável</th><th></th></tr></thead>
-          <tbody id="manh-tbody"><tr><td colspan="5" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
+          <thead><tr><th>Data</th><th>Cliente</th><th class="txt">Descrição</th><th>Responsável</th><th>Fotos</th><th></th></tr></thead>
+          <tbody id="manh-tbody"><tr><td colspan="6" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FATURAS ================= -->
+  <section class="view" id="view-faturas">
+    <div class="page-head">
+      <h2>Faturas de energia</h2>
+      <p>Anexe a fatura (cliente ou usina) e o sistema lê os dados automaticamente — Neoenergia PE.</p>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Enviar fatura<small>extração automática</small></div>
+      <form id="form-fatura-unificada" novalidate>
+        <div class="field-grid">
+          <div>
+            <label for="fx-tipo">Tipo</label>
+            <select id="fx-tipo">
+              <option value="cliente">Cliente</option>
+              <option value="usina">Usina</option>
+            </select>
+          </div>
+          <div>
+            <label for="fx-entidade" id="fx-entidade-label">Cliente</label>
+            <select id="fx-entidade" required><option value="">selecione…</option></select>
+          </div>
+          <div><label for="fx-mes">Mês de referência</label><input type="month" id="fx-mes" required></div>
+          <div><label for="fx-arquivo">Fatura (PDF)</label><input type="file" id="fx-arquivo" accept="application/pdf" required></div>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-primary" id="fx-extrair">Extrair dados da fatura</button>
+        </div>
+        <div id="fx-review" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+          <div class="hint" style="margin-bottom:12px;">Confira os valores lidos automaticamente — pode corrigir antes de salvar.</div>
+          <div class="field-grid">
+            <div><label for="fx-consumo">Consumo (kWh)</label><input type="number" id="fx-consumo" step="0.01"></div>
+            <div><label for="fx-injetada">Energia injetada (kWh)</label><input type="number" id="fx-injetada" step="0.01"></div>
+            <div><label for="fx-valor">Valor total (R$)</label><input type="number" id="fx-valor" step="0.01"></div>
+            <div><label for="fx-vencimento">Vencimento</label><input type="date" id="fx-vencimento"></div>
+          </div>
+          <div class="btn-row" style="margin-top:14px;">
+            <button type="button" class="btn btn-primary" id="fx-salvar">Salvar fatura</button>
+            <button type="button" class="btn btn-ghost" id="fx-descartar">Descartar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Histórico de faturas<small id="fx-hist-meta"></small></div>
+      <div class="toolbar">
+        <div class="field"><label for="fxh-tipo">Tipo</label><select id="fxh-tipo"><option value="">todos</option><option value="cliente">Cliente</option><option value="usina">Usina</option></select></div>
+        <div class="field grow"><label for="fxh-entidade">Filtrar por cliente/usina</label><select id="fxh-entidade"><option value="">todos</option></select></div>
+      </div>
+      <div class="table-wrap" style="max-height:460px;">
+        <table>
+          <thead><tr><th>Mês</th><th>Tipo</th><th>Cliente/Usina</th><th class="num">Consumo (kWh)</th><th class="num">Energia Injetada (kWh)</th><th class="num">Valor (R$)</th><th>Vencimento</th><th></th></tr></thead>
+          <tbody id="fxh-tbody"><tr><td colspan="8" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -1227,6 +1418,69 @@ async function deleteLancRemote(id){
 }
 
 /* ============================================================
+   Busca global (header) — usinas e clientes
+   ============================================================ */
+function goToView(viewName){
+  const btn = document.querySelector('nav.tabs > button[data-view="'+viewName+'"], nav.tabs > .tab-dropdown > button[data-view="'+viewName+'"]');
+  if(btn) btn.click();
+}
+async function goToUsinaReport(codigo){
+  goToView('relatorio');
+  if(BASE_DATA_READY) await BASE_DATA_READY;
+  populateRelatorioUsinaSelect();
+  document.getElementById('rel-usina').value = codigo;
+  renderRelatorio();
+}
+async function goToCliente(codigo){
+  goToView('clientes');
+  if(BASE_DATA_READY) await BASE_DATA_READY;
+  renderClientesTable();
+  startEditCliente(codigo);
+}
+function closeGlobalSearch(){
+  document.getElementById('global-search-results').classList.remove('open');
+}
+document.getElementById('global-search-input').addEventListener('input', (e)=>{
+  const q = e.target.value.trim().toLowerCase();
+  const resultsEl = document.getElementById('global-search-results');
+  if(q.length < 2){ resultsEl.classList.remove('open'); resultsEl.innerHTML=''; return; }
+
+  const usinaMatches = USINAS.filter(u => u.nome.toLowerCase().includes(q) || u.codigo.toLowerCase().includes(q)).slice(0, 6);
+  const clienteMatches = CLIENTES.filter(c => c.nome.toLowerCase().includes(q) || (c.contaContrato||'').toLowerCase().includes(q)).slice(0, 6);
+
+  if(!usinaMatches.length && !clienteMatches.length){
+    resultsEl.innerHTML = `<div class="gsr-empty">Nada encontrado para "${escapeHtml(e.target.value.trim())}".</div>`;
+    resultsEl.classList.add('open');
+    return;
+  }
+
+  let html = '';
+  if(usinaMatches.length){
+    html += '<div class="gsr-group-label">Usinas</div>';
+    html += usinaMatches.map(u => `<div class="gsr-item" data-type="usina" data-codigo="${u.codigo}"><span class="gsr-item-title">${escapeHtml(u.nome)}</span><span class="gsr-item-sub">${u.codigo}</span></div>`).join('');
+  }
+  if(clienteMatches.length){
+    html += '<div class="gsr-group-label">Clientes</div>';
+    html += clienteMatches.map(c => `<div class="gsr-item" data-type="cliente" data-codigo="${c.codigo}"><span class="gsr-item-title">${escapeHtml(c.nome)}</span><span class="gsr-item-sub">${escapeHtml(c.contaContrato||c.codigo)}</span></div>`).join('');
+  }
+  resultsEl.innerHTML = html;
+  resultsEl.classList.add('open');
+});
+document.getElementById('global-search-results').addEventListener('click', (e)=>{
+  const item = e.target.closest('.gsr-item');
+  if(!item) return;
+  const codigo = item.dataset.codigo;
+  document.getElementById('global-search-input').value = '';
+  closeGlobalSearch();
+  if(item.dataset.type === 'usina') goToUsinaReport(codigo);
+  else goToCliente(codigo);
+});
+document.addEventListener('click', (e)=>{
+  const box = document.getElementById('global-search');
+  if(!box.contains(e.target)) closeGlobalSearch();
+});
+
+/* ============================================================
    Tabs
    ============================================================ */
 function activateSubview(name){
@@ -1240,7 +1494,7 @@ async function renderSubview(name){
   if(name === 'dashboard'){ renderDashboard(); refreshLiveStatus(); }
   if(name === 'lancamento'){ renderGrid(); renderLancTable(); }
   if(name === 'graficos') renderCharts();
-  if(name === 'cadastro'){ renderInjGrid(); renderInjHistory(); }
+  if(name === 'cadastro'){ renderInjGrid(); renderInjHistory(); populateIntegracaoUsinaSelect(); renderIntegracoesTable(); }
 }
 
 document.querySelectorAll('nav.tabs > button, nav.tabs > .tab-dropdown > button').forEach(btn=>{
@@ -1255,6 +1509,7 @@ document.querySelectorAll('nav.tabs > button, nav.tabs > .tab-dropdown > button'
       document.getElementById('usinas-dropdown').classList.toggle('open');
     }
     if(btn.dataset.view === 'clientes'){ renderClientesTable(); renderCompGrid(); renderCompHistory(); populateManutencaoClienteSelects(); renderManutencoesHistory(); }
+    if(btn.dataset.view === 'faturas'){ populateFaturaUnificadaSelects(); populateFaturaUnificadaFiltro(); renderFaturasUnificadasHistory(); }
     if(btn.dataset.view === 'graficos-clientes') renderClientesCharts();
     if(btn.dataset.view === 'relatorio'){ populateRelatorioUsinaSelect(); renderRelatorio(); }
     if(btn.dataset.view === 'usuarios'){ renderClienteUsinasChipsUsuario([]); await loadUsuarios(); renderUsuariosTable(); }
@@ -1696,7 +1951,7 @@ function renderLiveStatusRow(item){
   const stateLabel = item.state===1 ? 'Online' : (item.state===2 ? 'Offline' : (item.state===3 ? 'Alarme' : '—'));
   const stateClass = item.state===1 ? 'ok' : (item.state===3 ? 'bad' : 'warn');
   return `
-    <td class="txt">${escapeHtml(item.nome)}</td>
+    <td class="txt">${platformBadgesHtml(item.codigo)}${escapeHtml(item.nome)}</td>
     <td><span class="tag ${stateClass}">${stateLabel}</span></td>
     <td class="num">${item.power!=null ? fmtNum(item.power) + ' ' + (item.powerStr||'kW') : '—'}</td>
     <td class="num">${item.dayEnergy!=null ? fmtNum(item.dayEnergy) + ' kWh' : '—'}</td>`;
@@ -1982,6 +2237,18 @@ async function renderAnnualChart(){
       }
     }
   });
+
+  const pctHead = document.getElementById('chart-annual-pct-head');
+  const pctBody = document.getElementById('chart-annual-pct-body');
+  pctHead.innerHTML = '<th class="txt">% do esperado</th>' + MESES.map(m=>`<th class="num">${m.l}</th>`).join('');
+  pctBody.innerHTML = '<td class="txt">Atingimento</td>' + MESES.map((m,i)=>{
+    const esp = expByMonth[i];
+    const real = realByMonth[i];
+    if(!esp) return '<td class="num">—</td>';
+    const pct = (real/esp)*100;
+    const cls = pct>=100 ? 'ok' : (pct>=80 ? 'warn' : 'danger');
+    return `<td class="num"><span class="tag ${cls}">${fmtPct(pct)}</span></td>`;
+  }).join('');
 
   const hasExp = expByMonth.some(v=>v>0);
   const box = document.getElementById('chart-annual').parentElement;
@@ -2283,6 +2550,132 @@ document.getElementById('inj-save').addEventListener('click', async ()=>{
   }
 });
 
+/* ============================================================
+   Integrações de monitoramento (SolisCloud / FusionSolar / APsystems)
+   ============================================================ */
+let INTEGRACOES = null;
+let editingIntegracaoId = null;
+const PLATAFORMA_LABEL = { solis:'SolisCloud', fusion:'FusionSolar', apsystems:'APsystems', isolar:'iSolarCloud' };
+const PLATFORM_BADGE_LETTER = { solis:'S', fusion:'F', apsystems:'A', isolar:'i' };
+function platformBadgesHtml(codigo){
+  if(!INTEGRACOES) return '';
+  const plataformas = INTEGRACOES.filter(r=>r.codigo_usina===codigo).map(r=>r.plataforma);
+  if(!plataformas.length) return '';
+  return plataformas.map(p=>`<span class="platform-badge ${p}" title="${PLATAFORMA_LABEL[p]||p}">${PLATFORM_BADGE_LETTER[p]||'?'}</span>`).join('');
+}
+
+function populateIntegracaoUsinaSelect(){
+  const sel = document.getElementById('ig-usina');
+  const cur = sel.value;
+  sel.innerHTML = USINAS.slice().sort((a,b)=>a.nome.localeCompare(b.nome))
+    .map(u=>`<option value="${u.codigo}">${u.codigo} — ${escapeHtml(u.nome)}</option>`).join('');
+  if(cur) sel.value = cur;
+}
+function toggleIntegracaoCampos(){
+  const plataforma = document.getElementById('ig-plataforma').value;
+  document.getElementById('ig-station-id-label').textContent = plataforma === 'apsystems' ? 'System ID (sid)' : (plataforma === 'isolar' ? 'PS ID (ID da usina)' : 'Station ID');
+  document.getElementById('ig-eid-field').style.display = plataforma === 'apsystems' ? '' : 'none';
+  document.getElementById('ig-conta-fusion-field').style.display = plataforma === 'fusion' ? '' : 'none';
+}
+document.getElementById('ig-plataforma').addEventListener('change', toggleIntegracaoCampos);
+
+async function loadIntegracoes(force){
+  if(INTEGRACOES && !force) return INTEGRACOES;
+  try{
+    const { data, error } = await sb.from('integracoes_usina').select('*');
+    throwIfSupabaseError(error, 'Integrações');
+    INTEGRACOES = data || [];
+  }catch(e){ toast('Erro ao carregar integrações: ' + e.message, true); INTEGRACOES = []; }
+  return INTEGRACOES;
+}
+async function renderIntegracoesTable(){
+  const tbody = document.getElementById('ig-tbody');
+  tbody.innerHTML = `<tr><td colspan="5" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
+  const rows = (await loadIntegracoes()).slice().sort((a,b)=> a.codigo_usina.localeCompare(b.codigo_usina));
+  document.getElementById('ig-count').textContent = rows.length + ' integração(ões)';
+  if(!rows.length){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Nenhuma integração cadastrada ainda.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r=>{
+    const usina = USINAS.find(u=>u.codigo===r.codigo_usina);
+    return `
+    <tr>
+      <td class="txt">${escapeHtml(usina?usina.nome:r.codigo_usina)}</td>
+      <td><span class="platform-badge ${r.plataforma}">${PLATFORM_BADGE_LETTER[r.plataforma]||'?'}</span> ${PLATAFORMA_LABEL[r.plataforma]||r.plataforma}${r.plataforma==='fusion' ? ` <span class="hint" style="margin:0;">(${escapeHtml(r.conta_fusion||'padrao')})</span>` : ''}</td>
+      <td class="txt">${escapeHtml(r.station_id||'—')}</td>
+      <td class="txt">${escapeHtml(r.eid||'—')}</td>
+      <td><div class="row-actions">
+        <button class="btn-edit-ghost" title="Editar" onclick="startEditIntegracao('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
+        <button class="btn-danger-ghost" title="Excluir" onclick="deleteIntegracao('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+window.startEditIntegracao = function(id){
+  const r = INTEGRACOES.find(x=>x.id===id);
+  if(!r) return;
+  editingIntegracaoId = id;
+  document.getElementById('ig-usina').value = r.codigo_usina;
+  document.getElementById('ig-plataforma').value = r.plataforma;
+  toggleIntegracaoCampos();
+  document.getElementById('ig-station-id').value = r.station_id || '';
+  document.getElementById('ig-eid').value = r.eid || '';
+  document.getElementById('ig-conta-fusion').value = r.conta_fusion || 'padrao';
+  document.getElementById('ig-submit').textContent = 'Salvar alterações';
+  document.getElementById('ig-cancel').style.display = 'inline-flex';
+  document.getElementById('form-integracao').scrollIntoView({behavior:'smooth', block:'center'});
+};
+document.getElementById('ig-cancel').addEventListener('click', ()=>{
+  editingIntegracaoId = null;
+  document.getElementById('form-integracao').reset();
+  toggleIntegracaoCampos();
+  document.getElementById('ig-submit').textContent = 'Adicionar integração';
+  document.getElementById('ig-cancel').style.display = 'none';
+});
+window.deleteIntegracao = async function(id){
+  if(!confirm('Remover esta integração? A usina para de sincronizar automaticamente com essa plataforma.')) return;
+  try{
+    const { error } = await sb.from('integracoes_usina').delete().eq('id', id);
+    throwIfSupabaseError(error, 'Integrações');
+    toast('Integração removida.');
+    await loadIntegracoes(true);
+    renderIntegracoesTable();
+  }catch(e){ toast('Erro ao excluir: ' + e.message, true); }
+};
+document.getElementById('form-integracao').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const codigoUsina = document.getElementById('ig-usina').value;
+  const plataforma = document.getElementById('ig-plataforma').value;
+  const stationId = document.getElementById('ig-station-id').value.trim();
+  const eid = document.getElementById('ig-eid').value.trim();
+  const contaFusion = document.getElementById('ig-conta-fusion').value.trim() || 'padrao';
+  if(!codigoUsina || !stationId){ toast('Preencha usina e Station ID.', true); return; }
+  if(plataforma === 'apsystems' && !eid){ toast('Preencha o ECU ID para APsystems.', true); return; }
+
+  const btn = document.getElementById('ig-submit');
+  btn.disabled = true;
+  try{
+    const { error } = await sb.from('integracoes_usina').upsert({
+      codigo_usina: codigoUsina, plataforma, station_id: stationId, eid: plataforma==='apsystems' ? eid : null,
+      conta_fusion: plataforma==='fusion' ? contaFusion : null
+    }, { onConflict:'codigo_usina,plataforma' });
+    throwIfSupabaseError(error, 'Integrações');
+    toast(editingIntegracaoId ? 'Integração atualizada.' : 'Integração adicionada.');
+    editingIntegracaoId = null;
+    e.target.reset();
+    toggleIntegracaoCampos();
+    document.getElementById('ig-submit').textContent = 'Adicionar integração';
+    document.getElementById('ig-cancel').style.display = 'none';
+    await loadIntegracoes(true);
+    renderIntegracoesTable();
+  }catch(err){
+    toast('Erro ao salvar: ' + err.message, true);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
 function populateInjUsinaFilterSelect(){
   const sel = document.getElementById('injh-usina');
   const current = sel.value;
@@ -2290,6 +2683,51 @@ function populateInjUsinaFilterSelect(){
     .map(u=>`<option value="${u.codigo}">${u.codigo} — ${escapeHtml(u.nome)}</option>`).join('');
   sel.innerHTML = '<option value="">todas as usinas</option>' + opts;
   if(current) sel.value = current;
+}
+
+/* ============================================================
+   Contas de energia da usina — dados
+   ============================================================ */
+let FATURAS_USINA = null;
+
+function faturaUsinaRowToObj(row){
+  return {
+    id: row.id, codigoUsina: row.codigo_usina, mes: row.mes,
+    arquivoPath: row.arquivo_url,
+    energiaInjetadaKwh: row.energia_injetada_kwh!=null ? parseFloat(row.energia_injetada_kwh) : null,
+    consumoKwh: row.consumo_kwh!=null ? parseFloat(row.consumo_kwh) : null,
+    valorTotal: row.valor_total!=null ? parseFloat(row.valor_total) : null,
+    vencimento: row.vencimento || null,
+    proximaLeitura: row.proxima_leitura || null
+  };
+}
+async function loadFaturasUsina(force){
+  if(FATURAS_USINA && !force) return FATURAS_USINA;
+  try{
+    const { data, error } = await sb.from('faturas_usina').select('*');
+    throwIfSupabaseError(error, 'Faturas da usina');
+    FATURAS_USINA = (data||[]).map(faturaUsinaRowToObj);
+  }catch(e){ toast('Erro ao carregar contas de energia: ' + e.message, true); FATURAS_USINA = []; }
+  return FATURAS_USINA;
+}
+async function salvarFaturaUsinaRemote(f){
+  try{
+    const { error } = await sb.from('faturas_usina').upsert({
+      codigo_usina: f.codigoUsina, mes: f.mes, arquivo_url: f.arquivoPath,
+      energia_injetada_kwh: f.energiaInjetadaKwh, consumo_kwh: f.consumoKwh,
+      valor_total: f.valorTotal, vencimento: f.vencimento || null,
+      proxima_leitura: f.proximaLeitura || null, extraido_auto: true
+    }, { onConflict:'mes,codigo_usina' });
+    throwIfSupabaseError(error, 'Faturas da usina');
+    return true;
+  }catch(e){ toast('Erro ao salvar conta de energia: ' + e.message, true); return false; }
+}
+async function deleteFaturaUsinaRemote(id){
+  try{
+    const { error } = await sb.from('faturas_usina').delete().eq('id', id);
+    throwIfSupabaseError(error, 'Faturas da usina');
+    return true;
+  }catch(e){ toast('Erro ao excluir conta de energia: ' + e.message, true); return false; }
 }
 
 async function renderInjHistory(){
@@ -2351,16 +2789,28 @@ function normalizeDataISO(val){
   return s;
 }
 function manutencaoObjToRow(m){
-  const row = { codigo_cliente:m.codigoCliente, data:m.data, descricao:m.descricao||'', responsavel:m.responsavel||'' };
+  const row = { codigo_cliente:m.codigoCliente, data:m.data, descricao:m.descricao||'', responsavel:m.responsavel||'', fotos:m.fotos||[] };
   if(m.id) row.id = m.id;
   return row;
+}
+async function uploadFotosManutencao(files){
+  const urls = [];
+  for(const file of files){
+    const ext = (file.name.split('.').pop()||'jpg').toLowerCase();
+    const path = Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.' + ext;
+    const { error } = await sb.storage.from('manutencoes-fotos').upload(path, file);
+    if(error) throw new Error('Erro ao enviar foto: ' + error.message);
+    const { data } = sb.storage.from('manutencoes-fotos').getPublicUrl(path);
+    urls.push(data.publicUrl);
+  }
+  return urls;
 }
 async function loadManutencoes(force){
   if(MANUTENCOES && !force) return MANUTENCOES;
   try{
     const { data, error } = await sb.from('manutencoes').select('*');
     throwIfSupabaseError(error, 'Manutenções');
-    MANUTENCOES = (data||[]).map(r=>({ id:r.id, codigoCliente:r.codigo_cliente, data: normalizeDataISO(r.data), descricao:r.descricao||'', responsavel:r.responsavel||'' }));
+    MANUTENCOES = (data||[]).map(r=>({ id:r.id, codigoCliente:r.codigo_cliente, data: normalizeDataISO(r.data), descricao:r.descricao||'', responsavel:r.responsavel||'', fotos:r.fotos||[] }));
   }catch(e){ toast('Erro ao carregar manutenções: ' + e.message, true); MANUTENCOES = []; }
   return MANUTENCOES;
 }
@@ -2391,6 +2841,11 @@ function populateManutencaoClienteSelects(){
   if(curB) selB.value = curB;
 }
 
+document.getElementById('man-fotos').addEventListener('change', (e)=>{
+  const files = Array.from(e.target.files || []);
+  const localUrls = files.map(f => URL.createObjectURL(f));
+  renderManFotosPreview([...editingManutencaoFotos, ...localUrls]);
+});
 document.getElementById('form-manutencao').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const codigoCliente = document.getElementById('man-cliente').value;
@@ -2402,13 +2857,19 @@ document.getElementById('form-manutencao').addEventListener('submit', async (e)=
   const btn = document.getElementById('man-submit');
   btn.disabled = true;
   try{
+    const filesInput = document.getElementById('man-fotos');
+    const novasFotos = filesInput.files.length ? await uploadFotosManutencao(Array.from(filesInput.files)) : [];
+    const fotos = [...editingManutencaoFotos, ...novasFotos];
+
     const manutencoes = await loadManutencoes();
-    const payload = { id: editingManutencaoId || null, codigoCliente, data, descricao, responsavel };
+    const payload = { id: editingManutencaoId || null, codigoCliente, data, descricao, responsavel, fotos };
     const ok = await upsertManutencaoRemote(payload);
     if(ok){
       toast(editingManutencaoId ? 'Manutenção atualizada.' : 'Manutenção registrada.');
       editingManutencaoId = null;
+      editingManutencaoFotos = [];
       e.target.reset();
+      renderManFotosPreview([]);
       document.getElementById('man-submit').textContent = 'Registrar manutenção';
       document.getElementById('man-cancel').style.display = 'none';
       document.getElementById('manh-month').value = data.slice(0,7);
@@ -2423,19 +2884,30 @@ document.getElementById('form-manutencao').addEventListener('submit', async (e)=
 });
 document.getElementById('man-cancel').addEventListener('click', ()=>{
   editingManutencaoId = null;
+  editingManutencaoFotos = [];
   document.getElementById('form-manutencao').reset();
+  renderManFotosPreview([]);
   document.getElementById('man-submit').textContent = 'Registrar manutenção';
   document.getElementById('man-cancel').style.display = 'none';
 });
+let editingManutencaoFotos = [];
+function renderManFotosPreview(urls){
+  const wrap = document.getElementById('man-fotos-preview');
+  if(!urls || !urls.length){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = urls.map(u => `<img src="${u}" style="width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid var(--border);">`).join('');
+}
 window.startEditManutencao = async function(id){
   const manutencoes = await loadManutencoes();
   const m = manutencoes.find(x=>x.id===id);
   if(!m) return;
   editingManutencaoId = id;
+  editingManutencaoFotos = m.fotos || [];
   document.getElementById('man-cliente').value = m.codigoCliente;
   document.getElementById('man-data').value = m.data;
   document.getElementById('man-descricao').value = m.descricao;
   document.getElementById('man-responsavel').value = m.responsavel;
+  document.getElementById('man-fotos').value = '';
+  renderManFotosPreview(editingManutencaoFotos);
   document.getElementById('man-submit').textContent = 'Salvar alterações';
   document.getElementById('man-cancel').style.display = 'inline-flex';
   document.getElementById('form-manutencao').scrollIntoView({behavior:'smooth', block:'center'});
@@ -2461,7 +2933,7 @@ async function renderManutencoesHistory(){
   document.getElementById('man-hist-meta').textContent = rows.length + ' registro(s)';
 
   if(!rows.length){
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty">Nenhuma manutenção registrada${month?' neste mês':''}${filterCli?' para este cliente':''}.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">Nenhuma manutenção registrada${month?' neste mês':''}${filterCli?' para este cliente':''}.</div></td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(m=>`
@@ -2470,6 +2942,7 @@ async function renderManutencoesHistory(){
       <td class="txt">${escapeHtml(clienteNome(m.codigoCliente))}</td>
       <td class="txt">${formatFrases(m.descricao)}</td>
       <td class="txt">${escapeHtml(m.responsavel||'—')}</td>
+      <td>${(m.fotos&&m.fotos.length) ? `<div style="display:flex; gap:4px;">${m.fotos.slice(0,3).map(u=>`<a href="${u}" target="_blank"><img src="${u}" style="width:32px; height:32px; object-fit:cover; border-radius:4px; border:1px solid var(--border);"></a>`).join('')}${m.fotos.length>3?`<span class="hint" style="margin:0; align-self:center;">+${m.fotos.length-3}</span>`:''}</div>` : '—'}</td>
       <td><div class="row-actions">
         <button class="btn-edit-ghost" title="Editar" onclick="startEditManutencao('${m.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>
         <button class="btn-danger-ghost" title="Excluir" onclick="deleteManutencao('${m.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
@@ -2478,6 +2951,244 @@ async function renderManutencoesHistory(){
 }
 document.getElementById('manh-month').addEventListener('change', renderManutencoesHistory);
 document.getElementById('manh-cliente').addEventListener('change', renderManutencoesHistory);
+
+/* ============================================================
+   Faturas de energia — upload + extração automática (Apps Script/OCR)
+   ============================================================ */
+let FATURAS = null;
+let faturaExtraida = null; // {codigoCliente, mes, arquivoPath} enquanto aguarda confirmação
+
+function faturaRowToObj(row){
+  return {
+    id: row.id, codigoCliente: row.codigo_cliente, mes: row.mes,
+    arquivoPath: row.arquivo_url,
+    consumoKwh: row.consumo_kwh!=null ? parseFloat(row.consumo_kwh) : null,
+    energiaInjetadaKwh: row.energia_injetada_kwh!=null ? parseFloat(row.energia_injetada_kwh) : null,
+    valorTotal: row.valor_total!=null ? parseFloat(row.valor_total) : null,
+    vencimento: row.vencimento || null,
+    proximaLeitura: row.proxima_leitura || null,
+    extraidoAuto: !!row.extraido_auto
+  };
+}
+async function loadFaturas(force){
+  if(FATURAS && !force) return FATURAS;
+  try{
+    const { data, error } = await sb.from('faturas').select('*');
+    throwIfSupabaseError(error, 'Faturas');
+    FATURAS = (data||[]).map(faturaRowToObj);
+  }catch(e){ toast('Erro ao carregar faturas: ' + e.message, true); FATURAS = []; }
+  return FATURAS;
+}
+async function salvarFaturaRemote(f){
+  try{
+    const { error } = await sb.from('faturas').upsert({
+      codigo_cliente: f.codigoCliente, mes: f.mes, arquivo_url: f.arquivoPath,
+      consumo_kwh: f.consumoKwh, energia_injetada_kwh: f.energiaInjetadaKwh,
+      valor_total: f.valorTotal, vencimento: f.vencimento || null,
+      proxima_leitura: f.proximaLeitura || null, extraido_auto: true
+    }, { onConflict:'mes,codigo_cliente' });
+    throwIfSupabaseError(error, 'Faturas');
+    return true;
+  }catch(e){ toast('Erro ao salvar fatura: ' + e.message, true); return false; }
+}
+async function deleteFaturaRemote(id){
+  try{
+    const { error } = await sb.from('faturas').delete().eq('id', id);
+    throwIfSupabaseError(error, 'Faturas');
+    return true;
+  }catch(e){ toast('Erro ao excluir fatura: ' + e.message, true); return false; }
+}
+/* ============================================================
+   Faturas unificadas (Cliente ou Usina) — upload + extração
+   ============================================================ */
+let faturaUnifExtraida = null; // {tipo, entidade, mes, arquivoPath, proximaLeitura}
+
+function populateFaturaUnificadaSelects(){
+  const tipo = document.getElementById('fx-tipo').value;
+  const sel = document.getElementById('fx-entidade');
+  const cur = sel.value;
+  if(tipo === 'usina'){
+    document.getElementById('fx-entidade-label').textContent = 'Usina';
+    sel.innerHTML = '<option value="">selecione…</option>' + USINAS.slice().sort((a,b)=>a.nome.localeCompare(b.nome))
+      .map(u=>`<option value="${u.codigo}">${u.codigo} — ${escapeHtml(u.nome)}</option>`).join('');
+  } else {
+    document.getElementById('fx-entidade-label').textContent = 'Cliente';
+    sel.innerHTML = '<option value="">selecione…</option>' + CLIENTES.slice().sort((a,b)=>a.nome.localeCompare(b.nome))
+      .map(c=>`<option value="${c.codigo}">${c.codigo} — ${escapeHtml(c.nome)}</option>`).join('');
+  }
+  if(cur) sel.value = cur;
+}
+function populateFaturaUnificadaFiltro(){
+  const tipo = document.getElementById('fxh-tipo').value;
+  const sel = document.getElementById('fxh-entidade');
+  const cur = sel.value;
+  const optsUsinas = USINAS.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(u=>`<option value="usina:${u.codigo}">${u.codigo} — ${escapeHtml(u.nome)} (usina)</option>`).join('');
+  const optsClientes = CLIENTES.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(c=>`<option value="cliente:${c.codigo}">${c.codigo} — ${escapeHtml(c.nome)} (cliente)</option>`).join('');
+  let opts = '';
+  if(tipo === 'usina') opts = optsUsinas;
+  else if(tipo === 'cliente') opts = optsClientes;
+  else opts = optsClientes + optsUsinas;
+  sel.innerHTML = '<option value="">todos</option>' + opts;
+  if(cur) sel.value = cur;
+}
+document.getElementById('fx-tipo').addEventListener('change', populateFaturaUnificadaSelects);
+document.getElementById('fxh-tipo').addEventListener('change', ()=>{ populateFaturaUnificadaFiltro(); renderFaturasUnificadasHistory(); });
+
+document.getElementById('fx-extrair').addEventListener('click', async ()=>{
+  const tipo = document.getElementById('fx-tipo').value;
+  const entidade = document.getElementById('fx-entidade').value;
+  const mes = document.getElementById('fx-mes').value;
+  const fileInput = document.getElementById('fx-arquivo');
+  const file = fileInput.files[0];
+  if(!entidade || !mes || !file){ toast('Selecione ' + (tipo==='usina'?'a usina':'o cliente') + ', mês e o arquivo PDF.', true); return; }
+
+  const btn = document.getElementById('fx-extrair');
+  btn.disabled = true;
+  btn.textContent = 'Enviando e lendo a fatura…';
+  try{
+    const bucket = tipo === 'usina' ? 'faturas-usinas' : 'faturas-clientes';
+    const path = entidade + '/' + mes + '-' + Date.now() + '.pdf';
+    const { error: upErr } = await sb.storage.from(bucket).upload(path, file, { contentType:'application/pdf', upsert:true });
+    if(upErr) throw new Error('Erro ao enviar PDF: ' + upErr.message);
+
+    const { data: signedData, error: signErr } = await sb.storage.from(bucket).createSignedUrl(path, 120);
+    if(signErr) throw new Error('Erro ao gerar link do arquivo: ' + signErr.message);
+
+    const { data: sessionData } = await sb.auth.getSession();
+    const accessToken = sessionData && sessionData.session ? sessionData.session.access_token : '';
+
+    const res = await fetch(LIVE_STATUS_API, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({ op:'extrairFatura', token: accessToken, fileUrl: signedData.signedUrl })
+    });
+    const json = await res.json();
+    if(!json.ok) throw new Error(json.error || 'Erro desconhecido ao extrair a fatura.');
+
+    const campos = json.campos;
+    document.getElementById('fx-consumo').value = campos.consumoKwh!=null ? campos.consumoKwh : '';
+    document.getElementById('fx-injetada').value = campos.energiaInjetadaKwh!=null ? campos.energiaInjetadaKwh : '';
+    document.getElementById('fx-valor').value = campos.valorTotal!=null ? campos.valorTotal : '';
+    document.getElementById('fx-vencimento').value = campos.vencimento || '';
+    faturaUnifExtraida = { tipo, entidade, mes, arquivoPath: path, proximaLeitura: campos.proximaLeitura || null };
+    document.getElementById('fx-review').style.display = 'block';
+    toast('Dados extraídos — confira antes de salvar.');
+  }catch(err){
+    toast(err.message || String(err), true);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Extrair dados da fatura';
+  }
+});
+document.getElementById('fx-descartar').addEventListener('click', ()=>{
+  faturaUnifExtraida = null;
+  document.getElementById('fx-review').style.display = 'none';
+  document.getElementById('form-fatura-unificada').reset();
+  populateFaturaUnificadaSelects();
+});
+document.getElementById('fx-salvar').addEventListener('click', async ()=>{
+  if(!faturaUnifExtraida){ toast('Extraia os dados da fatura primeiro.', true); return; }
+  const btn = document.getElementById('fx-salvar');
+  btn.disabled = true;
+  try{
+    const consumoKwh = numOrNull(document.getElementById('fx-consumo').value);
+    const energiaInjetadaKwh = numOrNull(document.getElementById('fx-injetada').value);
+    const valorTotal = numOrNull(document.getElementById('fx-valor').value);
+    const vencimento = document.getElementById('fx-vencimento').value || null;
+    let ok;
+    if(faturaUnifExtraida.tipo === 'usina'){
+      ok = await salvarFaturaUsinaRemote({
+        codigoUsina: faturaUnifExtraida.entidade, mes: faturaUnifExtraida.mes, arquivoPath: faturaUnifExtraida.arquivoPath,
+        energiaInjetadaKwh, consumoKwh, valorTotal, vencimento, proximaLeitura: faturaUnifExtraida.proximaLeitura
+      });
+      if(ok && energiaInjetadaKwh!=null){
+        await upsertInjetada([{ mes: faturaUnifExtraida.mes, codigoUsina: faturaUnifExtraida.entidade, kwhInjetado: energiaInjetadaKwh, obs:'Preenchido automaticamente pela conta de energia da usina' }]);
+        await loadInjetada(true);
+        renderInjGrid();
+        renderInjHistory();
+      }
+      if(ok) await loadFaturasUsina(true);
+    } else {
+      ok = await salvarFaturaRemote({
+        codigoCliente: faturaUnifExtraida.entidade, mes: faturaUnifExtraida.mes, arquivoPath: faturaUnifExtraida.arquivoPath,
+        consumoKwh, energiaInjetadaKwh, valorTotal, vencimento, proximaLeitura: faturaUnifExtraida.proximaLeitura
+      });
+      if(ok) await loadFaturas(true);
+    }
+    if(ok){
+      toast('Fatura salva.');
+      faturaUnifExtraida = null;
+      document.getElementById('fx-review').style.display = 'none';
+      document.getElementById('form-fatura-unificada').reset();
+      populateFaturaUnificadaSelects();
+      renderFaturasUnificadasHistory();
+    }
+  } finally {
+    btn.disabled = false;
+  }
+});
+window.verFaturaUnif = async function(tipo, path){
+  const bucket = tipo === 'usina' ? 'faturas-usinas' : 'faturas-clientes';
+  try{
+    const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 60);
+    if(error) throw new Error(error.message);
+    window.open(data.signedUrl, '_blank');
+  }catch(e){ toast('Erro ao abrir fatura: ' + e.message, true); }
+};
+window.deleteFaturaUnif = async function(tipo, id){
+  if(!confirm('Excluir esta fatura?')) return;
+  const ok = tipo === 'usina' ? await deleteFaturaUsinaRemote(id) : await deleteFaturaRemote(id);
+  if(ok){
+    if(tipo === 'usina') await loadFaturasUsina(true); else await loadFaturas(true);
+    toast('Fatura removida.');
+    renderFaturasUnificadasHistory();
+  }
+};
+async function renderFaturasUnificadasHistory(){
+  const filterTipo = document.getElementById('fxh-tipo').value;
+  const filterEnt = document.getElementById('fxh-entidade').value; // "tipo:codigo" ou ""
+  const tbody = document.getElementById('fxh-tbody');
+  tbody.innerHTML = `<tr><td colspan="8" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
+
+  const [faturasCli, faturasUs] = await Promise.all([loadFaturas(), loadFaturasUsina()]);
+  let linhas = [];
+  if(filterTipo !== 'usina'){
+    linhas = linhas.concat(faturasCli.map(f=>({ tipo:'cliente', codigo:f.codigoCliente, nome:clienteNome(f.codigoCliente), mes:f.mes, consumoKwh:f.consumoKwh, energiaInjetadaKwh:f.energiaInjetadaKwh, valorTotal:f.valorTotal, vencimento:f.vencimento, arquivoPath:f.arquivoPath, id:f.id })));
+  }
+  if(filterTipo !== 'cliente'){
+    linhas = linhas.concat(faturasUs.map(f=>{
+      const usina = USINAS.find(u=>u.codigo===f.codigoUsina);
+      return { tipo:'usina', codigo:f.codigoUsina, nome:usina?usina.nome:f.codigoUsina, mes:f.mes, consumoKwh:f.consumoKwh, energiaInjetadaKwh:f.energiaInjetadaKwh, valorTotal:f.valorTotal, vencimento:f.vencimento, arquivoPath:f.arquivoPath, id:f.id };
+    }));
+  }
+  if(filterEnt){
+    const [entTipo, entCodigo] = filterEnt.split(':');
+    linhas = linhas.filter(l => l.tipo===entTipo && l.codigo===entCodigo);
+  }
+  linhas.sort((a,b)=> b.mes.localeCompare(a.mes));
+
+  document.getElementById('fx-hist-meta').textContent = linhas.length + ' fatura(s)';
+
+  if(!linhas.length){
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty">Nenhuma fatura registrada.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = linhas.map(f=>`
+    <tr>
+      <td>${new Date(f.mes+'-02').toLocaleDateString('pt-BR',{month:'short', year:'numeric'})}</td>
+      <td><span class="tag ${f.tipo==='usina'?'warn':'ok'}">${f.tipo==='usina'?'Usina':'Cliente'}</span></td>
+      <td class="txt">${escapeHtml(f.nome)}</td>
+      <td class="num">${f.consumoKwh!=null ? fmtNum(f.consumoKwh) : '—'}</td>
+      <td class="num">${f.energiaInjetadaKwh!=null ? fmtNum(f.energiaInjetadaKwh) : '—'}</td>
+      <td class="num">${f.valorTotal!=null ? fmtBRL(f.valorTotal) : '—'}</td>
+      <td>${f.vencimento ? new Date(f.vencimento+'T00:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+      <td><div class="row-actions">
+        ${f.arquivoPath ? `<button class="btn-edit-ghost" title="Ver PDF" onclick="verFaturaUnif('${f.tipo}','${f.arquivoPath}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
+        <button class="btn-danger-ghost" title="Excluir" onclick="deleteFaturaUnif('${f.tipo}','${f.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
+      </div></td>
+    </tr>`).join('');
+}
+document.getElementById('fxh-entidade').addEventListener('change', renderFaturasUnificadasHistory);
 
 /* ============================================================
    Usuários (Admin) — login (e-mail), papel e usinas permitidas
@@ -3574,7 +4285,8 @@ async function renderRelatorio(){
     data: m.data ? new Date(m.data+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit', month:'long'}) : '—',
     cliente: clienteNome(m.codigoCliente),
     descricao: m.descricao,
-    responsavel: m.responsavel||'—'
+    responsavel: m.responsavel||'—',
+    fotos: m.fotos||[]
   }));
 
   const manCardsEl = document.getElementById('rel-man-cards');
@@ -3586,6 +4298,7 @@ async function renderRelatorio(){
         <div class="man-card-date">${escapeHtml(m.data)}</div>
         <div class="man-card-cliente">${escapeHtml(m.cliente)}</div>
         <div class="man-card-desc">${formatFrases(m.descricao)}</div>
+        ${m.fotos.length ? `<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;">${m.fotos.map(u=>`<a href="${u}" target="_blank"><img src="${u}" style="width:70px; height:70px; object-fit:cover; border-radius:6px; border:1px solid var(--border);"></a>`).join('')}</div>` : ''}
         <div class="man-card-resp">Responsável: ${escapeHtml(m.responsavel)}</div>
       </div>`).join('');
   }
@@ -3713,10 +4426,11 @@ async function init(){
   document.getElementById('injh-month').value = currentMonth();
   document.getElementById('manh-month').value = currentMonth();
   document.getElementById('man-data').value = todayISO();
+  document.getElementById('fx-mes').value = currentMonth();
 
   // carrega os cadastros base primeiro (em paralelo), antes de desenhar qualquer coisa —
   // evita que um clique rápido em outra aba (ex: Clientes) renderize com dados ainda vazios
-  BASE_DATA_READY = Promise.all([loadUsinas(), loadClientes()]);
+  BASE_DATA_READY = Promise.all([loadUsinas(), loadClientes(), loadIntegracoes()]);
   try{ await BASE_DATA_READY; }catch(e){ console.error(e); }
 
   try{ populateUsinaSelects(); }catch(e){ console.error(e); }
@@ -3737,12 +4451,14 @@ function applyRolePermissions(){
   if(!AUTH) return;
   document.getElementById('user-name').textContent = AUTH.nome + (AUTH.papel==='Admin' ? ' (admin)' : '');
   const clientesBtn = document.querySelector('nav.tabs > button[data-view="clientes"]');
+  const faturasBtn = document.querySelector('nav.tabs > button[data-view="faturas"]');
   const gcBtn = document.querySelector('nav.tabs > button[data-view="graficos-clientes"]');
   const lancSub = document.querySelector('.tab-dropdown-menu button[data-subview="lancamento"]');
   const cadSub = document.querySelector('.tab-dropdown-menu button[data-subview="cadastro"]');
   const usBtn = document.querySelector('nav.tabs > button[data-view="usuarios"]');
   const isAdmin = AUTH.papel === 'Admin';
   if(clientesBtn) clientesBtn.style.display = isAdmin ? '' : 'none';
+  if(faturasBtn) faturasBtn.style.display = isAdmin ? '' : 'none';
   if(gcBtn) gcBtn.style.display = isAdmin ? '' : 'none';
   if(lancSub) lancSub.style.display = isAdmin ? '' : 'none';
   if(cadSub) cadSub.style.display = isAdmin ? '' : 'none';
@@ -3795,6 +4511,63 @@ async function renderClientesDaUsina(){
   }).join('');
 }
 
+function proximoMesStr(mes){
+  const y = parseInt(mes.slice(0,4),10), m = parseInt(mes.slice(5,7),10);
+  const ny = m===12 ? y+1 : y;
+  const nm = m===12 ? 1 : m+1;
+  return ny + '-' + String(nm).padStart(2,'0');
+}
+function calcularFaturasAtrasadas(){
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  const resultado = [];
+  CLIENTES.forEach(c=>{
+    const historico = (FATURAS||[]).filter(f=>f.codigoCliente===c.codigo).sort((a,b)=>b.mes.localeCompare(a.mes));
+    if(!historico.length) return; // sem histórico ainda, não dá pra calcular
+    const ultima = historico[0];
+    if(!ultima.proximaLeitura) return;
+    const proxima = new Date(ultima.proximaLeitura+'T00:00:00');
+    const diasAtraso = Math.floor((hoje - proxima) / (1000*60*60*24));
+    if(diasAtraso > 0){
+      resultado.push({ tipo:'cliente', codigo: c.codigo, nome: c.nome, proximaLeitura: ultima.proximaLeitura, diasAtraso });
+    }
+  });
+  USINAS.forEach(u=>{
+    const historico = (FATURAS_USINA||[]).filter(f=>f.codigoUsina===u.codigo).sort((a,b)=>b.mes.localeCompare(a.mes));
+    if(!historico.length) return;
+    const ultima = historico[0];
+    if(!ultima.proximaLeitura) return;
+    const proxima = new Date(ultima.proximaLeitura+'T00:00:00');
+    const diasAtraso = Math.floor((hoje - proxima) / (1000*60*60*24));
+    if(diasAtraso > 0){
+      resultado.push({ tipo:'usina', codigo: u.codigo, nome: u.nome, proximaLeitura: ultima.proximaLeitura, diasAtraso });
+    }
+  });
+  return resultado.sort((a,b)=>b.diasAtraso - a.diasAtraso);
+}
+async function mostrarPopupFaturasAtrasadas(){
+  if(!AUTH || AUTH.papel !== 'Admin') return;
+  await Promise.all([loadFaturas(), loadFaturasUsina()]);
+  const atrasadas = calcularFaturasAtrasadas();
+  if(!atrasadas.length) return;
+  document.getElementById('popup-atraso-tbody').innerHTML = atrasadas.map(a=>`
+    <tr>
+      <td class="txt">${escapeHtml(a.nome)} <span class="tag ${a.tipo==='usina'?'warn':'ok'}" style="margin-left:4px;">${a.tipo==='usina'?'Usina':'Cliente'}</span></td>
+      <td>${new Date(a.proximaLeitura+'T00:00:00').toLocaleDateString('pt-BR')}</td>
+      <td class="num"><span class="tag danger">${a.diasAtraso} dia(s)</span></td>
+    </tr>`).join('');
+  document.getElementById('popup-atraso-overlay').classList.add('open');
+}
+function fecharPopupAtraso(){
+  document.getElementById('popup-atraso-overlay').classList.remove('open');
+}
+document.getElementById('popup-atraso-fechar').addEventListener('click', fecharPopupAtraso);
+document.getElementById('popup-atraso-fechar-2').addEventListener('click', fecharPopupAtraso);
+document.getElementById('popup-atraso-ir').addEventListener('click', ()=>{
+  fecharPopupAtraso();
+  goToView('faturas');
+});
+
 document.getElementById('login-form').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const user = document.getElementById('login-user').value.trim();
@@ -3815,6 +4588,7 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
     document.getElementById('app-shell').style.display = 'block';
     await init();
     applyRolePermissions();
+    mostrarPopupFaturasAtrasadas();
   }catch(err){
     errEl.textContent = 'Erro ao conectar: ' + (err && err.message ? err.message : err);
   }
@@ -3842,6 +4616,7 @@ async function tentarRestaurarSessao(){
   document.getElementById('app-shell').style.display = 'block';
   await init();
   applyRolePermissions();
+  mostrarPopupFaturasAtrasadas();
 }
 tentarRestaurarSessao();
 
