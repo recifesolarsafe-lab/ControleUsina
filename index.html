@@ -2369,24 +2369,32 @@ async function refreshLiveStatus(){
   LIVE_STATUS_CACHE = usinasVisiveis.map(u=>({ codigo:u.codigo, nome:u.nome, ok:false, error:'consultando…' }));
   list.innerHTML = `<div class="usina-detail-empty"><span class="spin"></span> consultando…</div>`;
 
-  for(const u of usinasVisiveis){
-    let item;
+  // Dispara todas as consultas em paralelo — sem esperar uma terminar pra começar a próxima
+  const promises = usinasVisiveis.map(async u=>{
     try{
       const result = await liveStatusRequest(u.codigo);
-      item = result.ok
+      return result.ok
         ? { codigo:u.codigo, nome:u.nome, ok:true, state:result.state, power:result.power, powerStr:result.powerStr, dayEnergy:result.dayEnergy, extra:result.extra||{} }
         : { codigo:u.codigo, nome:u.nome, ok:false, error: result.error || 'sem integração' };
     }catch(err){
-      item = { codigo:u.codigo, nome:u.nome, ok:false, error: 'Erro: ' + (err&&err.message?err.message:String(err)) };
+      return { codigo:u.codigo, nome:u.nome, ok:false, error: 'Erro: ' + (err&&err.message?err.message:String(err)) };
     }
-    const idx = LIVE_STATUS_CACHE.findIndex(x=>x.codigo===u.codigo);
-    if(idx>-1) LIVE_STATUS_CACHE[idx] = item;
-    await new Promise(r=>setTimeout(r, 150)); // pausa curta entre chamadas pra não sobrecarregar as APIs
+  });
+
+  // Vai atualizando a lista conforme cada usina responde (não espera todas de uma vez)
+  for(const p of promises){
+    p.then(item=>{
+      const idx = LIVE_STATUS_CACHE.findIndex(x=>x.codigo===item.codigo);
+      if(idx>-1) LIVE_STATUS_CACHE[idx] = item;
+      renderUsinaList();
+      if(USINA_DETAIL_SELECIONADA===item.codigo) renderUsinaDetail(item.codigo);
+    });
   }
+
+  // Aguarda todas terminarem pra atualizar o rodapé e reabilitar o botão
+  await Promise.allSettled(promises);
   document.getElementById('live-status-meta').textContent = 'atualizado às ' + new Date().toLocaleTimeString('pt-BR');
   btn.disabled = false;
-  renderUsinaList();
-  if(USINA_DETAIL_SELECIONADA) renderUsinaDetail(USINA_DETAIL_SELECIONADA);
 }
 document.getElementById('live-status-refresh').addEventListener('click', refreshLiveStatus);
 
