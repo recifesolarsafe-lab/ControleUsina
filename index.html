@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SolarSafe — Controle de Geração</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1B2A45">
+<meta name="theme-color" content="#F4F5F7">
 <link rel="icon" href="icon-32.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,32 +18,32 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <style>
   :root{
-    --bg:#1B2A45;
-    --surface:#213353;
-    --surface-2:#293D61;
-    --surface-3:#31456D;
-    --border:#3A4F79;
-    --amber:#F2703C;
-    --amber-dim:#C9572A;
-    --amber-soft:rgba(242,112,60,0.14);
-    --teal:#34D9C4;
-    --teal-soft:rgba(52,217,196,0.12);
-    --red:#F2555F;
-    --red-soft:rgba(242,85,95,0.12);
-    --text:#EDF0F5;
-    --text-dim:#9CACC9;
-    --text-faint:#6376A0;
+    --bg:#EEF0F0;
+    --surface:#FFFFFF;
+    --surface-2:#F5F6F6;
+    --surface-3:#EBEDED;
+    --border:#D5D9DB;
+    --amber:#0B4F8A;
+    --amber-dim:#083A66;
+    --amber-soft:rgba(11,79,138,0.08);
+    --teal:#2F7A5C;
+    --teal-soft:rgba(47,122,92,0.10);
+    --red:#A6323B;
+    --red-soft:rgba(166,50,59,0.08);
+    --warn:#C97A24;
+    --warn-soft:rgba(201,122,36,0.10);
+    --text:#10151C;
+    --text-dim:#4A525C;
+    --text-faint:#7D848C;
     --font-display:'Space Grotesk',sans-serif;
     --font-body:'Inter',sans-serif;
     --font-mono:'IBM Plex Mono',monospace;
-    --radius:10px;
+    --radius:3px;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   html,body{height:100%;}
   body{
-    background:
-      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(242,112,60,0.07), transparent 60%),
-      var(--bg);
+    background:var(--bg);
     color:var(--text);
     font-family:var(--font-body);
     min-height:100vh;
@@ -54,7 +54,7 @@
 
   header.top{
     position:sticky; top:0; z-index:40;
-    background:rgba(14,20,27,0.9);
+    background:rgba(255,255,255,0.85);
     backdrop-filter:blur(10px);
     border-bottom:1px solid var(--border);
   }
@@ -75,12 +75,12 @@
   .brand-text span{display:block; font-size:11px; color:var(--text-faint); font-family:var(--font-mono); margin-top:1px; letter-spacing:0.3px;}
   nav.tabs{
     display:flex; gap:4px; margin-left:auto;
-    background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:4px;
+    background:var(--surface); border:1px solid var(--border); border-radius:4px; padding:4px;
     flex-wrap:wrap;
   }
   nav.tabs button{
     font-family:var(--font-body); font-weight:500; font-size:13.5px;
-    color:var(--text-dim); background:transparent; border:none; border-radius:7px;
+    color:var(--text-dim); background:transparent; border:none; border-radius:3px;
     padding:8px 14px; cursor:pointer; transition:all .15s ease; white-space:nowrap;
   }
   nav.tabs button:hover{color:var(--text);}
@@ -88,7 +88,7 @@
   .sync-pill{
     display:flex; align-items:center; gap:6px;
     font-family:var(--font-mono); font-size:11px; color:var(--text-faint);
-    border:1px solid var(--border); padding:5px 10px; border-radius:20px;
+    border:1px solid var(--border); padding:5px 10px; border-radius:3px;
   }
   .sync-dot{width:6px; height:6px; border-radius:50%; background:var(--teal); box-shadow:0 0 8px var(--teal);}
 
@@ -102,7 +102,7 @@
     max-height:360px; overflow-y:auto; display:none;
   }
   .global-search-results.open{display:block;}
-  .gsr-group-label{font-family:var(--font-mono); font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.5px; padding:10px 14px 4px;}
+  .gsr-group-label{font-family:var(--font-mono); font-size:10px; color:var(--text-faint); letter-spacing:0.2px; padding:10px 14px 4px;}
   .gsr-item{display:flex; flex-direction:column; gap:2px; padding:9px 14px; cursor:pointer; transition:background .12s ease;}
   .gsr-item:hover{background:var(--surface-2);}
   .gsr-item-title{font-size:13px; color:var(--text); font-weight:500;}
@@ -168,8 +168,9 @@
   .panel{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px;}
   .panel + .panel{margin-top:18px;}
   .panel-title{
-    font-family:var(--font-display); font-size:14px; font-weight:600;
+    font-family:var(--font-mono); font-size:12.5px; font-weight:600; letter-spacing:0.2px;
     display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;
+    padding-bottom:12px; border-bottom:1px solid var(--border);
     gap:12px; flex-wrap:wrap;
   }
   .panel-title small{font-family:var(--font-mono); font-weight:400; color:var(--text-faint); font-size:11px;}
@@ -180,7 +181,7 @@
     background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
     padding:20px; display:flex; flex-direction:column; align-items:center; justify-content:center;
   }
-  .gauge-label{font-family:var(--font-mono); font-size:11px; color:var(--text-faint); letter-spacing:0.5px; text-transform:uppercase; margin-top:8px;}
+  .gauge-label{font-family:var(--font-mono); font-size:11px; color:var(--text-faint); letter-spacing:0.2px; margin-top:8px;}
   .gauge-big{font-family:var(--font-display); font-size:13px; color:var(--text-dim); margin-top:2px;}
 
   .kpi-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
@@ -211,17 +212,17 @@
   }
   input:focus, select:focus, textarea:focus{outline:none; border-color:var(--amber);}
   textarea{resize:vertical; font-family:var(--font-mono); font-size:12.5px;}
-  input[type=date], input[type=month]{color-scheme:dark;}
+  input[type=date], input[type=month]{color-scheme:light;}
 
   .btn{
     font-family:var(--font-body); font-weight:600; font-size:13px; cursor:pointer;
-    border-radius:7px; padding:9px 16px; border:1px solid transparent; transition:all .15s ease;
+    border-radius:4px; padding:9px 16px; border:1px solid transparent; transition:all .15s ease;
     display:inline-flex; align-items:center; gap:6px;
   }
-  .btn-primary{background:var(--amber); color:#231404;}
-  .btn-primary:hover{background:#ffb84f;}
+  .btn-primary{background:var(--amber); color:#FFFFFF;}
+  .btn-primary:hover{background:var(--amber-dim);}
   .btn-ghost{background:var(--surface-2); border-color:var(--border); color:var(--text);}
-  .btn-ghost:hover{border-color:var(--amber);}
+  .btn-ghost:hover{border-color:var(--amber); color:var(--amber);}
   .btn-danger-ghost{background:transparent; color:var(--red); border-color:transparent; padding:6px 8px;}
   .btn-danger-ghost:hover{background:var(--red-soft);}
   .btn-edit-ghost{background:transparent; color:var(--text-dim); border-color:transparent; padding:6px 8px;}
@@ -251,7 +252,7 @@
   tbody tr:last-child td{border-bottom:none;}
   tbody tr:hover{background:rgba(255,255,255,0.02);}
   .num{text-align:right;}
-  .tag{display:inline-block; padding:3px 8px; border-radius:20px; font-size:10.5px; font-family:var(--font-mono);}
+  .tag{display:inline-block; padding:3px 8px; border-radius:3px; font-size:10.5px; font-family:var(--font-mono);}
   .tag.ok{background:var(--teal-soft); color:var(--teal);}
   .tag.warn{background:var(--amber-soft); color:var(--amber);}
   .tag.danger{background:var(--red-soft); color:var(--red);}
@@ -263,7 +264,7 @@
   .status-chips{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;}
   .status-chips .chip{
     font-family:var(--font-body); font-size:12px; font-weight:500; color:var(--text-dim);
-    background:var(--surface-2); border:1px solid var(--border); border-radius:20px;
+    background:var(--surface-2); border:1px solid var(--border); border-radius:3px;
     padding:6px 13px; cursor:pointer; transition:all .15s ease;
   }
   .status-chips .chip:hover{border-color:var(--amber); color:var(--text);}
@@ -305,8 +306,7 @@
   .usina-kwh-row-a{flex-wrap:wrap;}
   .usina-kwh-row-a .ukr-sub{font-family:var(--font-mono); font-size:10px; color:var(--text-faint); flex-shrink:0;}
   .usina-kwh-row-a input{width:70px;}
-  .g-total-display{width:104px; padding:6px 8px; font-size:12.5px; font-family:var(--font-mono); text-align:right;
-    background:var(--surface-3); border:1px solid var(--border); border-radius:7px; color:var(--amber); font-weight:600;}
+  .g-total-display{margin-top:4px; font-size:10.5px; font-family:var(--font-mono); text-align:right; color:var(--text-faint);}
   tr.row-dirty td{background:rgba(242,112,60,0.05);}
   tr.row-saved td{background:rgba(52,217,196,0.04);}
 
@@ -346,6 +346,85 @@
   .platform-badge.fusion{background:#E23744;}
   .platform-badge.apsystems{background:#00B8A9;}
   .platform-badge.isolar{background:#2F6FED;}
+
+  .usina-monitor-grid{display:grid; grid-template-columns:340px 1fr; gap:16px; align-items:start;}
+  @media (max-width:900px){ .usina-monitor-grid{grid-template-columns:1fr;} }
+
+  .usina-list{display:flex; flex-direction:column; gap:8px; max-height:560px; overflow-y:auto; padding-right:2px;}
+  .usina-list-item{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:12px 14px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2);
+    cursor:pointer; transition:border-color .15s ease, background .15s ease;
+  }
+  .usina-list-item:hover{border-color:var(--amber);}
+  .usina-list-item.active{border-color:var(--amber); background:var(--amber-soft);}
+  .usina-list-item .uli-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+  .usina-list-item .uli-dot.ok{background:var(--teal); box-shadow:0 0 6px var(--teal);}
+  .usina-list-item .uli-dot.warn{background:var(--amber); box-shadow:0 0 6px var(--amber);}
+  .usina-list-item .uli-dot.bad{background:var(--red); box-shadow:0 0 6px var(--red);}
+  .usina-list-item .uli-dot.off{background:var(--text-faint);}
+  .usina-list-item .uli-main{flex:1; min-width:0;}
+  .usina-list-item .uli-name{font-weight:600; font-size:13.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .usina-list-item .uli-sub{font-size:11px; color:var(--text-faint); font-family:var(--font-mono); margin-top:2px;}
+  .usina-list-item .uli-right{text-align:right; flex-shrink:0;}
+  .usina-list-item .uli-kwh{font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--text);}
+  .usina-list-item .uli-tag{margin-top:3px;}
+
+  .usina-detail{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:22px; min-height:400px;}
+  .usina-detail-empty{color:var(--text-faint); text-align:center; padding:70px 20px; font-size:13px;}
+  .usina-detail-head{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:4px;}
+  .usina-detail-title{font-family:var(--font-display); font-size:20px; font-weight:600; color:var(--text);}
+  .usina-detail-sub{font-size:12.5px; color:var(--text-faint); margin-top:5px;}
+  .usina-detail-meta{font-size:11.5px; color:var(--text-faint); font-family:var(--font-mono); margin:12px 0 20px;}
+  .usina-metric-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); gap:10px; margin-bottom:22px;}
+  .usina-metric-card{background:var(--surface-2); border:1px solid var(--border); border-radius:9px; padding:13px 14px;}
+  .usina-metric-card .umc-label{font-size:10px; color:var(--text-faint); letter-spacing:0.2px; font-family:var(--font-mono);}
+  .usina-metric-card .umc-value{font-family:var(--font-mono); font-size:18px; font-weight:700; margin-top:5px; color:var(--text);}
+  .usina-detail-chart-title{font-size:13px; font-weight:600; color:var(--text); margin-bottom:12px;}
+
+  /* cliente master-detail */
+  .cli-master-detail{display:grid; grid-template-columns:260px 1fr; gap:16px; align-items:start;}
+  @media (max-width:900px){ .cli-master-detail{grid-template-columns:1fr;} }
+  .cli-master{display:flex; flex-direction:column; gap:8px;}
+  .cli-master-header{display:flex; gap:8px; align-items:center;}
+  .cli-master-header input{flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:3px; background:var(--surface-2); color:var(--text); font-size:13px;}
+  #cli-master-list{display:flex; flex-direction:column; gap:4px; max-height:560px; overflow-y:auto; padding-right:2px;}
+  .cli-master-item{
+    padding:10px 12px; border:1px solid var(--border); border-radius:3px;
+    background:var(--surface-2); cursor:pointer; transition:border-color .15s ease, background .15s ease;
+  }
+  .cli-master-item:hover{border-color:var(--amber);}
+  .cli-master-item.active{border-color:var(--amber); background:var(--amber-soft);}
+  .cli-master-item .cmi-nome{font-size:13.5px; font-weight:600; color:var(--text);}
+  .cli-master-item .cmi-sub{font-size:11px; color:var(--text-faint); font-family:var(--font-mono); margin-top:2px;}
+  .cli-detail{background:var(--surface); border:1px solid var(--border); border-radius:3px; min-height:400px; overflow:hidden;}
+  .cli-detail-head{padding:18px 20px 0; border-bottom:1px solid var(--border);}
+  .cli-detail-name{font-family:var(--font-display); font-size:18px; font-weight:600; color:var(--text);}
+  .cli-detail-meta{font-size:12px; color:var(--text-faint); font-family:var(--font-mono); margin-top:4px; padding-bottom:12px;}
+  .cli-mini-tabs{display:flex; gap:0; border-bottom:1px solid var(--border); padding:0 20px;}
+  .cli-mini-tab{
+    font-size:13px; font-weight:500; color:var(--text-dim); padding:10px 16px;
+    border:none; background:transparent; cursor:pointer; border-bottom:2px solid transparent;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  .cli-mini-tab:hover{color:var(--text);}
+  .cli-mini-tab.active{color:var(--amber); border-bottom-color:var(--amber); font-weight:600;}
+  .cli-detail-body{padding:20px;}
+
+  .view-sidebar-layout{display:grid; grid-template-columns:180px 1fr; gap:20px; align-items:start;}
+  @media (max-width:800px){ .view-sidebar-layout{grid-template-columns:1fr;} }
+  .view-sidebar-nav{display:flex; flex-direction:row; flex-wrap:wrap; gap:4px; position:sticky; top:76px; z-index:5;}
+  @media (min-width:801px){ .view-sidebar-nav{flex-direction:column; flex-wrap:nowrap;} }
+  .vsn-item{
+    text-align:left; padding:10px 14px; border-radius:8px; border:1px solid transparent;
+    background:transparent; color:var(--text-dim); font-family:var(--font-body); font-size:13.5px; font-weight:500;
+    cursor:pointer; transition:background .15s ease, color .15s ease;
+  }
+  .vsn-item:hover{background:var(--surface-2); color:var(--text);}
+  .vsn-item.active{background:var(--amber-soft); color:var(--amber); font-weight:600;}
+  .view-sidebar-content-wrap{min-width:0;}
+  .view-sidebar-content{display:none;}
+  .view-sidebar-content.active{display:block;}
   .spin{display:inline-block; width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--amber); border-radius:50%; animation:spin .7s linear infinite; margin-right:8px; vertical-align:-2px;}
   @keyframes spin{to{transform:rotate(360deg);}}
 
@@ -366,19 +445,18 @@
 
   /* ---------- relatório da usina ---------- */
   .report-hero{
-    position:relative; overflow:hidden; border-radius:16px; padding:32px 36px;
-    background:
-      radial-gradient(700px 420px at 100% -20%, rgba(242,112,60,0.14), transparent 60%),
-      linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    position:relative; overflow:hidden; border-radius:4px; padding:32px 36px;
+    background:var(--surface);
     border:1px solid var(--border);
+    border-left:3px solid var(--amber);
     margin-bottom:20px;
   }
   .report-hero-top{display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap;}
-  .report-hero-eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--amber);}
+  .report-hero-eyebrow{font-family:var(--font-mono); font-size:11.5px; color:var(--text-faint);}
   .report-hero-name{font-family:var(--font-display); font-size:30px; font-weight:600; margin-top:8px;}
   .report-hero-sub{font-size:13px; color:var(--text-dim); margin-top:6px;}
   .report-status-badge{
-    font-family:var(--font-mono); font-size:12px; padding:8px 16px; border-radius:20px;
+    font-family:var(--font-mono); font-size:12px; padding:8px 16px; border-radius:3px;
     background:var(--surface-3); border:1px solid var(--border); color:var(--text-dim); white-space:nowrap;
   }
   .report-status-badge.ok{background:var(--teal-soft); border-color:var(--teal); color:var(--teal);}
@@ -391,12 +469,12 @@
 
   @media print{
     header.top, nav.tabs, #rel-toolbar-panel, .btn, .sync-pill{display:none !important;}
-    body, #app-shell, main{background:#1B2A45 !important; color:#EDF0F5 !important; print-color-adjust:exact; -webkit-print-color-adjust:exact;}
-    .report-hero{background:#213353 !important; border:1px solid #3A4F79;}
-    .panel{background:#213353 !important; border:1px solid #3A4F79 !important; break-inside:avoid;}
-    .val, .report-hero-name{color:#EDF0F5 !important;}
+    body, #app-shell, main{background:#FFFFFF !important; color:#1B2333 !important; print-color-adjust:exact; -webkit-print-color-adjust:exact;}
+    .report-hero{background:#FFFFFF !important; border:1px solid #E3E6EB;}
+    .panel{background:#FFFFFF !important; border:1px solid #E3E6EB !important; break-inside:avoid;}
+    .val, .report-hero-name{color:#1B2333 !important;}
     #rel-hero-geracao{color:#F2703C !important;}
-    #rel-chart-diario-box, #rel-chart-anual-box{background:#1B2A45 !important; overflow:hidden; width:100%; box-sizing:border-box;}
+    #rel-chart-diario-box, #rel-chart-anual-box{background:#FFFFFF !important; overflow:hidden; width:100%; box-sizing:border-box;}
     .chart-box{max-width:100%;}
     canvas{max-width:100% !important;}
   }
@@ -523,20 +601,41 @@
       <div class="global-search-results" id="global-search-results"></div>
     </div>
     <nav class="tabs">
-      <div class="tab-dropdown" id="usinas-dropdown">
-        <button class="active" data-view="usinas">Usinas <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><path d="M6 9l6 6 6-6"/></svg></button>
+      <!-- Dashboard -->
+      <button class="active" data-nav="dashboard" data-view="usinas" data-subview="dashboard">Dashboard</button>
+
+      <!-- Operação -->
+      <div class="tab-dropdown" id="nav-operacao-dropdown">
+        <button data-nav="operacao">Operação <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><path d="M6 9l6 6 6-6"/></svg></button>
         <div class="tab-dropdown-menu">
-          <button data-subview="dashboard" class="active">Dashboard</button>
-          <button data-subview="lancamento">Lançamento Diário</button>
-          <button data-subview="graficos">Gráfico</button>
-          <button data-subview="cadastro">Cadastro Usinas</button>
+          <button data-nav-item="operacao" data-view="usinas" data-subview="lancamento">Lançamento Diário</button>
+          <button data-nav-item="operacao" data-view="clientes" data-target-panel="cli-compensacao">Compensação Mensal</button>
+          <button data-nav-item="operacao" data-view="usinas" data-subview="cadastro" data-target-panel="cad-injecao">Energia Injetada</button>
         </div>
       </div>
-      <button data-view="clientes">Clientes</button>
-      <button data-view="faturas">Faturas</button>
-      <button data-view="graficos-clientes">Gráf. Clientes</button>
-      <button data-view="relatorio">Relatório</button>
-      <button data-view="usuarios">Usuários</button>
+
+      <!-- Relatórios -->
+      <div class="tab-dropdown" id="nav-relatorios-dropdown">
+        <button data-nav="relatorios">Relatórios <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="tab-dropdown-menu">
+          <button data-nav-item="relatorios" data-view="relatorio">Relatório por usina</button>
+          <button data-nav-item="relatorios" data-view="usinas" data-subview="graficos">Gráfico de usinas</button>
+          <button data-nav-item="relatorios" data-view="graficos-clientes">Gráf. Clientes</button>
+        </div>
+      </div>
+
+      <!-- Cadastros -->
+      <div class="tab-dropdown" id="nav-cadastros-dropdown">
+        <button data-nav="cadastros">Cadastros <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="11" height="11"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="tab-dropdown-menu">
+          <button data-nav-item="cadastros" data-view="usinas" data-subview="cadastro">Usinas</button>
+          <button data-nav-item="cadastros" data-view="clientes">Clientes</button>
+          <button data-nav-item="cadastros" data-view="faturas">Faturas</button>
+        </div>
+      </div>
+
+      <!-- Administração -->
+      <button data-nav="administracao" data-view="usuarios">Administração</button>
     </nav>
     <div class="sync-pill" id="user-pill" style="cursor:pointer;" title="Sair"><span id="user-name"></span> · Sair</div>
   </div>
@@ -558,12 +657,9 @@
         <button class="btn btn-ghost" id="live-status-refresh">Atualizar agora</button>
         <div class="field grow" style="margin-bottom:0;"><input type="text" id="live-status-search" placeholder="Buscar usina…"></div>
       </div>
-      <div class="table-wrap" style="max-height:360px;">
-        <table>
-          <thead><tr><th colspan="4" style="text-align:center; font-size:20px; font-weight:700; letter-spacing:1px; color:#4DA3FF; font-family:var(--font-display); text-transform:uppercase; padding:16px; background:transparent;">Status da Usina</th></tr>
-          <tr><th>Usina</th><th>Status</th><th class="num">Potência atual</th><th class="num">Geração hoje</th></tr></thead>
-          <tbody id="live-status-tbody"><tr><td colspan="4" class="empty">Clique em "Atualizar agora" para consultar o SolisCloud.</td></tr></tbody>
-        </table>
+      <div class="usina-monitor-grid">
+        <div class="usina-list" id="live-status-list"><div class="usina-detail-empty">Clique em "Atualizar agora" pra consultar as usinas.</div></div>
+        <div class="usina-detail" id="usina-detail-panel"><div class="usina-detail-empty">Selecione uma usina na lista ao lado pra ver os detalhes.</div></div>
       </div>
     </div>
 
@@ -588,7 +684,7 @@
     <div class="dash-hero">
       <div class="gauge-card">
         <svg width="200" height="140" viewBox="0 0 200 120" id="gauge-svg">
-          <path d="M 14 110 A 86 86 0 0 1 186 110" fill="none" stroke="#212C38" stroke-width="14" stroke-linecap="round"/>
+          <path d="M 14 110 A 86 86 0 0 1 186 110" fill="none" stroke="#E3E6EB" stroke-width="14" stroke-linecap="round"/>
           <path id="gauge-arc" d="M 14 110 A 86 86 0 0 1 186 110" fill="none" stroke="url(#gaugeGrad)" stroke-width="14" stroke-linecap="round" stroke-dasharray="270 270" stroke-dashoffset="270"/>
           <defs>
             <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -596,7 +692,7 @@
               <stop offset="100%" stop-color="#F2703C"/>
             </linearGradient>
           </defs>
-          <text x="100" y="98" text-anchor="middle" font-family="Space Grotesk" font-size="30" font-weight="600" fill="#E7EAEE" id="gauge-text">—</text>
+          <text x="100" y="98" text-anchor="middle" font-family="Space Grotesk" font-size="30" font-weight="600" fill="#1B2333" id="gauge-text">—</text>
         </svg>
         <div class="gauge-label">Atingimento da meta</div>
         <div class="gauge-big" id="gauge-sub">sem dados no mês</div>
@@ -767,6 +863,15 @@
       <p>Cadastre cada usina uma vez — o código é gerado automaticamente e usado nos lançamentos.</p>
     </div>
 
+    <div class="view-sidebar-layout">
+      <nav class="view-sidebar-nav">
+        <button type="button" class="vsn-item active" data-panel-group="cad-usinas">Usinas</button>
+        <button type="button" class="vsn-item" data-panel-group="cad-injecao">Energia injetada</button>
+        <button type="button" class="vsn-item" data-panel-group="cad-integracoes">Integrações</button>
+        <button type="button" class="vsn-item" data-panel-group="cad-rateio">Rateio</button>
+      </nav>
+      <div class="view-sidebar-content-wrap">
+      <div class="view-sidebar-content active" data-panel-group="cad-usinas">
     <div class="panel">
       <div class="panel-title">Nova usina</div>
       <form id="form-usina" novalidate>
@@ -782,7 +887,7 @@
         </div>
 
         <details class="batch" open>
-          <summary>Geração esperada por mês (kWh) — opcional, usada no gráfico Real x Esperado</summary>
+          <summary>Geração esperada por mês (kWh) — preenchida automaticamente pela capacidade, pode ajustar se precisar</summary>
           <div class="batch-body">
             <div class="field-grid compact" id="exp-grid">
               <div><label for="u-exp-01">Jan</label><input type="number" id="u-exp-01" min="0" step="0.1"></div>
@@ -840,6 +945,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         </table>
       </div>
     </div>
+      </div>
+      <div class="view-sidebar-content" data-panel-group="cad-injecao">
 
     <div class="panel" id="inj-grid-panel">
       <div class="panel-title">Energia injetada mensal<small>quanto cada usina injetou na rede naquele mês</small></div>
@@ -879,10 +986,33 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         </table>
       </div>
     </div>
+      </div>
+      <div class="view-sidebar-content" data-panel-group="cad-integracoes">
 
     <div class="panel">
       <div class="panel-title">Integrações de monitoramento<small>SolisCloud, FusionSolar, APsystems</small></div>
       <p class="hint" style="margin-bottom:14px;">Vincule os IDs de cada plataforma de monitoramento a uma usina. A sincronização diária, o Status ao vivo e os alertas passam a reconhecer a usina automaticamente — sem precisar mexer em código.</p>
+
+      <!-- Busca automática de usinas disponíveis na plataforma -->
+      <div style="margin-bottom:18px; padding:14px 16px; border:1px solid var(--border); border-radius:3px; background:var(--surface-2);">
+        <div style="font-size:13px; font-weight:600; margin-bottom:10px;">Buscar usinas disponíveis na plataforma</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="field" style="margin:0;">
+            <label for="ig-busca-plataforma">Plataforma</label>
+            <select id="ig-busca-plataforma">
+              <option value="solis">SolisCloud</option>
+              <option value="fusion">FusionSolar</option>
+            </select>
+          </div>
+          <div class="field" id="ig-busca-conta-wrap" style="margin:0; display:none;">
+            <label for="ig-busca-conta">Conta</label>
+            <select id="ig-busca-conta"><option value="padrao">padrao</option></select>
+          </div>
+          <button type="button" class="btn btn-primary" id="ig-buscar-btn">Buscar usinas disponíveis</button>
+        </div>
+        <div id="ig-busca-resultado" style="margin-top:14px; display:none;"></div>
+      </div>
+
       <form id="form-integracao" novalidate>
         <div class="field-grid">
           <div><label for="ig-usina">Usina</label><select id="ig-usina" required></select></div>
@@ -898,8 +1028,14 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
           <div><label for="ig-station-id" id="ig-station-id-label">Station ID</label><input type="text" id="ig-station-id" required></div>
           <div id="ig-eid-field" style="display:none;"><label for="ig-eid">ECU ID</label><input type="text" id="ig-eid"></div>
           <div id="ig-conta-fusion-field" style="display:none;">
-            <label for="ig-conta-fusion">Conta FusionSolar <span class="hint" style="margin:0;">(deixe "padrao" se for a única)</span></label>
-            <input type="text" id="ig-conta-fusion" value="padrao">
+            <label for="ig-conta-fusion">Conta FusionSolar</label>
+            <select id="ig-conta-fusion"><option value="padrao">padrao</option><option value="__nova__">+ Nova conta…</option></select>
+            <input type="text" id="ig-conta-fusion-nova" placeholder="nome da nova conta (ex: Granja Malta)" style="display:none; margin-top:6px;">
+          </div>
+          <div id="ig-conta-isolar-field" style="display:none;">
+            <label for="ig-conta-isolar">Conta iSolarCloud</label>
+            <select id="ig-conta-isolar"><option value="padrao">padrao</option><option value="__nova__">+ Nova conta…</option></select>
+            <input type="text" id="ig-conta-isolar-nova" placeholder="nome da nova conta (ex: Santa Emilia)" style="display:none; margin-top:6px;">
           </div>
         </div>
         <div class="btn-row">
@@ -916,6 +1052,55 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
           <thead><tr><th>Usina</th><th>Plataforma</th><th>Station ID</th><th>ECU ID</th><th></th></tr></thead>
           <tbody id="ig-tbody"><tr><td colspan="5" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
         </table>
+      </div>
+    </div>
+      </div>
+      <div class="view-sidebar-content" data-panel-group="cad-rateio">
+
+    <div class="panel">
+      <div class="panel-title">Configurar rateio</div>
+      <div class="toolbar" style="margin-bottom:16px;">
+        <div class="field grow">
+          <label for="rat-usina">Usina</label>
+          <select id="rat-usina"></select>
+        </div>
+        <div class="field">
+          <label for="rat-modo">Modo de rateio</label>
+          <select id="rat-modo">
+            <option value="percentual">Percentual (%)</option>
+            <option value="prioridade">Prioridade (ordem)</option>
+          </select>
+        </div>
+        <button type="button" class="btn btn-ghost" id="rat-modo-salvar">Salvar modo</button>
+      </div>
+      <p class="hint" style="margin-bottom:16px;" id="rat-hint-percentual">A soma dos percentuais de todos os clientes deve totalizar 100%. O sistema distribui a energia injetada proporcionalmente.</p>
+      <p class="hint" style="margin-bottom:16px; display:none;" id="rat-hint-prioridade">Prioridade 1 recebe energia primeiro, até zerar o crédito disponível, depois a prioridade 2, e assim por diante.</p>
+      <div id="rat-linhas"></div>
+      <div class="btn-row" style="margin-top:16px;">
+        <button type="button" class="btn btn-primary" id="rat-salvar">Salvar rateio</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Rateio atual<small id="rat-resumo-meta"></small></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Cliente</th><th>Conta Contrato</th><th class="num" id="rat-col-header">%</th><th>Excedente</th><th></th></tr></thead>
+          <tbody id="rat-tbody"><tr><td colspan="4" class="empty">Selecione uma usina para ver o rateio.</td></tr></tbody>
+        </table>
+      </div>
+      <div id="rat-total-bar" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="hint" style="margin:0;">Total alocado</span>
+          <span id="rat-total-value" class="val" style="font-size:15px;"></span>
+        </div>
+        <div style="margin-top:8px; height:6px; background:var(--surface-3); border-radius:3px; overflow:hidden;">
+          <div id="rat-total-bar-fill" style="height:100%; border-radius:3px; transition:width .3s ease;"></div>
+        </div>
+      </div>
+    </div>
+
+      </div>
       </div>
     </div>
     </div>
@@ -972,8 +1157,18 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
       <p>Cadastre os clientes vinculados às usinas e registre, todo mês, quantos kWh cada um compensou.</p>
     </div>
 
-    <div class="panel">
-      <div class="panel-title">Novo cliente</div>
+    <div class="view-sidebar-layout">
+      <nav class="view-sidebar-nav">
+        <button type="button" class="vsn-item active" data-panel-group="cli-clientes">Clientes</button>
+        <button type="button" class="vsn-item" data-panel-group="cli-compensacao">Compensação</button>
+        <button type="button" class="vsn-item" data-panel-group="cli-manutencoes">Manutenções</button>
+      </nav>
+      <div class="view-sidebar-content-wrap">
+      <div class="view-sidebar-content active" data-panel-group="cli-clientes">
+
+    <!-- Formulário oculto — aparece ao clicar em "+ Novo" ou editar -->
+    <div class="panel" id="cli-form-panel" style="display:none; margin-bottom:18px;">
+      <div class="panel-title" id="cli-form-title">Novo cliente</div>
       <form id="form-cliente" novalidate>
         <div class="field-grid">
           <div><label for="cl-nome">Nome do cliente</label><input type="text" id="cl-nome" required></div>
@@ -994,28 +1189,37 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
           <div><label for="cl-tarifa-fora">Tarifa Fora Ponta (R$/kWh)</label><input type="number" id="cl-tarifa-fora" step="0.0001" min="0" placeholder="ex: 0,72"></div>
         </div>
         <div class="field" style="margin-top:12px;">
-          <label>Usina(s) padrão <span class="hint" style="margin:0;">(sugestão inicial ao lançar a compensação — pode ser trocada mês a mês, sem afetar meses já lançados)</span></label>
+          <label>Usina(s) padrão <span class="hint" style="margin:0;">(sugestão inicial ao lançar a compensação)</span></label>
           <div class="status-chips" id="cl-usinas-chips"></div>
         </div>
         <div class="btn-row">
           <button type="submit" class="btn btn-primary" id="cl-submit">Adicionar cliente</button>
-          <button type="button" class="btn btn-ghost" id="cl-cancel" style="display:none;">Cancelar edição</button>
+          <button type="button" class="btn btn-ghost" id="cl-cancel">Cancelar</button>
         </div>
       </form>
     </div>
 
-    <div class="panel">
-      <div class="panel-title">Clientes cadastrados<small id="clientes-count"></small></div>
-      <div class="toolbar">
-        <div class="field grow"><label for="clf-search">Buscar</label><input type="text" id="clf-search" placeholder="nome, código ou conta contrato…"></div>
+    <!-- Master-detail: lista + detalhe do cliente -->
+    <div class="cli-master-detail">
+      <!-- Lista de clientes (esquerda) -->
+      <div class="cli-master">
+        <div class="cli-master-header">
+          <input type="text" id="clf-search" placeholder="buscar…" autocomplete="off">
+          <button type="button" class="btn btn-primary" id="cli-novo-btn" style="flex-shrink:0; white-space:nowrap;">+ Novo</button>
+        </div>
+        <div id="cli-master-list"><div class="usina-detail-empty"><span class="spin"></span></div></div>
+        <div id="clientes-count" style="font-size:11px; color:var(--text-faint); font-family:var(--font-mono); padding:8px 2px;"></div>
+        <!-- tbody oculto mantido pra compatibilidade com goToCliente -->
+        <table style="display:none;"><tbody id="clientes-tbody"></tbody></table>
       </div>
-      <div class="table-wrap" style="max-height:420px;">
-        <table>
-          <thead><tr><th>Código</th><th>Nome</th><th>Conta Contrato</th><th>Grupo</th><th class="num">Tarifa (R$/kWh)</th><th>Usina(s) padrão</th><th></th></tr></thead>
-          <tbody id="clientes-tbody"><tr><td colspan="7" class="loading-row"><span class="spin"></span>carregando clientes…</td></tr></tbody>
-        </table>
+      <!-- Detalhe do cliente selecionado (direita) -->
+      <div class="cli-detail" id="cli-detail-panel">
+        <div class="usina-detail-empty">Selecione um cliente na lista para ver compensações, faturas e manutenções.</div>
       </div>
     </div>
+
+      </div>
+      <div class="view-sidebar-content" data-panel-group="cli-compensacao">
 
     <div class="panel" id="comp-grid-panel">
       <div class="panel-title">Compensação mensal</div>
@@ -1059,6 +1263,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         </table>
       </div>
     </div>
+      </div>
+      <div class="view-sidebar-content" data-panel-group="cli-manutencoes">
 
     <div class="panel">
       <div class="panel-title">Manutenções e ações</div>
@@ -1097,6 +1303,9 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         </table>
       </div>
     </div>
+      </div>
+      </div>
+    </div>
   </section>
 
   <!-- ================= FATURAS ================= -->
@@ -1106,6 +1315,13 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
       <p>Anexe a fatura (cliente ou usina) e o sistema lê os dados automaticamente — Neoenergia PE.</p>
     </div>
 
+    <div class="view-sidebar-layout">
+      <nav class="view-sidebar-nav">
+        <button type="button" class="vsn-item active" data-panel-group="fat-enviar">Enviar fatura</button>
+        <button type="button" class="vsn-item" data-panel-group="fat-historico">Histórico</button>
+      </nav>
+      <div class="view-sidebar-content-wrap">
+      <div class="view-sidebar-content active" data-panel-group="fat-enviar">
     <div class="panel">
       <div class="panel-title">Enviar fatura<small>extração automática</small></div>
       <form id="form-fatura-unificada" novalidate>
@@ -1134,6 +1350,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
             <div><label for="fx-injetada">Energia injetada (kWh)</label><input type="number" id="fx-injetada" step="0.01"></div>
             <div><label for="fx-valor">Valor total (R$)</label><input type="number" id="fx-valor" step="0.01"></div>
             <div><label for="fx-vencimento">Vencimento</label><input type="date" id="fx-vencimento"></div>
+            <div><label for="fx-leitura-anterior">Leitura anterior</label><input type="date" id="fx-leitura-anterior"></div>
+            <div><label for="fx-leitura-atual">Leitura atual</label><input type="date" id="fx-leitura-atual"></div>
           </div>
           <div class="btn-row" style="margin-top:14px;">
             <button type="button" class="btn btn-primary" id="fx-salvar">Salvar fatura</button>
@@ -1142,6 +1360,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
         </div>
       </form>
     </div>
+      </div>
+      <div class="view-sidebar-content" data-panel-group="fat-historico">
 
     <div class="panel">
       <div class="panel-title">Histórico de faturas<small id="fx-hist-meta"></small></div>
@@ -1151,9 +1371,12 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
       </div>
       <div class="table-wrap" style="max-height:460px;">
         <table>
-          <thead><tr><th>Mês</th><th>Tipo</th><th>Cliente/Usina</th><th class="num">Consumo (kWh)</th><th class="num">Energia Injetada (kWh)</th><th class="num">Valor (R$)</th><th>Vencimento</th><th></th></tr></thead>
-          <tbody id="fxh-tbody"><tr><td colspan="8" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
+          <thead><tr><th>Mês</th><th>Tipo</th><th>Cliente/Usina</th><th class="num">Consumo (kWh)</th><th class="num">Energia Injetada (kWh)</th><th class="num">Valor (R$)</th><th>Vencimento</th><th>Leitura ant. → atual</th><th></th></tr></thead>
+          <tbody id="fxh-tbody"><tr><td colspan="9" class="loading-row"><span class="spin"></span>carregando…</td></tr></tbody>
         </table>
+      </div>
+    </div>
+      </div>
       </div>
     </div>
   </section>
@@ -1189,7 +1412,8 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
   <section class="view" id="view-relatorio">
     <div class="panel" id="rel-toolbar-panel" style="margin-bottom:18px;">
       <div class="toolbar" style="margin-bottom:0;">
-        <div class="field grow"><label for="rel-usina">Usina</label><select id="rel-usina"><option value="">selecione uma usina…</option></select></div>
+        <div class="field grow"><label for="rel-usina-busca">Usina</label><input type="text" id="rel-usina-busca" list="rel-usina-opcoes" placeholder="digite pra buscar…" autocomplete="off"><datalist id="rel-usina-opcoes"></datalist></div>
+        <div class="field grow"><label for="rel-usina2-busca">Usina 2 <span class="hint" style="margin:0;">(opcional — soma geração e gráficos)</span></label><input type="text" id="rel-usina2-busca" list="rel-usina2-opcoes" placeholder="deixe em branco pra ver só 1 usina…" autocomplete="off"><datalist id="rel-usina2-opcoes"></datalist></div>
         <div class="field"><label for="rel-month">Mês de referência</label><input type="month" id="rel-month"></div>
         <button class="btn btn-ghost" id="rel-print">🖨 Imprimir / Exportar PDF</button>
       </div>
@@ -1303,7 +1527,10 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Endpoint do Apps Script — mantido só para o Status ao vivo (SolisCloud/FusionSolar),
 // que precisa de credenciais que não podem ficar expostas no navegador.
-const LIVE_STATUS_API = 'https://script.google.com/macros/s/AKfycbwzOmUSW3ZJ5U5PV3qo3Ns-VhC40-KcwdZtrdvyJS2DrgDeL37b1rU91e3SXUoOwviv/exec';
+// Edge Function — status ao vivo e listagem de usinas (mais rápido)
+const LIVE_STATUS_API = 'https://vrkibkamnxfxghdgzgcu.supabase.co/functions/v1/live-status';
+// Apps Script — OCR de fatura e outras operações que dependem do Google
+const APPS_SCRIPT_API = 'https://script.google.com/macros/s/AKfycbwzOmUSW3ZJ5U5PV3qo3Ns-VhC40-KcwdZtrdvyJS2DrgDeL37b1rU91e3SXUoOwviv/exec';
 
 let AUTH = null; // { userId, nome, papel, usinas }
 
@@ -1401,6 +1628,14 @@ async function loadMonth(month){
   }catch(e){ toast('Erro ao carregar lançamentos: ' + e.message, true); MONTH_CACHE[month] = []; }
   return MONTH_CACHE[month];
 }
+async function loadDateRange(startDate, endDate){
+  try{
+    const { data, error } = await sb.from('lancamentos').select('*')
+      .gte('data', startDate).lte('data', endDate);
+    throwIfSupabaseError(error, 'Lançamentos');
+    return (data||[]).map(lancRowToObj);
+  }catch(e){ toast('Erro ao carregar lançamentos: ' + e.message, true); return []; }
+}
 async function upsertLancamentos(entries){
   if(!entries.length) return true;
   try{
@@ -1421,21 +1656,29 @@ async function deleteLancRemote(id){
    Busca global (header) — usinas e clientes
    ============================================================ */
 function goToView(viewName){
-  const btn = document.querySelector('nav.tabs > button[data-view="'+viewName+'"], nav.tabs > .tab-dropdown > button[data-view="'+viewName+'"]');
-  if(btn) btn.click();
+  // Try direct nav button first, then dropdown items
+  const btn = document.querySelector('nav.tabs > button[data-view="'+viewName+'"]')
+    || document.querySelector('nav.tabs .tab-dropdown-menu button[data-view="'+viewName+'"]');
+  if(btn) activateNavItem(btn);
 }
 async function goToUsinaReport(codigo){
   goToView('relatorio');
   if(BASE_DATA_READY) await BASE_DATA_READY;
   populateRelatorioUsinaSelect();
-  document.getElementById('rel-usina').value = codigo;
+  const usina = USINAS.find(u=>u.codigo===codigo);
+  document.getElementById('rel-usina-busca').value = usina ? (usina.codigo + ' — ' + usina.nome) : codigo;
+  document.getElementById('rel-usina2-busca').value = '';
   renderRelatorio();
 }
 async function goToCliente(codigo){
   goToView('clientes');
   if(BASE_DATA_READY) await BASE_DATA_READY;
-  renderClientesTable();
-  startEditCliente(codigo);
+  await Promise.all([loadFaturas(), loadCompensacoes(), loadManutencoes()]);
+  renderClientesTable(); renderCliMasterList();
+  CLI_SELECIONADO = codigo;
+  CLI_MINI_TAB = 'compensacoes';
+  document.querySelectorAll('.cli-master-item').forEach(el=>el.classList.toggle('active', el.dataset.codigo===codigo));
+  renderCliDetalhe();
 }
 function closeGlobalSearch(){
   document.getElementById('global-search-results').classList.remove('open');
@@ -1494,45 +1737,94 @@ async function renderSubview(name){
   if(name === 'dashboard'){ renderDashboard(); refreshLiveStatus(); }
   if(name === 'lancamento'){ renderGrid(); renderLancTable(); }
   if(name === 'graficos') renderCharts();
-  if(name === 'cadastro'){ renderInjGrid(); renderInjHistory(); populateIntegracaoUsinaSelect(); renderIntegracoesTable(); }
+  if(name === 'cadastro'){ renderInjGrid(); renderInjHistory(); populateIntegracaoUsinaSelect(); renderIntegracoesTable(); populateRateioUsinaSelect(); renderRateioLinhas(); renderRateioTabela(); }
 }
 
-document.querySelectorAll('nav.tabs > button, nav.tabs > .tab-dropdown > button').forEach(btn=>{
-  btn.addEventListener('click', async (e)=>{
-    document.querySelectorAll('nav.tabs > button, nav.tabs > .tab-dropdown > button').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('view-'+btn.dataset.view).classList.add('active');
-    if(BASE_DATA_READY) await BASE_DATA_READY;
-    if(btn.dataset.view === 'usinas'){
-      activateSubview('dashboard'); renderSubview('dashboard');
-      document.getElementById('usinas-dropdown').classList.toggle('open');
+// ============================================================
+// Navegação principal — novo esquema em 5 grupos
+// ============================================================
+function setNavActive(navGroup){
+  document.querySelectorAll('nav.tabs > button[data-nav], nav.tabs > .tab-dropdown > button[data-nav]').forEach(b=>{
+    b.classList.toggle('active', b.dataset.nav===navGroup);
+  });
+}
+
+async function activateNavItem(btn){
+  const view = btn.dataset.view;
+  const subview = btn.dataset.subview;
+  const targetPanel = btn.dataset.targetPanel;
+  const navGroup = btn.dataset.nav || btn.dataset.navItem;
+
+  // fecha todos os dropdowns
+  document.querySelectorAll('.tab-dropdown').forEach(d=>d.classList.remove('open'));
+
+  // activa a view
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  if(view) document.getElementById('view-'+view).classList.add('active');
+
+  // marca o grupo de nav ativo
+  if(navGroup) setNavActive(navGroup);
+
+  if(BASE_DATA_READY) await BASE_DATA_READY;
+
+  // executa lógica específica de cada destino
+  if(view === 'usinas'){
+    const sv = subview || 'dashboard';
+    activateSubview(sv);
+    renderSubview(sv);
+    if(targetPanel){
+      const layout = document.querySelector('#view-usinas .view-sidebar-layout');
+      if(layout){
+        layout.querySelectorAll('.vsn-item').forEach(b=>b.classList.toggle('active', b.dataset.panelGroup===targetPanel));
+        layout.querySelectorAll('.view-sidebar-content').forEach(c=>c.classList.toggle('active', c.dataset.panelGroup===targetPanel));
+      }
     }
-    if(btn.dataset.view === 'clientes'){ renderClientesTable(); renderCompGrid(); renderCompHistory(); populateManutencaoClienteSelects(); renderManutencoesHistory(); }
-    if(btn.dataset.view === 'faturas'){ populateFaturaUnificadaSelects(); populateFaturaUnificadaFiltro(); renderFaturasUnificadasHistory(); }
-    if(btn.dataset.view === 'graficos-clientes') renderClientesCharts();
-    if(btn.dataset.view === 'relatorio'){ populateRelatorioUsinaSelect(); renderRelatorio(); }
-    if(btn.dataset.view === 'usuarios'){ renderClienteUsinasChipsUsuario([]); await loadUsuarios(); renderUsuariosTable(); }
+  }
+  if(view === 'clientes'){
+    renderClientesTable(); renderCliMasterList();
+    renderCompGrid(); renderCompHistory();
+    populateManutencaoClienteSelects(); renderManutencoesHistory();
+    if(targetPanel){
+      const layout = document.querySelector('#view-clientes .view-sidebar-layout');
+      if(layout){
+        layout.querySelectorAll('.vsn-item').forEach(b=>b.classList.toggle('active', b.dataset.panelGroup===targetPanel));
+        layout.querySelectorAll('.view-sidebar-content').forEach(c=>c.classList.toggle('active', c.dataset.panelGroup===targetPanel));
+      }
+    }
+  }
+  if(view === 'faturas'){ populateFaturaUnificadaSelects(); populateFaturaUnificadaFiltro(); renderFaturasUnificadasHistory(); }
+  if(view === 'graficos-clientes') renderClientesCharts();
+  if(view === 'relatorio'){ populateRelatorioUsinaSelect(); renderRelatorio(); }
+  if(view === 'usuarios'){ renderClienteUsinasChipsUsuario([]); await loadUsuarios(); renderUsuariosTable(); }
+}
+
+// botões diretos (Dashboard, Administração)
+document.querySelectorAll('nav.tabs > button[data-nav]').forEach(btn=>{
+  btn.addEventListener('click', ()=> activateNavItem(btn));
+});
+
+// cabeçalhos dos dropdowns — só abre/fecha o menu
+document.querySelectorAll('nav.tabs > .tab-dropdown > button[data-nav]').forEach(btn=>{
+  btn.addEventListener('click', (e)=>{
+    const dd = btn.closest('.tab-dropdown');
+    const wasOpen = dd.classList.contains('open');
+    document.querySelectorAll('.tab-dropdown').forEach(d=>d.classList.remove('open'));
+    if(!wasOpen) dd.classList.add('open');
   });
 });
 
-document.querySelectorAll('.tab-dropdown-menu button').forEach(btn=>{
-  btn.addEventListener('click', async (e)=>{
+// itens dentro dos dropdowns
+document.querySelectorAll('nav.tabs .tab-dropdown-menu button[data-nav-item]').forEach(btn=>{
+  btn.addEventListener('click', (e)=>{
     e.stopPropagation();
-    document.querySelectorAll('nav.tabs > button, nav.tabs > .tab-dropdown > button').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    document.querySelector('.tab-dropdown > button[data-view="usinas"]').classList.add('active');
-    document.getElementById('view-usinas').classList.add('active');
-    document.getElementById('usinas-dropdown').classList.remove('open');
-    activateSubview(btn.dataset.subview);
-    if(BASE_DATA_READY) await BASE_DATA_READY;
-    renderSubview(btn.dataset.subview);
+    activateNavItem(btn);
   });
 });
 
 document.addEventListener('click', (e)=>{
-  const dd = document.getElementById('usinas-dropdown');
-  if(dd.classList.contains('open') && !dd.contains(e.target)) dd.classList.remove('open');
+  if(!e.target.closest('.tab-dropdown')){
+    document.querySelectorAll('.tab-dropdown').forEach(d=>d.classList.remove('open'));
+  }
 });
 
 /* ============================================================
@@ -1674,6 +1966,15 @@ window.deleteUsina = async function(codigo){
   if(ok){ toast('Usina removida.'); renderCadastroTable(); populateUsinaSelects(); renderDashboard(); renderGrid(); renderClienteUsinasChips(getSelectedClienteUsinas()); populateInjUsinaFilterSelect(); renderInjGrid(); }
   else USINAS = prev;
 };
+const FATOR_GERACAO_MENSAL = [119,124,127,114,102,97,98,112,120,123,125,125]; // kWh/kWp por mês, Jan a Dez
+document.getElementById('u-capacidade').addEventListener('input', ()=>{
+  const capacidade = parseFloat(document.getElementById('u-capacidade').value);
+  if(!capacidade || isNaN(capacidade)) return;
+  FATOR_GERACAO_MENSAL.forEach((fator, i)=>{
+    const mes = String(i+1).padStart(2,'0');
+    document.getElementById('u-exp-' + mes).value = Math.round(capacidade * fator);
+  });
+});
 document.getElementById('form-usina').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const nomeEl = document.getElementById('u-nome');
@@ -1937,27 +2238,41 @@ document.getElementById('lf-usina').addEventListener('change', renderLancTable);
 async function liveStatusRequest(codigo){
   const { data: sessionData } = await sb.auth.getSession();
   const accessToken = sessionData && sessionData.session ? sessionData.session.access_token : '';
-  const qs = new URLSearchParams({ action:'liveStatus', codigo, token: accessToken, _: Date.now() }).toString();
-  const res = await fetch(LIVE_STATUS_API + '?' + qs, { cache:'no-store' });
+  const qs = new URLSearchParams({ codigo, token: accessToken, _: String(Date.now()) }).toString();
+  const res = await fetch(LIVE_STATUS_API + '?' + qs, {
+    cache: 'no-store',
+    headers: {
+      'Authorization': 'Bearer ' + accessToken,
+      'apikey': 'sb_publishable_eVX5EtPnF1luunX3_bfSNQ_C93R5n0X'
+    }
+  });
   return await res.json();
 }
 let LIVE_STATUS_CACHE = [];
+let USINA_DETAIL_SELECIONADA = null;
 const STATUS_ORDER = { 2:0, 3:1, 1:2 }; // Offline, Alarme, Online — indefinido/erro fica por último
 
-function renderLiveStatusRow(item){
-  if(!item.ok){
-    return `<td class="txt">${escapeHtml(item.nome)}</td><td colspan="3"><span class="hint" style="margin:0;">${escapeHtml(item.error || 'sem integração SolisCloud')}</span></td>`;
-  }
-  const stateLabel = item.state===1 ? 'Online' : (item.state===2 ? 'Offline' : (item.state===3 ? 'Alarme' : '—'));
-  const stateClass = item.state===1 ? 'ok' : (item.state===3 ? 'bad' : 'warn');
+function renderUsinaListItem(item){
+  const dotClass = !item.ok ? 'off' : (item.state===1 ? 'ok' : (item.state===3 ? 'bad' : 'warn'));
+  const kwhTxt = item.ok && item.dayEnergy!=null ? fmtNum(item.dayEnergy) + ' kWh' : '—';
+  const statusTxt = !item.ok ? (item.error||'sem integração') : (item.state===1?'Online':(item.state===2?'Offline':(item.state===3?'Alarme':'—')));
+  const tagClass = !item.ok ? 'warn' : (item.state===1?'ok':(item.state===3?'bad':'warn'));
+  const ativo = USINA_DETAIL_SELECIONADA === item.codigo ? ' active' : '';
   return `
-    <td class="txt">${platformBadgesHtml(item.codigo)}${escapeHtml(item.nome)}</td>
-    <td><span class="tag ${stateClass}">${stateLabel}</span></td>
-    <td class="num">${item.power!=null ? fmtNum(item.power) + ' ' + (item.powerStr||'kW') : '—'}</td>
-    <td class="num">${item.dayEnergy!=null ? fmtNum(item.dayEnergy) + ' kWh' : '—'}</td>`;
+    <div class="usina-list-item${ativo}" data-codigo="${item.codigo}">
+      <span class="uli-dot ${dotClass}"></span>
+      <div class="uli-main">
+        <div class="uli-name">${platformBadgesHtml(item.codigo)}${escapeHtml(item.nome)}</div>
+        <div class="uli-sub">${item.codigo}</div>
+      </div>
+      <div class="uli-right">
+        <div class="uli-kwh">${kwhTxt}</div>
+        <div class="uli-tag"><span class="tag ${tagClass}" style="font-size:9.5px;">${escapeHtml(statusTxt)}</span></div>
+      </div>
+    </div>`;
 }
-function renderLiveStatusTable(){
-  const tbody = document.getElementById('live-status-tbody');
+function renderUsinaList(){
+  const list = document.getElementById('live-status-list');
   const q = (document.getElementById('live-status-search').value||'').toLowerCase().trim();
   const filtrado = LIVE_STATUS_CACHE.filter(item => !q || item.nome.toLowerCase().includes(q) || item.codigo.toLowerCase().includes(q));
   const ordenado = filtrado.slice().sort((a,b)=>{
@@ -1966,49 +2281,112 @@ function renderLiveStatusTable(){
     return pa - pb;
   });
   if(!ordenado.length){
-    tbody.innerHTML = `<tr><td colspan="4" class="empty">Nenhuma usina encontrada.</td></tr>`;
+    list.innerHTML = `<div class="usina-detail-empty">Nenhuma usina encontrada.</div>`;
     return;
   }
-  tbody.innerHTML = ordenado.map(item=>`<tr data-codigo="${item.codigo}">${renderLiveStatusRow(item)}</tr>`).join('');
+  list.innerHTML = ordenado.map(renderUsinaListItem).join('');
+  if(!USINA_DETAIL_SELECIONADA && ordenado.length) selecionarUsinaDetail(ordenado[0].codigo);
 }
-document.getElementById('live-status-search').addEventListener('input', renderLiveStatusTable);
+document.getElementById('live-status-list').addEventListener('click', (e)=>{
+  const item = e.target.closest('.usina-list-item');
+  if(!item) return;
+  selecionarUsinaDetail(item.dataset.codigo);
+});
+document.getElementById('live-status-search').addEventListener('input', renderUsinaList);
+
+async function selecionarUsinaDetail(codigo){
+  USINA_DETAIL_SELECIONADA = codigo;
+  document.querySelectorAll('.usina-list-item').forEach(el=>el.classList.toggle('active', el.dataset.codigo===codigo));
+  await renderUsinaDetail(codigo);
+}
+
+async function renderUsinaDetail(codigo){
+  const painel = document.getElementById('usina-detail-panel');
+  const usina = USINAS.find(u=>u.codigo===codigo);
+  const item = LIVE_STATUS_CACHE.find(x=>x.codigo===codigo);
+  if(!usina){ painel.innerHTML = `<div class="usina-detail-empty">Usina não encontrada.</div>`; return; }
+
+  const statusTxt = item && item.ok ? (item.state===1?'Online':(item.state===2?'Offline':(item.state===3?'Alarme':'—'))) : (item ? (item.error||'sem integração') : '—');
+  const tagClass = item && item.ok ? (item.state===1?'ok':(item.state===3?'bad':'warn')) : 'warn';
+  const extra = (item && item.extra) || {};
+
+  painel.innerHTML = `
+    <div class="usina-detail-head">
+      <div>
+        <div class="usina-detail-title">${platformBadgesHtml(codigo)}${escapeHtml(usina.nome)}</div>
+        <div class="usina-detail-sub">${escapeHtml(usina.uf||'')}${usina.uf?' · ':''}${usina.capacidade?fmtNum(usina.capacidade)+' kWp instalados':''}</div>
+      </div>
+      <span class="tag ${tagClass}">${escapeHtml(statusTxt)}</span>
+    </div>
+    <div class="usina-detail-meta">${item ? 'última consulta agora' : 'clique em "Atualizar agora" pra consultar'}</div>
+    <div class="usina-metric-grid">
+      <div class="usina-metric-card"><div class="umc-label">Potência atual</div><div class="umc-value">${item && item.ok && item.power!=null ? fmtNum(item.power)+' '+(item.powerStr||'kW') : '—'}</div></div>
+      <div class="usina-metric-card"><div class="umc-label">Geração hoje</div><div class="umc-value">${item && item.ok && item.dayEnergy!=null ? fmtNum(item.dayEnergy)+' kWh' : '—'}</div></div>
+      <div class="usina-metric-card"><div class="umc-label">Tensão CA</div><div class="umc-value">${extra.tensao!=null ? fmtNum(extra.tensao)+' V' : '—'}</div></div>
+      <div class="usina-metric-card"><div class="umc-label">Corrente CA</div><div class="umc-value">${extra.corrente!=null ? fmtNum(extra.corrente)+' A' : '—'}</div></div>
+    </div>
+    <div class="usina-detail-chart-title">Geração dos últimos 7 dias</div>
+    <div class="chart-box" style="height:220px;"><canvas id="usina-detail-chart"></canvas></div>
+  `;
+
+  // últimos 7 dias, direto do Supabase
+  const hoje = new Date();
+  const seteDiasAtras = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()-6);
+  const fmtISO = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const entries = await loadDateRange(fmtISO(seteDiasAtras), fmtISO(hoje));
+  const porDia = {};
+  entries.filter(en=>en.codigo===codigo).forEach(en=>{ porDia[en.data] = (porDia[en.data]||0) + (en.geracaoReal||0); });
+  const dias = [], valores = [];
+  for(let i=0;i<7;i++){
+    const d = new Date(seteDiasAtras.getFullYear(), seteDiasAtras.getMonth(), seteDiasAtras.getDate()+i);
+    dias.push(String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'));
+    valores.push(porDia[fmtISO(d)] || 0);
+  }
+  if(typeof Chart !== 'undefined'){
+    destroyChart('usinaDetail');
+    CHARTS.usinaDetail = new Chart(document.getElementById('usina-detail-chart'), {
+      type:'bar',
+      data:{ labels:dias, datasets:[{ label:'kWh', data:valores, backgroundColor:'#F2703C', borderRadius:5 }] },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ display:false } },
+        scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#EDEFF3'}, ticks:{ callback:v=>fmtNum(v) } } }
+      }
+    });
+  }
+}
 
 async function refreshLiveStatus(){
-  const tbody = document.getElementById('live-status-tbody');
+  const list = document.getElementById('live-status-list');
   const btn = document.getElementById('live-status-refresh');
   const permitidas = (AUTH && AUTH.papel !== 'Admin') ? new Set(AUTH.usinas||[]) : null;
   const usinasVisiveis = USINAS.filter(u => !permitidas || permitidas.has(u.codigo)).sort((a,b)=>a.codigo.localeCompare(b.codigo));
   if(!usinasVisiveis.length){
-    tbody.innerHTML = `<tr><td colspan="4" class="empty">Nenhuma usina disponível.</td></tr>`;
+    list.innerHTML = `<div class="usina-detail-empty">Nenhuma usina disponível.</div>`;
     return;
   }
   btn.disabled = true;
   LIVE_STATUS_CACHE = usinasVisiveis.map(u=>({ codigo:u.codigo, nome:u.nome, ok:false, error:'consultando…' }));
-  tbody.innerHTML = usinasVisiveis.map(u=>`
-    <tr data-codigo="${u.codigo}">
-      <td class="txt">${escapeHtml(u.nome)}</td>
-      <td colspan="3" class="loading-row"><span class="spin"></span>consultando…</td>
-    </tr>`).join('');
+  list.innerHTML = `<div class="usina-detail-empty"><span class="spin"></span> consultando…</div>`;
 
   for(const u of usinasVisiveis){
-    const tr = tbody.querySelector('tr[data-codigo="'+u.codigo+'"]');
     let item;
     try{
       const result = await liveStatusRequest(u.codigo);
       item = result.ok
-        ? { codigo:u.codigo, nome:u.nome, ok:true, state:result.state, power:result.power, powerStr:result.powerStr, dayEnergy:result.dayEnergy }
-        : { codigo:u.codigo, nome:u.nome, ok:false, error: result.error || 'sem integração SolisCloud' };
+        ? { codigo:u.codigo, nome:u.nome, ok:true, state:result.state, power:result.power, powerStr:result.powerStr, dayEnergy:result.dayEnergy, extra:result.extra||{} }
+        : { codigo:u.codigo, nome:u.nome, ok:false, error: result.error || 'sem integração' };
     }catch(err){
       item = { codigo:u.codigo, nome:u.nome, ok:false, error: 'Erro: ' + (err&&err.message?err.message:String(err)) };
     }
     const idx = LIVE_STATUS_CACHE.findIndex(x=>x.codigo===u.codigo);
     if(idx>-1) LIVE_STATUS_CACHE[idx] = item;
-    if(tr) tr.innerHTML = renderLiveStatusRow(item);
-    await new Promise(r=>setTimeout(r, 400)); // pausa curta entre chamadas pra não sobrecarregar a API do SolisCloud
+    await new Promise(r=>setTimeout(r, 150)); // pausa curta entre chamadas pra não sobrecarregar as APIs
   }
   document.getElementById('live-status-meta').textContent = 'atualizado às ' + new Date().toLocaleTimeString('pt-BR');
   btn.disabled = false;
-  renderLiveStatusTable(); // reordena Offline → Alarme → Online e reaplica a busca no resultado final
+  renderUsinaList();
+  if(USINA_DETAIL_SELECIONADA) renderUsinaDetail(USINA_DETAIL_SELECIONADA);
 }
 document.getElementById('live-status-refresh').addEventListener('click', refreshLiveStatus);
 
@@ -2108,21 +2486,21 @@ function renderDashboardRanking(month, monthNum, entries){
   destroyChart('top');
   CHARTS.top = new Chart(document.getElementById('chart-top'), {
     type:'bar',
-    data:{ labels: top10.map(r=>r.nome), datasets:[{ label:'% atingimento', data: top10.map(r=>r.pct.toFixed(1)), backgroundColor:'#34D9C4', borderRadius:4 }] },
+    data:{ labels: top10.map(r=>r.nome), datasets:[{ label:'% atingimento', data: top10.map(r=>r.pct.toFixed(1)), backgroundColor:'#0EA989', borderRadius:4 }] },
     options:{
       indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ display:false } },
-      scales:{ x:{ grid:{color:'#1B2530'}, ticks:{ callback:v=>v+'%' } }, y:{ grid:{display:false}, ticks:{ autoSkip:false, font:{size:11} } } }
+      scales:{ x:{ grid:{color:'#EDEFF3'}, ticks:{ callback:v=>v+'%' } }, y:{ grid:{display:false}, ticks:{ autoSkip:false, font:{size:11} } } }
     }
   });
   destroyChart('bottom');
   CHARTS.bottom = new Chart(document.getElementById('chart-bottom'), {
     type:'bar',
-    data:{ labels: bottom10.map(r=>r.nome), datasets:[{ label:'% atingimento', data: bottom10.map(r=>r.pct.toFixed(1)), backgroundColor:'#F2555F', borderRadius:4 }] },
+    data:{ labels: bottom10.map(r=>r.nome), datasets:[{ label:'% atingimento', data: bottom10.map(r=>r.pct.toFixed(1)), backgroundColor:'#E2434F', borderRadius:4 }] },
     options:{
       indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ display:false } },
-      scales:{ x:{ grid:{color:'#1B2530'}, ticks:{ callback:v=>v+'%' } }, y:{ grid:{display:false}, ticks:{ autoSkip:false, font:{size:11} } } }
+      scales:{ x:{ grid:{color:'#EDEFF3'}, ticks:{ callback:v=>v+'%' } }, y:{ grid:{display:false}, ticks:{ autoSkip:false, font:{size:11} } } }
     }
   });
 
@@ -2132,7 +2510,7 @@ function renderDashboardRanking(month, monthNum, entries){
       if(!box.querySelector('.empty-overlay')){
         const div = document.createElement('div');
         div.className='empty-overlay';
-        div.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5C6672;font-size:12px;';
+        div.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8991A3;font-size:12px;';
         div.textContent='Sem lançamentos com meta neste mês.';
         box.style.position='relative';
         box.appendChild(div);
@@ -2168,8 +2546,8 @@ document.getElementById('dash-status-clear').addEventListener('click', ()=>{
    ============================================================ */
 if(typeof Chart !== 'undefined'){
   Chart.defaults.font.family = "'Inter', sans-serif";
-  Chart.defaults.color = '#93A0AD';
-  Chart.defaults.borderColor = '#28323E';
+  Chart.defaults.color = '#5B6478';
+  Chart.defaults.borderColor = '#E3E6EB';
 } else {
   console.error('Chart.js não carregou — os gráficos ficarão indisponíveis, mas o resto da página funciona normalmente.');
 }
@@ -2181,7 +2559,7 @@ function chartsUnavailable(){
     if(box.querySelector('.chart-fallback')) return;
     const div = document.createElement('div');
     div.className = 'chart-fallback';
-    div.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5C6672;font-size:12px;text-align:center;padding:20px;';
+    div.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8991A3;font-size:12px;text-align:center;padding:20px;';
     div.textContent = 'Não foi possível carregar a biblioteca de gráficos. Recarregue a página.';
     box.style.position = 'relative';
     box.appendChild(div);
@@ -2226,14 +2604,14 @@ async function renderAnnualChart(){
     type:'bar',
     data:{ labels: MESES.map(m=>m.l), datasets:[
       { label:'Real (kWh)', data:realByMonth, backgroundColor:'#F2703C', borderRadius:4 },
-      { label:'Esperado (kWh)', data:expByMonth, backgroundColor:'#3A4453', borderRadius:4 }
+      { label:'Esperado (kWh)', data:expByMonth, backgroundColor:'#C7CCD6', borderRadius:4 }
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ labels:{ boxWidth:12, boxHeight:12, padding:16 } } },
       scales:{
         x:{ grid:{display:false} },
-        y:{ grid:{color:'#1B2530'}, ticks:{ callback:v=>fmtNum(v) } }
+        y:{ grid:{color:'#EDEFF3'}, ticks:{ callback:v=>fmtNum(v) } }
       }
     }
   });
@@ -2257,7 +2635,7 @@ async function renderAnnualChart(){
     if(!existingOverlay){
       const div = document.createElement('div');
       div.className='empty-overlay';
-      div.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5C6672;font-size:12px;text-align:center;padding:20px;background:rgba(20,28,37,0.85);';
+      div.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8991A3;font-size:12px;text-align:center;padding:20px;background:rgba(20,28,37,0.85);';
       div.textContent='Nenhuma geração esperada cadastrada. Preencha os valores mensais em Usinas → Cadastro Usinas.';
       box.style.position='relative';
       box.appendChild(div);
@@ -2297,15 +2675,15 @@ async function renderCharts(){
     type:'line',
     data:{ labels, datasets:[
       { label:'Geração real (kWh)', data:dailyReal, borderColor:'#F2703C', backgroundColor:'rgba(242,112,60,0.12)', fill:true, tension:.35, pointRadius:0, borderWidth:2.5 },
-      { label:'Meta do dia (kWh)', data:dailyMeta, borderColor:'#5C6672', borderDash:[5,4], fill:false, tension:0, pointRadius:0, borderWidth:2 }
+      { label:'Meta do dia (kWh)', data:dailyMeta, borderColor:'#8991A3', borderDash:[5,4], fill:false, tension:0, pointRadius:0, borderWidth:2 }
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
       interaction:{mode:'index', intersect:false},
       plugins:{ legend:{ labels:{ boxWidth:12, boxHeight:2, padding:16 } } },
       scales:{
-        x:{ grid:{color:'#1B2530'}, title:{display:true, text:'dia do mês'} },
-        y:{ grid:{color:'#1B2530'}, ticks:{ callback:v=>fmtNum(v) } }
+        x:{ grid:{color:'#EDEFF3'}, title:{display:true, text:'dia do mês'} },
+        y:{ grid:{color:'#EDEFF3'}, ticks:{ callback:v=>fmtNum(v) } }
       }
     }
   });
@@ -2328,7 +2706,7 @@ function renderCompareChart(month, nDays, labels, entries){
     if(!box.querySelector('.empty-overlay')){
       const div = document.createElement('div');
       div.className = 'empty-overlay';
-      div.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5C6672;font-size:12px;text-align:center;padding:20px;';
+      div.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8991A3;font-size:12px;text-align:center;padding:20px;';
       div.textContent = 'Selecione as duas usinas acima para comparar.';
       box.style.position = 'relative';
       box.appendChild(div);
@@ -2361,15 +2739,15 @@ function renderCompareChart(month, nDays, labels, entries){
     type:'line',
     data:{ labels, datasets:[
       { label:(usinaA?usinaA.nome:codA) + ' (kWh/kWp)', data:dailyYieldA, borderColor:'#F2703C', backgroundColor:'rgba(242,112,60,0.10)', fill:true, tension:.35, pointRadius:0, borderWidth:2.5 },
-      { label:(usinaB?usinaB.nome:codB) + ' (kWh/kWp)', data:dailyYieldB, borderColor:'#34D9C4', backgroundColor:'rgba(52,217,196,0.10)', fill:true, tension:.35, pointRadius:0, borderWidth:2.5 }
+      { label:(usinaB?usinaB.nome:codB) + ' (kWh/kWp)', data:dailyYieldB, borderColor:'#0EA989', backgroundColor:'rgba(14,169,137,0.10)', fill:true, tension:.35, pointRadius:0, borderWidth:2.5 }
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
       interaction:{mode:'index', intersect:false},
       plugins:{ legend:{ labels:{ boxWidth:12, boxHeight:2, padding:16 } } },
       scales:{
-        x:{ grid:{color:'#1B2530'}, title:{display:true, text:'dia do mês'} },
-        y:{ grid:{color:'#1B2530'}, title:{display:true, text:'kWh gerado por kWp instalado'}, ticks:{ callback:v=>Number(v).toFixed(1) } }
+        x:{ grid:{color:'#EDEFF3'}, title:{display:true, text:'dia do mês'} },
+        y:{ grid:{color:'#EDEFF3'}, title:{display:true, text:'kWh gerado por kWp instalado'}, ticks:{ callback:v=>Number(v).toFixed(1) } }
       }
     }
   });
@@ -2564,6 +2942,203 @@ function platformBadgesHtml(codigo){
   return plataformas.map(p=>`<span class="platform-badge ${p}" title="${PLATAFORMA_LABEL[p]||p}">${PLATFORM_BADGE_LETTER[p]||'?'}</span>`).join('');
 }
 
+/* ============================================================
+   Rateio de usinas — configuração de % ou prioridade por cliente
+   ============================================================ */
+let RATEIO_CACHE = null;
+
+async function loadRateio(force){
+  if(RATEIO_CACHE && !force) return RATEIO_CACHE;
+  try{
+    const { data, error } = await sb.from('rateio_usina').select('*');
+    throwIfSupabaseError(error, 'Rateio');
+    RATEIO_CACHE = data || [];
+  }catch(e){ toast('Erro ao carregar rateio: ' + e.message, true); RATEIO_CACHE = []; }
+  return RATEIO_CACHE;
+}
+
+function populateRateioUsinaSelect(){
+  const sel = document.getElementById('rat-usina');
+  const cur = sel.value;
+  sel.innerHTML = USINAS.slice().sort((a,b)=>a.nome.localeCompare(b.nome))
+    .map(u=>`<option value="${u.codigo}">${u.codigo} — ${escapeHtml(u.nome)}</option>`).join('');
+  if(cur) sel.value = cur;
+}
+
+function renderRateioLinhas(){
+  const codigoUsina = document.getElementById('rat-usina').value;
+  const modo = document.getElementById('rat-modo').value;
+  const usina = USINAS.find(u=>u.codigo===codigoUsina);
+  if(!usina) return;
+
+  document.getElementById('rat-hint-percentual').style.display = modo==='percentual' ? '' : 'none';
+  document.getElementById('rat-hint-prioridade').style.display = modo==='prioridade' ? '' : 'none';
+
+  const clientesUsina = CLIENTES.filter(c=>(c.usinas||[]).includes(codigoUsina));
+  const linhasExistentes = (RATEIO_CACHE||[]).filter(r=>r.codigo_usina===codigoUsina);
+
+  const wrap = document.getElementById('rat-linhas');
+  if(!clientesUsina.length){
+    wrap.innerHTML = `<p class="hint">Nenhum cliente vinculado a esta usina. Vincule clientes em Clientes → Cadastro.</p>`;
+    return;
+  }
+  wrap.innerHTML = clientesUsina.map(c=>{
+    const existente = linhasExistentes.find(r=>r.codigo_cliente===c.codigo);
+    const val = modo==='percentual' ? (existente?existente.percentual:'') : (existente?existente.prioridade:'');
+    const excedente = existente && existente.recebe_excedente;
+    return `
+      <div class="rat-linha" style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border);">
+        <div style="flex:1; font-size:13.5px;">${escapeHtml(c.nome)}</div>
+        <div style="font-size:11.5px; color:var(--text-faint); font-family:var(--font-mono); min-width:120px;">${escapeHtml(c.contaContrato||c.codigo)}</div>
+        <input type="number" class="rat-input" data-cliente="${c.codigo}"
+          min="${modo==='percentual'?0.01:1}" max="${modo==='percentual'?100:99}" step="${modo==='percentual'?0.01:1}"
+          placeholder="${modo==='percentual'?'%':'prioridade'}"
+          value="${val}"
+          style="width:90px; text-align:right; font-family:var(--font-mono); border:1px solid var(--border); border-radius:3px; padding:6px 8px; background:var(--surface-2); color:var(--text);">
+        ${modo==='percentual' ? '<span style="color:var(--text-faint); font-size:13px;">%</span>' : `
+          <label style="display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text-dim); cursor:pointer; white-space:nowrap;">
+            <input type="radio" name="rat-excedente" class="rat-excedente" data-cliente="${c.codigo}" ${excedente?'checked':''} style="accent-color:var(--amber);">
+            Recebe excedente
+          </label>`}
+      </div>`;
+  }).join('');
+
+  if(modo==='percentual') atualizarTotalPercentual();
+  document.querySelectorAll('.rat-input').forEach(inp=>inp.addEventListener('input', ()=>{
+    if(modo==='percentual') atualizarTotalPercentual();
+  }));
+}
+
+function atualizarTotalPercentual(){
+  const total = Array.from(document.querySelectorAll('.rat-input'))
+    .reduce((s,inp)=>s+(parseFloat(inp.value)||0), 0);
+  document.getElementById('rat-total-bar').style.display = '';
+  document.getElementById('rat-total-value').textContent = total.toFixed(1) + '%';
+  document.getElementById('rat-total-value').style.color = Math.abs(total-100)<0.01 ? 'var(--teal)' : (total>100 ? 'var(--red)' : 'var(--warn)');
+  const fill = document.getElementById('rat-total-bar-fill');
+  fill.style.width = Math.min(total,100) + '%';
+  fill.style.background = Math.abs(total-100)<0.01 ? 'var(--teal)' : (total>100 ? 'var(--red)' : 'var(--warn)');
+}
+
+async function renderRateioTabela(){
+  const codigoUsina = document.getElementById('rat-usina').value;
+  const usina = USINAS.find(u=>u.codigo===codigoUsina);
+  const tbody = document.getElementById('rat-tbody');
+  const colHeader = document.getElementById('rat-col-header');
+  if(!usina){ tbody.innerHTML = `<tr><td colspan="4" class="empty">Selecione uma usina.</td></tr>`; return; }
+
+  const modo = usina.modo_rateio || 'percentual';
+  colHeader.textContent = modo==='percentual' ? '%' : 'Prioridade';
+  document.getElementById('rat-resumo-meta').textContent = usina.nome + ' · modo ' + modo;
+
+  const linhas = (await loadRateio()).filter(r=>r.codigo_usina===codigoUsina)
+    .sort((a,b)=> modo==='percentual' ? (b.percentual||0)-(a.percentual||0) : (a.prioridade||99)-(b.prioridade||99));
+
+  if(!linhas.length){
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">Rateio não configurado para esta usina.</td></tr>`;
+    document.getElementById('rat-total-bar').style.display = 'none';
+    return;
+  }
+  tbody.innerHTML = linhas.map(r=>{
+    const cli = CLIENTES.find(c=>c.codigo===r.codigo_cliente);
+    const val = modo==='percentual' ? (r.percentual!=null ? fmtNum(r.percentual)+'%' : '—') : (r.prioridade!=null ? r.prioridade : '—');
+    const excedente = modo==='prioridade' && r.recebe_excedente;
+    return `<tr>
+      <td class="txt">${escapeHtml(cli?cli.nome:r.codigo_cliente)}</td>
+      <td class="txt">${escapeHtml(cli?cli.contaContrato||'—':'—')}</td>
+      <td class="num" style="font-family:var(--font-mono); font-weight:700;">${val}</td>
+      <td>${excedente ? '<span class="tag ok">sim</span>' : '<span style="color:var(--text-faint);">—</span>'}</td>
+      <td><button class="btn-danger-ghost" onclick="deletarRateioLinha('${r.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button></td>
+    </tr>`;
+  }).join('');
+
+  if(modo==='percentual'){
+    const total = linhas.reduce((s,r)=>s+(r.percentual||0),0);
+    document.getElementById('rat-total-bar').style.display = '';
+    document.getElementById('rat-total-value').textContent = total.toFixed(1)+'%';
+    document.getElementById('rat-total-value').style.color = Math.abs(total-100)<0.01?'var(--teal)':(total>100?'var(--red)':'var(--warn)');
+    const fill = document.getElementById('rat-total-bar-fill');
+    fill.style.width = Math.min(total,100)+'%';
+    fill.style.background = Math.abs(total-100)<0.01?'var(--teal)':(total>100?'var(--red)':'var(--warn)');
+  } else {
+    document.getElementById('rat-total-bar').style.display = 'none';
+  }
+}
+
+window.deletarRateioLinha = async function(id){
+  if(!confirm('Remover esta linha do rateio?')) return;
+  try{
+    const { error } = await sb.from('rateio_usina').delete().eq('id', id);
+    throwIfSupabaseError(error, 'Rateio');
+    await loadRateio(true);
+    renderRateioTabela();
+    renderRateioLinhas();
+    toast('Removido.');
+  }catch(e){ toast('Erro: ' + e.message, true); }
+};
+
+document.getElementById('rat-usina').addEventListener('change', async ()=>{
+  const codigoUsina = document.getElementById('rat-usina').value;
+  const usina = USINAS.find(u=>u.codigo===codigoUsina);
+  if(usina && usina.modo_rateio) document.getElementById('rat-modo').value = usina.modo_rateio;
+  await loadRateio(true);
+  renderRateioLinhas();
+  renderRateioTabela();
+});
+
+document.getElementById('rat-modo').addEventListener('change', renderRateioLinhas);
+
+document.getElementById('rat-modo-salvar').addEventListener('click', async ()=>{
+  const codigoUsina = document.getElementById('rat-usina').value;
+  const modo = document.getElementById('rat-modo').value;
+  if(!codigoUsina){ toast('Selecione uma usina.', true); return; }
+  try{
+    const { error } = await sb.from('usinas').update({ modo_rateio: modo }).eq('codigo', codigoUsina);
+    throwIfSupabaseError(error, 'Usinas');
+    const usina = USINAS.find(u=>u.codigo===codigoUsina);
+    if(usina) usina.modo_rateio = modo;
+    toast('Modo de rateio salvo.');
+    renderRateioLinhas();
+    renderRateioTabela();
+  }catch(e){ toast('Erro: ' + e.message, true); }
+});
+
+document.getElementById('rat-salvar').addEventListener('click', async ()=>{
+  const codigoUsina = document.getElementById('rat-usina').value;
+  const modo = document.getElementById('rat-modo').value;
+  if(!codigoUsina){ toast('Selecione uma usina.', true); return; }
+
+  const inputs = document.querySelectorAll('.rat-input');
+  if(!inputs.length){ toast('Nenhum cliente para configurar.', true); return; }
+
+  if(modo==='percentual'){
+    const total = Array.from(inputs).reduce((s,inp)=>s+(parseFloat(inp.value)||0),0);
+    if(Math.abs(total-100)>0.09){ toast('A soma dos percentuais precisa ser 100% (atual: '+total.toFixed(1)+'%).', true); return; }
+  }
+
+  const excedenteSelecionado = document.querySelector('.rat-excedente:checked');
+  const codigoExcedente = excedenteSelecionado ? excedenteSelecionado.dataset.cliente : null;
+
+  const linhas = Array.from(inputs).map(inp=>({
+    codigo_usina: codigoUsina,
+    codigo_cliente: inp.dataset.cliente,
+    percentual: modo==='percentual' ? (parseFloat(inp.value)||null) : null,
+    prioridade: modo==='prioridade' ? (parseInt(inp.value)||null) : null,
+    recebe_excedente: modo==='prioridade' ? (inp.dataset.cliente === codigoExcedente) : false
+  })).filter(l=> l.percentual!=null || l.prioridade!=null);
+
+  const btn = document.getElementById('rat-salvar');
+  btn.disabled = true;
+  try{
+    const { error } = await sb.from('rateio_usina').upsert(linhas, { onConflict:'codigo_usina,codigo_cliente' });
+    throwIfSupabaseError(error, 'Rateio');
+    await loadRateio(true);
+    renderRateioTabela();
+    toast('Rateio salvo.');
+  }catch(e){ toast('Erro ao salvar: ' + e.message, true); }
+  finally{ btn.disabled = false; }
+});
+
 function populateIntegracaoUsinaSelect(){
   const sel = document.getElementById('ig-usina');
   const cur = sel.value;
@@ -2571,12 +3146,127 @@ function populateIntegracaoUsinaSelect(){
     .map(u=>`<option value="${u.codigo}">${u.codigo} — ${escapeHtml(u.nome)}</option>`).join('');
   if(cur) sel.value = cur;
 }
+/* ============================================================
+   Busca automática de usinas disponíveis na plataforma
+   ============================================================ */
+document.getElementById('ig-busca-plataforma').addEventListener('change', ()=>{
+  const plat = document.getElementById('ig-busca-plataforma').value;
+  const contaWrap = document.getElementById('ig-busca-conta-wrap');
+  contaWrap.style.display = plat === 'fusion' ? '' : 'none';
+  if(plat === 'fusion'){
+    popularSelectConta('ig-busca-conta', 'fusion');
+  }
+  document.getElementById('ig-busca-resultado').style.display = 'none';
+});
+
+document.getElementById('ig-buscar-btn').addEventListener('click', async ()=>{
+  const plat = document.getElementById('ig-busca-plataforma').value;
+  const conta = document.getElementById('ig-busca-conta').value || 'padrao';
+  const resultado = document.getElementById('ig-busca-resultado');
+  const btn = document.getElementById('ig-buscar-btn');
+
+  btn.disabled = true;
+  btn.textContent = 'Buscando…';
+  resultado.style.display = '';
+  resultado.innerHTML = `<div class="hint">Consultando a plataforma…</div>`;
+
+  try{
+    const { data: sessionDataLU } = await sb.auth.getSession();
+    const tokenLU = sessionDataLU && sessionDataLU.session ? sessionDataLU.session.access_token : '';
+    const url = `${APPS_SCRIPT_API}?action=listarUsinas&plataforma=${plat}&conta=${encodeURIComponent(conta)}&token=${tokenLU}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if(!data.ok){ resultado.innerHTML = `<div class="hint" style="color:var(--red);">Erro: ${escapeHtml(data.error||'Falha na consulta.')}</div>`; return; }
+    if(!data.usinas || !data.usinas.length){
+      resultado.innerHTML = `<div class="hint">Nenhuma usina nova encontrada nessa conta — todas já estão integradas.</div>`; return;
+    }
+
+    resultado.innerHTML = `
+      <div style="font-size:12.5px; font-weight:600; margin-bottom:10px; color:var(--text-dim);">${data.usinas.length} usina(s) disponível(is) — escolha a qual usina do painel cada uma corresponde:</div>
+      <div id="ig-busca-linhas" style="display:flex; flex-direction:column; gap:8px;"></div>
+      <div class="btn-row" style="margin-top:14px;">
+        <button type="button" class="btn btn-primary" id="ig-busca-salvar">Salvar integrações selecionadas</button>
+      </div>`;
+
+    const linhasEl = document.getElementById('ig-busca-linhas');
+    linhasEl.innerHTML = data.usinas.map((u,i)=>`
+      <div style="display:flex; align-items:center; gap:10px; padding:10px; border:1px solid var(--border); border-radius:3px; background:var(--surface); flex-wrap:wrap;">
+        <div style="flex:1; min-width:160px;">
+          <div style="font-weight:600; font-size:13px;">${escapeHtml(u.nome)}</div>
+          <div style="font-size:11px; color:var(--text-faint); font-family:var(--font-mono);">${escapeHtml(String(u.stationId))}${u.capacidade?' · '+fmtNum(u.capacidade)+' kWp':''}</div>
+        </div>
+        <select class="ig-busca-vinculo" data-station-id="${escapeHtml(String(u.stationId))}" data-plataforma="${plat}" style="min-width:200px; padding:7px 10px; border:1px solid var(--border); border-radius:3px; background:var(--surface-2); color:var(--text); font-size:13px;">
+          <option value="">— não vincular —</option>
+          ${USINAS.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(uu=>`<option value="${uu.codigo}">${uu.codigo} — ${escapeHtml(uu.nome)}</option>`).join('')}
+        </select>
+      </div>`).join('');
+
+    document.getElementById('ig-busca-salvar').addEventListener('click', async ()=>{
+      const vinculos = Array.from(document.querySelectorAll('.ig-busca-vinculo'))
+        .filter(sel=>sel.value)
+        .map(sel=>({
+          codigo_usina: sel.value,
+          plataforma: sel.dataset.plataforma,
+          station_id: sel.dataset.stationId,
+          eid: null,
+          conta_fusion: sel.dataset.plataforma==='fusion' ? conta : null,
+          conta_isolar: null
+        }));
+
+      if(!vinculos.length){ toast('Selecione ao menos uma usina pra vincular.', true); return; }
+
+      const btnSalvar = document.getElementById('ig-busca-salvar');
+      btnSalvar.disabled = true;
+      try{
+        const { error } = await sb.from('integracoes_usina').upsert(vinculos, { onConflict:'codigo_usina,plataforma' });
+        throwIfSupabaseError(error, 'Integrações');
+        toast(vinculos.length + ' integração(ões) salva(s).');
+        await loadIntegracoes(true);
+        renderIntegracoesTable();
+        resultado.style.display = 'none';
+      }catch(err){
+        toast('Erro ao salvar: ' + err.message, true);
+        btnSalvar.disabled = false;
+      }
+    });
+
+  }catch(err){
+    resultado.innerHTML = `<div class="hint" style="color:var(--red);">Erro de comunicação: ${escapeHtml(err.message||String(err))}</div>`;
+  }finally{
+    btn.disabled = false;
+    btn.textContent = 'Buscar usinas disponíveis';
+  }
+});
+
+function popularSelectConta(selectId, plataforma){
+  const sel = document.getElementById(selectId);
+  const atual = sel.value;
+  const contasExistentes = new Set(['padrao']);
+  (INTEGRACOES||[]).forEach(r=>{
+    if(r.plataforma !== plataforma) return;
+    const campo = plataforma === 'fusion' ? r.conta_fusion : r.conta_isolar;
+    if(campo) contasExistentes.add(campo);
+  });
+  const opts = Array.from(contasExistentes).sort().map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+  sel.innerHTML = opts + '<option value="__nova__">+ Nova conta…</option>';
+  if(Array.from(contasExistentes).includes(atual)) sel.value = atual;
+}
 function toggleIntegracaoCampos(){
   const plataforma = document.getElementById('ig-plataforma').value;
   document.getElementById('ig-station-id-label').textContent = plataforma === 'apsystems' ? 'System ID (sid)' : (plataforma === 'isolar' ? 'PS ID (ID da usina)' : 'Station ID');
   document.getElementById('ig-eid-field').style.display = plataforma === 'apsystems' ? '' : 'none';
   document.getElementById('ig-conta-fusion-field').style.display = plataforma === 'fusion' ? '' : 'none';
+  document.getElementById('ig-conta-isolar-field').style.display = plataforma === 'isolar' ? '' : 'none';
+  if(plataforma === 'fusion') popularSelectConta('ig-conta-fusion', 'fusion');
+  if(plataforma === 'isolar') popularSelectConta('ig-conta-isolar', 'isolar');
 }
+document.getElementById('ig-conta-fusion').addEventListener('change', ()=>{
+  document.getElementById('ig-conta-fusion-nova').style.display = document.getElementById('ig-conta-fusion').value === '__nova__' ? '' : 'none';
+});
+document.getElementById('ig-conta-isolar').addEventListener('change', ()=>{
+  document.getElementById('ig-conta-isolar-nova').style.display = document.getElementById('ig-conta-isolar').value === '__nova__' ? '' : 'none';
+});
 document.getElementById('ig-plataforma').addEventListener('change', toggleIntegracaoCampos);
 
 async function loadIntegracoes(force){
@@ -2602,7 +3292,7 @@ async function renderIntegracoesTable(){
     return `
     <tr>
       <td class="txt">${escapeHtml(usina?usina.nome:r.codigo_usina)}</td>
-      <td><span class="platform-badge ${r.plataforma}">${PLATFORM_BADGE_LETTER[r.plataforma]||'?'}</span> ${PLATAFORMA_LABEL[r.plataforma]||r.plataforma}${r.plataforma==='fusion' ? ` <span class="hint" style="margin:0;">(${escapeHtml(r.conta_fusion||'padrao')})</span>` : ''}</td>
+      <td><span class="platform-badge ${r.plataforma}">${PLATFORM_BADGE_LETTER[r.plataforma]||'?'}</span> ${PLATAFORMA_LABEL[r.plataforma]||r.plataforma}${r.plataforma==='fusion' ? ` <span class="hint" style="margin:0;">(${escapeHtml(r.conta_fusion||'padrao')})</span>` : ''}${r.plataforma==='isolar' ? ` <span class="hint" style="margin:0;">(${escapeHtml(r.conta_isolar||'padrao')})</span>` : ''}</td>
       <td class="txt">${escapeHtml(r.station_id||'—')}</td>
       <td class="txt">${escapeHtml(r.eid||'—')}</td>
       <td><div class="row-actions">
@@ -2621,7 +3311,10 @@ window.startEditIntegracao = function(id){
   toggleIntegracaoCampos();
   document.getElementById('ig-station-id').value = r.station_id || '';
   document.getElementById('ig-eid').value = r.eid || '';
+  popularSelectConta('ig-conta-fusion', 'fusion');
+  popularSelectConta('ig-conta-isolar', 'isolar');
   document.getElementById('ig-conta-fusion').value = r.conta_fusion || 'padrao';
+  document.getElementById('ig-conta-isolar').value = r.conta_isolar || 'padrao';
   document.getElementById('ig-submit').textContent = 'Salvar alterações';
   document.getElementById('ig-cancel').style.display = 'inline-flex';
   document.getElementById('form-integracao').scrollIntoView({behavior:'smooth', block:'center'});
@@ -2630,6 +3323,8 @@ document.getElementById('ig-cancel').addEventListener('click', ()=>{
   editingIntegracaoId = null;
   document.getElementById('form-integracao').reset();
   toggleIntegracaoCampos();
+  document.getElementById('ig-conta-fusion-nova').style.display = 'none';
+  document.getElementById('ig-conta-isolar-nova').style.display = 'none';
   document.getElementById('ig-submit').textContent = 'Adicionar integração';
   document.getElementById('ig-cancel').style.display = 'none';
 });
@@ -2649,22 +3344,30 @@ document.getElementById('form-integracao').addEventListener('submit', async (e)=
   const plataforma = document.getElementById('ig-plataforma').value;
   const stationId = document.getElementById('ig-station-id').value.trim();
   const eid = document.getElementById('ig-eid').value.trim();
-  const contaFusion = document.getElementById('ig-conta-fusion').value.trim() || 'padrao';
+  const selFusion = document.getElementById('ig-conta-fusion').value;
+  const contaFusion = (selFusion === '__nova__' ? document.getElementById('ig-conta-fusion-nova').value.trim() : selFusion) || 'padrao';
+  const selIsolar = document.getElementById('ig-conta-isolar').value;
+  const contaIsolar = (selIsolar === '__nova__' ? document.getElementById('ig-conta-isolar-nova').value.trim() : selIsolar) || 'padrao';
   if(!codigoUsina || !stationId){ toast('Preencha usina e Station ID.', true); return; }
   if(plataforma === 'apsystems' && !eid){ toast('Preencha o ECU ID para APsystems.', true); return; }
+  if(plataforma === 'fusion' && selFusion === '__nova__' && !contaFusion){ toast('Digite o nome da nova conta FusionSolar.', true); return; }
+  if(plataforma === 'isolar' && selIsolar === '__nova__' && !contaIsolar){ toast('Digite o nome da nova conta iSolarCloud.', true); return; }
 
   const btn = document.getElementById('ig-submit');
   btn.disabled = true;
   try{
     const { error } = await sb.from('integracoes_usina').upsert({
       codigo_usina: codigoUsina, plataforma, station_id: stationId, eid: plataforma==='apsystems' ? eid : null,
-      conta_fusion: plataforma==='fusion' ? contaFusion : null
+      conta_fusion: plataforma==='fusion' ? contaFusion : null,
+      conta_isolar: plataforma==='isolar' ? contaIsolar : null
     }, { onConflict:'codigo_usina,plataforma' });
     throwIfSupabaseError(error, 'Integrações');
     toast(editingIntegracaoId ? 'Integração atualizada.' : 'Integração adicionada.');
     editingIntegracaoId = null;
     e.target.reset();
     toggleIntegracaoCampos();
+    document.getElementById('ig-conta-fusion-nova').style.display = 'none';
+    document.getElementById('ig-conta-isolar-nova').style.display = 'none';
     document.getElementById('ig-submit').textContent = 'Adicionar integração';
     document.getElementById('ig-cancel').style.display = 'none';
     await loadIntegracoes(true);
@@ -2692,13 +3395,15 @@ let FATURAS_USINA = null;
 
 function faturaUsinaRowToObj(row){
   return {
-    id: row.id, codigoUsina: row.codigo_usina, mes: row.mes,
+    id: row.id, codigoUsina: row.codigo_usina, mes: normalizeMes(row.mes),
     arquivoPath: row.arquivo_url,
     energiaInjetadaKwh: row.energia_injetada_kwh!=null ? parseFloat(row.energia_injetada_kwh) : null,
     consumoKwh: row.consumo_kwh!=null ? parseFloat(row.consumo_kwh) : null,
     valorTotal: row.valor_total!=null ? parseFloat(row.valor_total) : null,
     vencimento: row.vencimento || null,
-    proximaLeitura: row.proxima_leitura || null
+    proximaLeitura: row.proxima_leitura || null,
+    leituraAnterior: row.leitura_anterior || null,
+    leituraAtual: row.leitura_atual || null
   };
 }
 async function loadFaturasUsina(force){
@@ -2716,7 +3421,9 @@ async function salvarFaturaUsinaRemote(f){
       codigo_usina: f.codigoUsina, mes: f.mes, arquivo_url: f.arquivoPath,
       energia_injetada_kwh: f.energiaInjetadaKwh, consumo_kwh: f.consumoKwh,
       valor_total: f.valorTotal, vencimento: f.vencimento || null,
-      proxima_leitura: f.proximaLeitura || null, extraido_auto: true
+      proxima_leitura: f.proximaLeitura || null,
+      leitura_anterior: f.leituraAnterior || null, leitura_atual: f.leituraAtual || null,
+      extraido_auto: true
     }, { onConflict:'mes,codigo_usina' });
     throwIfSupabaseError(error, 'Faturas da usina');
     return true;
@@ -2967,6 +3674,8 @@ function faturaRowToObj(row){
     valorTotal: row.valor_total!=null ? parseFloat(row.valor_total) : null,
     vencimento: row.vencimento || null,
     proximaLeitura: row.proxima_leitura || null,
+    leituraAnterior: row.leitura_anterior || null,
+    leituraAtual: row.leitura_atual || null,
     extraidoAuto: !!row.extraido_auto
   };
 }
@@ -2985,7 +3694,9 @@ async function salvarFaturaRemote(f){
       codigo_cliente: f.codigoCliente, mes: f.mes, arquivo_url: f.arquivoPath,
       consumo_kwh: f.consumoKwh, energia_injetada_kwh: f.energiaInjetadaKwh,
       valor_total: f.valorTotal, vencimento: f.vencimento || null,
-      proxima_leitura: f.proximaLeitura || null, extraido_auto: true
+      proxima_leitura: f.proximaLeitura || null,
+      leitura_anterior: f.leituraAnterior || null, leitura_atual: f.leituraAtual || null,
+      extraido_auto: true
     }, { onConflict:'mes,codigo_cliente' });
     throwIfSupabaseError(error, 'Faturas');
     return true;
@@ -3057,7 +3768,7 @@ document.getElementById('fx-extrair').addEventListener('click', async ()=>{
     const { data: sessionData } = await sb.auth.getSession();
     const accessToken = sessionData && sessionData.session ? sessionData.session.access_token : '';
 
-    const res = await fetch(LIVE_STATUS_API, {
+    const res = await fetch(APPS_SCRIPT_API, {
       method:'POST',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify({ op:'extrairFatura', token: accessToken, fileUrl: signedData.signedUrl })
@@ -3070,6 +3781,8 @@ document.getElementById('fx-extrair').addEventListener('click', async ()=>{
     document.getElementById('fx-injetada').value = campos.energiaInjetadaKwh!=null ? campos.energiaInjetadaKwh : '';
     document.getElementById('fx-valor').value = campos.valorTotal!=null ? campos.valorTotal : '';
     document.getElementById('fx-vencimento').value = campos.vencimento || '';
+    document.getElementById('fx-leitura-anterior').value = campos.leituraAnterior || '';
+    document.getElementById('fx-leitura-atual').value = campos.leituraAtual || '';
     faturaUnifExtraida = { tipo, entidade, mes, arquivoPath: path, proximaLeitura: campos.proximaLeitura || null };
     document.getElementById('fx-review').style.display = 'block';
     toast('Dados extraídos — confira antes de salvar.');
@@ -3095,11 +3808,14 @@ document.getElementById('fx-salvar').addEventListener('click', async ()=>{
     const energiaInjetadaKwh = numOrNull(document.getElementById('fx-injetada').value);
     const valorTotal = numOrNull(document.getElementById('fx-valor').value);
     const vencimento = document.getElementById('fx-vencimento').value || null;
+    const leituraAnterior = document.getElementById('fx-leitura-anterior').value || null;
+    const leituraAtual = document.getElementById('fx-leitura-atual').value || null;
     let ok;
     if(faturaUnifExtraida.tipo === 'usina'){
       ok = await salvarFaturaUsinaRemote({
         codigoUsina: faturaUnifExtraida.entidade, mes: faturaUnifExtraida.mes, arquivoPath: faturaUnifExtraida.arquivoPath,
-        energiaInjetadaKwh, consumoKwh, valorTotal, vencimento, proximaLeitura: faturaUnifExtraida.proximaLeitura
+        energiaInjetadaKwh, consumoKwh, valorTotal, vencimento, proximaLeitura: faturaUnifExtraida.proximaLeitura,
+        leituraAnterior, leituraAtual
       });
       if(ok && energiaInjetadaKwh!=null){
         await upsertInjetada([{ mes: faturaUnifExtraida.mes, codigoUsina: faturaUnifExtraida.entidade, kwhInjetado: energiaInjetadaKwh, obs:'Preenchido automaticamente pela conta de energia da usina' }]);
@@ -3111,7 +3827,8 @@ document.getElementById('fx-salvar').addEventListener('click', async ()=>{
     } else {
       ok = await salvarFaturaRemote({
         codigoCliente: faturaUnifExtraida.entidade, mes: faturaUnifExtraida.mes, arquivoPath: faturaUnifExtraida.arquivoPath,
-        consumoKwh, energiaInjetadaKwh, valorTotal, vencimento, proximaLeitura: faturaUnifExtraida.proximaLeitura
+        consumoKwh, energiaInjetadaKwh, valorTotal, vencimento, proximaLeitura: faturaUnifExtraida.proximaLeitura,
+        leituraAnterior, leituraAtual
       });
       if(ok) await loadFaturas(true);
     }
@@ -3148,17 +3865,17 @@ async function renderFaturasUnificadasHistory(){
   const filterTipo = document.getElementById('fxh-tipo').value;
   const filterEnt = document.getElementById('fxh-entidade').value; // "tipo:codigo" ou ""
   const tbody = document.getElementById('fxh-tbody');
-  tbody.innerHTML = `<tr><td colspan="8" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="9" class="loading-row"><span class="spin"></span>carregando…</td></tr>`;
 
   const [faturasCli, faturasUs] = await Promise.all([loadFaturas(), loadFaturasUsina()]);
   let linhas = [];
   if(filterTipo !== 'usina'){
-    linhas = linhas.concat(faturasCli.map(f=>({ tipo:'cliente', codigo:f.codigoCliente, nome:clienteNome(f.codigoCliente), mes:f.mes, consumoKwh:f.consumoKwh, energiaInjetadaKwh:f.energiaInjetadaKwh, valorTotal:f.valorTotal, vencimento:f.vencimento, arquivoPath:f.arquivoPath, id:f.id })));
+    linhas = linhas.concat(faturasCli.map(f=>({ tipo:'cliente', codigo:f.codigoCliente, nome:clienteNome(f.codigoCliente), mes:f.mes, consumoKwh:f.consumoKwh, energiaInjetadaKwh:f.energiaInjetadaKwh, valorTotal:f.valorTotal, vencimento:f.vencimento, leituraAnterior:f.leituraAnterior, leituraAtual:f.leituraAtual, arquivoPath:f.arquivoPath, id:f.id })));
   }
   if(filterTipo !== 'cliente'){
     linhas = linhas.concat(faturasUs.map(f=>{
       const usina = USINAS.find(u=>u.codigo===f.codigoUsina);
-      return { tipo:'usina', codigo:f.codigoUsina, nome:usina?usina.nome:f.codigoUsina, mes:f.mes, consumoKwh:f.consumoKwh, energiaInjetadaKwh:f.energiaInjetadaKwh, valorTotal:f.valorTotal, vencimento:f.vencimento, arquivoPath:f.arquivoPath, id:f.id };
+      return { tipo:'usina', codigo:f.codigoUsina, nome:usina?usina.nome:f.codigoUsina, mes:f.mes, consumoKwh:f.consumoKwh, energiaInjetadaKwh:f.energiaInjetadaKwh, valorTotal:f.valorTotal, vencimento:f.vencimento, leituraAnterior:f.leituraAnterior, leituraAtual:f.leituraAtual, arquivoPath:f.arquivoPath, id:f.id };
     }));
   }
   if(filterEnt){
@@ -3170,7 +3887,7 @@ async function renderFaturasUnificadasHistory(){
   document.getElementById('fx-hist-meta').textContent = linhas.length + ' fatura(s)';
 
   if(!linhas.length){
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty">Nenhuma fatura registrada.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty">Nenhuma fatura registrada.</div></td></tr>`;
     return;
   }
   tbody.innerHTML = linhas.map(f=>`
@@ -3182,6 +3899,7 @@ async function renderFaturasUnificadasHistory(){
       <td class="num">${f.energiaInjetadaKwh!=null ? fmtNum(f.energiaInjetadaKwh) : '—'}</td>
       <td class="num">${f.valorTotal!=null ? fmtBRL(f.valorTotal) : '—'}</td>
       <td>${f.vencimento ? new Date(f.vencimento+'T00:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+      <td class="txt">${f.leituraAnterior && f.leituraAtual ? (new Date(f.leituraAnterior+'T00:00:00').toLocaleDateString('pt-BR') + ' → ' + new Date(f.leituraAtual+'T00:00:00').toLocaleDateString('pt-BR')) : '—'}</td>
       <td><div class="row-actions">
         ${f.arquivoPath ? `<button class="btn-edit-ghost" title="Ver PDF" onclick="verFaturaUnif('${f.tipo}','${f.arquivoPath}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>` : ''}
         <button class="btn-danger-ghost" title="Excluir" onclick="deleteFaturaUnif('${f.tipo}','${f.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16z"/></svg></button>
@@ -3434,10 +4152,9 @@ function compRowToObj(row){
 }
 function compObjToRow(c){
   const detalhe = c.detalhe || [];
-  const total = detalhe.reduce((s,d)=>s+(d.kwh||0),0);
   return {
     mes:c.mes, codigo_cliente:c.codigoCliente,
-    kwh_compensado: total,
+    kwh_compensado: c.kwhCompensado||0,
     credito: (c.credito!=null && c.credito!=='') ? c.credito : null,
     consumo: (c.consumo!=null && c.consumo!=='') ? c.consumo : null,
     usinas: detalhe.map(d=>d.codigo),
@@ -3511,6 +4228,154 @@ function getSelectedClienteUsinas(){
   return Array.from(document.querySelectorAll('#cl-usinas-chips .chip.active')).map(c=>c.dataset.codigo);
 }
 
+/* ============================================================
+   Vista por cliente — master-detail na aba Clientes
+   ============================================================ */
+let CLI_SELECIONADO = null;
+let CLI_MINI_TAB = 'compensacoes';
+
+function renderCliMasterList(){
+  const list = document.getElementById('cli-master-list');
+  const q = (document.getElementById('clf-search').value||'').toLowerCase().trim();
+  const filtrados = CLIENTES.filter(c=>!q||c.nome.toLowerCase().includes(q)||(c.contaContrato||'').includes(q)||(c.codigo||'').toLowerCase().includes(q))
+    .slice().sort((a,b)=>a.nome.localeCompare(b.nome));
+  document.getElementById('clientes-count').textContent = filtrados.length + ' cliente(s)';
+  if(!filtrados.length){
+    list.innerHTML = `<div class="usina-detail-empty">Nenhum cliente encontrado.</div>`;
+    return;
+  }
+  list.innerHTML = filtrados.map(c=>`
+    <div class="cli-master-item${CLI_SELECIONADO===c.codigo?' active':''}" data-codigo="${c.codigo}">
+      <div class="cmi-nome">${escapeHtml(c.nome)}</div>
+      <div class="cmi-sub">${c.contaContrato||c.codigo}${c.usinas&&c.usinas.length?' · '+c.usinas.length+' usina(s)':''}</div>
+    </div>`).join('');
+}
+
+document.getElementById('cli-master-list').addEventListener('click', e=>{
+  const item = e.target.closest('.cli-master-item');
+  if(!item) return;
+  CLI_SELECIONADO = item.dataset.codigo;
+  CLI_MINI_TAB = 'compensacoes';
+  document.querySelectorAll('.cli-master-item').forEach(el=>el.classList.toggle('active', el.dataset.codigo===CLI_SELECIONADO));
+  renderCliDetalhe();
+});
+
+document.getElementById('clf-search').addEventListener('input', renderCliMasterList);
+
+document.getElementById('cli-novo-btn').addEventListener('click', ()=>{
+  const painel = document.getElementById('cli-form-panel');
+  const visivel = painel.style.display !== 'none';
+  if(visivel){ painel.style.display='none'; return; }
+  // garante que está em modo "novo" (não edição)
+  document.getElementById('cl-cancel').click();
+  document.getElementById('cli-form-title').textContent = 'Novo cliente';
+  painel.style.display = '';
+  painel.scrollIntoView({behavior:'smooth', block:'nearest'});
+});
+
+function renderCliDetalhe(){
+  const painel = document.getElementById('cli-detail-panel');
+  const c = CLIENTES.find(cl=>cl.codigo===CLI_SELECIONADO);
+  if(!c){ painel.innerHTML = `<div class="usina-detail-empty">Cliente não encontrado.</div>`; return; }
+
+  const usinasNomes = (c.usinas||[]).map(u=>{ const uu=USINAS.find(x=>x.codigo===u); return uu?uu.nome:u; }).join(', ');
+
+  painel.innerHTML = `
+    <div class="cli-detail-head">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div class="cli-detail-name">${escapeHtml(c.nome)}</div>
+          <div class="cli-detail-meta">Conta ${c.contaContrato||'—'} · Grupo ${c.grupo||'B'} · Tarifa ${c.tarifa ? 'R$ '+fmtNum(c.tarifa)+'/kWh' : '—'}${usinasNomes?' · '+usinasNomes:''}</div>
+        </div>
+        <button type="button" class="btn btn-ghost" style="font-size:12px;" onclick="editarClienteDetalhe('${c.codigo}')">Editar</button>
+      </div>
+    </div>
+    <div class="cli-mini-tabs">
+      <button type="button" class="cli-mini-tab${CLI_MINI_TAB==='compensacoes'?' active':''}" data-tab="compensacoes">Compensações</button>
+      <button type="button" class="cli-mini-tab${CLI_MINI_TAB==='faturas'?' active':''}" data-tab="faturas">Faturas</button>
+      <button type="button" class="cli-mini-tab${CLI_MINI_TAB==='manutencoes'?' active':''}" data-tab="manutencoes">Manutenções</button>
+    </div>
+    <div class="cli-detail-body" id="cli-detail-body"></div>`;
+
+  painel.querySelectorAll('.cli-mini-tab').forEach(btn=>btn.addEventListener('click', ()=>{
+    CLI_MINI_TAB = btn.dataset.tab;
+    painel.querySelectorAll('.cli-mini-tab').forEach(b=>b.classList.toggle('active', b===btn));
+    renderCliDetalheBody();
+  }));
+
+  renderCliDetalheBody();
+}
+
+function renderCliDetalheBody(){
+  if(CLI_MINI_TAB==='compensacoes') renderCliDetalheCompensacoes();
+  else if(CLI_MINI_TAB==='faturas') renderCliDetalheFaturas();
+  else renderCliDetalheManutencoes();
+}
+
+function renderCliDetalheCompensacoes(){
+  const body = document.getElementById('cli-detail-body');
+  if(!body) return;
+  const registros = (COMPENSACOES||[]).filter(c=>c.codigoCliente===CLI_SELECIONADO).slice().sort((a,b)=>b.mes.localeCompare(a.mes));
+  if(!registros.length){ body.innerHTML = `<div class="empty" style="padding:32px 0; text-align:center;">Nenhuma compensação registrada.</div>`; return; }
+  body.innerHTML = `<div class="table-wrap" style="max-height:400px;"><table>
+    <thead><tr><th>Mês</th><th class="num">kWh Comp.</th><th class="num">Consumo</th><th class="num">Crédito</th><th class="num">Economia</th></tr></thead>
+    <tbody>${registros.map(r=>{
+      const cliente = CLIENTES.find(cl=>cl.codigo===CLI_SELECIONADO);
+      const kwh = r.kwhCompensado||0;
+      const eco = cliente ? calcEconomiaCliente(cliente, kwh, 0, 0) : null;
+      return `<tr>
+        <td style="font-family:var(--font-mono);">${r.mes}</td>
+        <td class="num">${kwh!=null?fmtNum(kwh):'—'}</td>
+        <td class="num">${r.consumo!=null?fmtNum(r.consumo):'—'}</td>
+        <td class="num">${r.credito!=null?fmtNum(r.credito):'—'}</td>
+        <td class="num">${eco!=null?fmtBRL(eco):'—'}</td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderCliDetalheFaturas(){
+  const body = document.getElementById('cli-detail-body');
+  if(!body) return;
+  const faturas = (FATURAS||[]).filter(f=>f.codigoCliente===CLI_SELECIONADO).slice().sort((a,b)=>b.mes.localeCompare(a.mes));
+  if(!faturas.length){ body.innerHTML = `<div class="empty" style="padding:32px 0; text-align:center;">Nenhuma fatura registrada.</div>`; return; }
+  body.innerHTML = `<div class="table-wrap" style="max-height:400px;"><table>
+    <thead><tr><th>Mês</th><th class="num">Consumo (kWh)</th><th class="num">Injetada (kWh)</th><th class="num">Valor (R$)</th><th>Vencimento</th><th></th></tr></thead>
+    <tbody>${faturas.map(f=>`<tr>
+      <td style="font-family:var(--font-mono);">${f.mes}</td>
+      <td class="num">${f.consumoKwh!=null?fmtNum(f.consumoKwh):'—'}</td>
+      <td class="num">${f.energiaInjetadaKwh!=null?fmtNum(f.energiaInjetadaKwh):'—'}</td>
+      <td class="num">${f.valorTotal!=null?fmtBRL(f.valorTotal):'—'}</td>
+      <td style="font-family:var(--font-mono); font-size:12px;">${f.vencimento?new Date(f.vencimento+'T00:00:00').toLocaleDateString('pt-BR'):'—'}</td>
+      <td>${f.arquivoPath?`<button class="btn-edit-ghost" onclick="verFaturaUnif('cliente','${f.arquivoPath}')" title="Ver PDF"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>`:''}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderCliDetalheManutencoes(){
+  const body = document.getElementById('cli-detail-body');
+  if(!body) return;
+  const mans = (MANUTENCOES||[]).filter(m=>m.codigoCliente===CLI_SELECIONADO).slice().sort((a,b)=>b.data.localeCompare(a.data));
+  if(!mans.length){ body.innerHTML = `<div class="empty" style="padding:32px 0; text-align:center;">Nenhuma manutenção registrada.</div>`; return; }
+  body.innerHTML = `<div class="table-wrap" style="max-height:400px;"><table>
+    <thead><tr><th>Data</th><th class="txt">Descrição</th><th>Responsável</th></tr></thead>
+    <tbody>${mans.map(m=>`<tr>
+      <td style="font-family:var(--font-mono); font-size:12px; white-space:nowrap;">${new Date(m.data+'T00:00:00').toLocaleDateString('pt-BR')}</td>
+      <td class="txt">${escapeHtml(m.descricao||'—')}</td>
+      <td>${escapeHtml(m.responsavel||'—')}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+window.editarClienteDetalhe = function(codigo){
+  document.getElementById('cli-form-panel').style.display = '';
+  document.getElementById('cli-form-title').textContent = 'Editar cliente';
+  document.getElementById('cli-form-panel').scrollIntoView({behavior:'smooth', block:'nearest'});
+  // dispara o fluxo de edição existente (função startEditCliente deve existir ou equivalente)
+  const btn = document.querySelector(`#clientes-tbody [data-codigo="${codigo}"] .btn-edit-ghost`);
+  if(btn) btn.click();
+};
+
 function renderClientesTable(){
   const tbody = document.getElementById('clientes-tbody');
   const q = (document.getElementById('clf-search').value||'').toLowerCase().trim();
@@ -3571,13 +4436,15 @@ document.getElementById('cl-cancel').addEventListener('click', ()=>{
   renderClienteUsinasChips([]);
   document.getElementById('cl-submit').textContent = 'Adicionar cliente';
   document.getElementById('cl-cancel').style.display = 'none';
+  document.getElementById('cli-form-panel').style.display = 'none';
+  document.getElementById('cli-form-title').textContent = 'Novo cliente';
 });
 window.deleteCliente = async function(codigo){
   if(!confirm('Excluir o cliente ' + codigo + '? O histórico de compensações já lançado será mantido.')) return;
   const prev = CLIENTES;
   CLIENTES = CLIENTES.filter(c=>c.codigo!==codigo);
   const ok = await deleteClienteRemote(codigo);
-  if(ok){ toast('Cliente removido.'); renderClientesTable(); renderCompGrid(); populateClienteFilterSelect(); populateManutencaoClienteSelects(); }
+  if(ok){ toast('Cliente removido.'); renderClientesTable(); renderCliMasterList(); renderCompGrid(); populateClienteFilterSelect(); populateManutencaoClienteSelects(); }
   else CLIENTES = prev;
 };
 document.getElementById('form-cliente').addEventListener('submit', async (e)=>{
@@ -3609,15 +4476,21 @@ document.getElementById('form-cliente').addEventListener('submit', async (e)=>{
     const ok = await upsertCliente(data);
     if(ok){
       toast(editingClienteCodigo ? 'Cliente atualizado.' : 'Cliente cadastrado: ' + data.codigo);
+      const codigoSalvo = data.codigo;
       editingClienteCodigo = null;
       e.target.reset();
       toggleTarifaFieldsByGrupo();
       renderClienteUsinasChips([]);
       document.getElementById('cl-submit').textContent = 'Adicionar cliente';
       document.getElementById('cl-cancel').style.display = 'none';
-      renderClientesTable();
+      document.getElementById('cli-form-panel').style.display = 'none';
+      document.getElementById('cli-form-title').textContent = 'Novo cliente';
+      renderClientesTable(); renderCliMasterList();
       renderCompGrid();
       populateClienteFilterSelect(); populateManutencaoClienteSelects();
+      CLI_SELECIONADO = codigoSalvo; CLI_MINI_TAB = 'compensacoes';
+      document.querySelectorAll('.cli-master-item').forEach(el=>el.classList.toggle('active', el.dataset.codigo===codigoSalvo));
+      renderCliDetalhe();
     }
   }catch(err){
     toast('Erro inesperado ao cadastrar cliente: ' + (err && err.message ? err.message : err), true);
@@ -3717,7 +4590,10 @@ async function renderCompGrid(){
         </div>
         <div class="usina-kwh-list">${kwhListHtml}</div>
       </td>
-      <td class="num"><div class="g-total-display">${fmtNum(totalInicial)}</div></td>
+      <td class="num">
+        <input type="number" class="grid-input g-kwh-compensado" step="0.1" min="0" value="${comp && comp.kwhCompensado!=null ? comp.kwhCompensado : ''}">
+        <div class="g-total-display" title="Soma da injeção por usina lançada ao lado">inj.: ${fmtNum(totalInicial)}</div>
+      </td>
       <td class="num"><input type="number" class="grid-input g-consumo" step="0.1" min="0" value="${comp && comp.consumo!=null ? comp.consumo : ''}"></td>
       <td class="num"><input type="number" class="grid-input g-credito" step="0.1" min="0" value="${comp && comp.credito!=null ? comp.credito : ''}"></td>
       <td><input type="text" class="grid-input obs g-obs" value="${comp?escapeHtml(comp.obs||''):''}"></td>
@@ -3783,7 +4659,7 @@ function syncUsinaKwhList(tr){
 function recalcRowTotal(tr){
   const total = rowTotalFromDom(tr);
   const totalEl = tr.querySelector('.g-total-display');
-  if(totalEl) totalEl.textContent = fmtNum(total);
+  if(totalEl) totalEl.textContent = 'inj.: ' + fmtNum(total);
   updateCompTotals();
 }
 function updateCompTotals(){
@@ -3791,9 +4667,9 @@ function updateCompTotals(){
   let total=0, count=0, all=0;
   tbody.querySelectorAll('tr[data-codigo]').forEach(tr=>{
     all++;
-    const inputs = tr.querySelectorAll('.usina-kwh-row input');
-    const hasValue = Array.from(inputs).some(inp=>inp.value!=='');
-    if(hasValue){ total += rowTotalFromDom(tr); count++; }
+    const input = tr.querySelector('.g-kwh-compensado');
+    const val = input ? parseFloat(input.value) : NaN;
+    if(!isNaN(val)){ total += val; count++; }
   });
   document.getElementById('ct-total').textContent = fmtNum(total) + ' kWh';
   document.getElementById('ct-count').textContent = count + ' / ' + all;
@@ -3847,6 +4723,8 @@ document.getElementById('comp-save').addEventListener('click', async ()=>{
     const credito = isNaN(creditoVal) ? null : creditoVal;
     const consumoVal = parseFloat(tr.querySelector('.g-consumo').value);
     const consumo = isNaN(consumoVal) ? null : consumoVal;
+    const kwhCompensadoVal = parseFloat(tr.querySelector('.g-kwh-compensado').value);
+    const kwhCompensado = isNaN(kwhCompensadoVal) ? null : kwhCompensadoVal;
     const detalhe = [];
     tr.querySelectorAll('.usina-kwh-row').forEach(row=>{
       const cod = row.dataset.codigo;
@@ -3864,9 +4742,9 @@ document.getElementById('comp-save').addEventListener('click', async ()=>{
         detalhe.push({ codigo: cod, kwh: (isNaN(pv)?0:pv) + (isNaN(fv)?0:fv), kwhPonta: isNaN(pv)?0:pv, kwhForaPonta: isNaN(fv)?0:fv });
       }
     });
-    if(!detalhe.length && credito==null && consumo==null){ skipped++; return; }
+    if(!detalhe.length && credito==null && consumo==null && kwhCompensado==null){ skipped++; return; }
 
-    const payload = { mes: month, codigoCliente: cod, detalhe, usinas: detalhe.map(d=>d.codigo), kwhCompensado: detalhe.reduce((s,d)=>s+d.kwh,0), credito, consumo, obs };
+    const payload = { mes: month, codigoCliente: cod, detalhe, usinas: detalhe.map(d=>d.codigo), kwhCompensado: kwhCompensado||0, credito, consumo, obs };
     const existing = byCliente[cod];
     if(existing){
       Object.assign(existing, payload);
@@ -3951,7 +4829,7 @@ document.getElementById('comph-cliente').addEventListener('change', renderCompHi
 /* ============================================================
    Gráficos de Clientes
    ============================================================ */
-const CLIENT_CHART_COLORS = ['#F2703C','#34D9C4','#8B7FE8','#F2555F','#5EC8F2','#E8A87C','#96E6B3','#D4A5E8','#F2D93C','#7FA8E8'];
+const CLIENT_CHART_COLORS = ['#F2703C','#0EA989','#8B7FE8','#E2434F','#5EC8F2','#E8A87C','#96E6B3','#D4A5E8','#F2D93C','#7FA8E8'];
 
 function chartsClientesUnavailable(){
   ['chart-cliente-mensal','chart-cliente-origem'].forEach(id=>{
@@ -3959,7 +4837,7 @@ function chartsClientesUnavailable(){
     if(box.querySelector('.chart-fallback')) return;
     const div = document.createElement('div');
     div.className = 'chart-fallback';
-    div.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5C6672;font-size:12px;text-align:center;padding:20px;';
+    div.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8991A3;font-size:12px;text-align:center;padding:20px;';
     div.textContent = 'Não foi possível carregar a biblioteca de gráficos. Recarregue a página.';
     box.style.position = 'relative';
     box.appendChild(div);
@@ -3974,7 +4852,7 @@ function showEmptyOverlay(box, text){
   clearEmptyOverlay(box);
   const div = document.createElement('div');
   div.className = 'empty-overlay';
-  div.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#5C6672;font-size:12px;text-align:center;padding:20px;background:rgba(20,28,37,0.85);';
+  div.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8991A3;font-size:12px;text-align:center;padding:20px;background:rgba(20,28,37,0.85);';
   div.textContent = text;
   box.style.position = 'relative';
   box.appendChild(div);
@@ -4026,7 +4904,7 @@ async function renderClienteMensalECharts(){
       options:{
         responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{ display:false } },
-        scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#1B2530'}, ticks:{ callback:v=>fmtNum(v) } } }
+        scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#EDEFF3'}, ticks:{ callback:v=>fmtNum(v) } } }
       }
     });
   }
@@ -4088,7 +4966,7 @@ async function renderClienteMensalECharts(){
         plugins:{ legend:{ labels:{ boxWidth:12, boxHeight:12, padding:14 } } },
         scales:{
           x:{ stacked:true, grid:{display:false} },
-          y:{ stacked:true, grid:{color:'#1B2530'}, ticks:{ callback:v=>fmtNum(v) } }
+          y:{ stacked:true, grid:{color:'#EDEFF3'}, ticks:{ callback:v=>fmtNum(v) } }
         }
       }
     });
@@ -4104,21 +4982,42 @@ document.getElementById('gc-refresh').addEventListener('click', renderClientesCh
    Relatório da usina
    ============================================================ */
 function populateRelatorioUsinaSelect(){
-  const sel = document.getElementById('rel-usina');
-  const current = sel.value;
   const opts = USINAS.slice().sort((a,b)=>a.nome.localeCompare(b.nome))
-    .map(u=>`<option value="${u.codigo}">${u.codigo} — ${escapeHtml(u.nome)}</option>`).join('');
-  sel.innerHTML = '<option value="">selecione uma usina…</option>' + opts;
-  if(current) sel.value = current;
+    .map(u=>`<option value="${u.codigo} — ${escapeHtml(u.nome)}">`).join('');
+
+  const input = document.getElementById('rel-usina-busca');
+  const datalist = document.getElementById('rel-usina-opcoes');
+  const current = input.value;
+  datalist.innerHTML = opts;
+  if(current) input.value = current;
+
+  const input2 = document.getElementById('rel-usina2-busca');
+  const datalist2 = document.getElementById('rel-usina2-opcoes');
+  const current2 = input2.value;
+  datalist2.innerHTML = opts;
+  if(current2) input2.value = current2;
+}
+function codigoUsinaSelecionadaRelatorio(){
+  const texto = document.getElementById('rel-usina-busca').value.trim();
+  const codigo = texto.split(' — ')[0].trim();
+  return USINAS.some(u=>u.codigo===codigo) ? codigo : '';
+}
+function codigoUsina2SelecionadaRelatorio(){
+  const texto = document.getElementById('rel-usina2-busca').value.trim();
+  if(!texto) return '';
+  const codigo = texto.split(' — ')[0].trim();
+  return USINAS.some(u=>u.codigo===codigo) ? codigo : '';
 }
 
 let RELATORIO_DATA = null;
 async function renderRelatorio(){
-  const codigo = document.getElementById('rel-usina').value;
+  const codigo = codigoUsinaSelecionadaRelatorio();
+  const codigo2 = codigoUsina2SelecionadaRelatorio();
   const month = document.getElementById('rel-month').value || currentMonth();
   document.getElementById('rel-month').value = month;
 
   const usina = USINAS.find(u=>u.codigo===codigo);
+  const usina2 = codigo2 ? USINAS.find(u=>u.codigo===codigo2) : null;
   if(!usina){
     document.getElementById('rel-empty').style.display = 'block';
     document.getElementById('rel-content').style.display = 'none';
@@ -4130,19 +5029,59 @@ async function renderRelatorio(){
   const monthNum = month.slice(5,7);
   const year = parseInt(month.slice(0,4),10);
   const nDays = daysInMonth(month);
-  const labels = Array.from({length:nDays}, (_,i)=>String(i+1));
-
-  // --- cabeçalho ---
-  document.getElementById('rel-nome').textContent = usina.nome;
-  document.getElementById('rel-periodo').textContent = 'Período de referência: ' + new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'});
-  document.getElementById('rel-gerado-em').textContent = new Date().toLocaleString('pt-BR');
 
   // --- geração, meta, PR ---
-  const entries = await loadMonth(month);
-  const entriesUsina = entries.filter(en=>en.codigo===codigo);
+  // Usa o ciclo de leitura da conta de energia da usina (leitura anterior -> leitura atual)
+  // quando existir uma fatura da usina com esses dados pro mês selecionado; senão, cai pro mês de calendário.
+  // Quando uma segunda usina está selecionada, soma a geração dela no MESMO período resolvido pela usina principal.
+  const faturasUsinaAll = await loadFaturasUsina();
+  const faturaCiclo = faturasUsinaAll.find(f=>f.codigoUsina===codigo && f.mes===month && f.leituraAnterior && f.leituraAtual);
+
+  let entriesUsina, periodoTexto, labels, dailyReal, dailyMetaFlat;
+
+  if(faturaCiclo){
+    const rangeEntries = await loadDateRange(faturaCiclo.leituraAnterior, faturaCiclo.leituraAtual);
+    entriesUsina = rangeEntries.filter(en=>en.codigo===codigo || (usina2 && en.codigo===codigo2));
+    periodoTexto = 'Ciclo de leitura: ' + new Date(faturaCiclo.leituraAnterior+'T00:00:00').toLocaleDateString('pt-BR') + ' a ' + new Date(faturaCiclo.leituraAtual+'T00:00:00').toLocaleDateString('pt-BR');
+
+    const diasCiclo = [];
+    let cursor = new Date(faturaCiclo.leituraAnterior+'T00:00:00');
+    const fimCiclo = new Date(faturaCiclo.leituraAtual+'T00:00:00');
+    while(cursor <= fimCiclo){
+      diasCiclo.push(new Date(cursor));
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate()+1);
+    }
+    labels = diasCiclo.map(d=>String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'));
+    const porData = {};
+    entriesUsina.forEach(en=>{ porData[en.data] = (porData[en.data]||0) + (en.geracaoReal||0); });
+    dailyReal = diasCiclo.map(d=>{
+      const iso = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      return porData[iso] || 0;
+    });
+    const metaTotalCiclo = metaMensal(usina, monthNum) + (usina2 ? metaMensal(usina2, monthNum) : 0);
+    dailyMetaFlat = Array(diasCiclo.length).fill(diasCiclo.length ? metaTotalCiclo/diasCiclo.length : 0);
+  } else {
+    const entries = await loadMonth(month);
+    entriesUsina = entries.filter(en=>en.codigo===codigo || (usina2 && en.codigo===codigo2));
+    periodoTexto = 'Período de referência: ' + new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'});
+
+    labels = Array.from({length:nDays}, (_,i)=>String(i+1));
+    dailyReal = Array(nDays).fill(0);
+    entriesUsina.forEach(en=>{
+      const day = parseInt(en.data.slice(8,10),10) - 1;
+      if(day>=0 && day<nDays) dailyReal[day] += en.geracaoReal||0;
+    });
+    dailyMetaFlat = Array(nDays).fill((metaMensal(usina, monthNum) + (usina2 ? metaMensal(usina2, monthNum) : 0)) / nDays);
+  }
+
   const totalReal = entriesUsina.reduce((s,en)=>s+(en.geracaoReal||0),0);
-  const meta = metaMensalProporcional(usina, month);
+  const meta = metaMensalProporcional(usina, month) + (usina2 ? (metaMensalProporcional(usina2, month)||0) : 0);
   const pr = meta ? (totalReal/meta*100) : null;
+
+  // --- cabeçalho ---
+  document.getElementById('rel-nome').textContent = usina.nome + (usina2 ? ' + ' + usina2.nome : '');
+  document.getElementById('rel-periodo').textContent = periodoTexto;
+  document.getElementById('rel-gerado-em').textContent = new Date().toLocaleString('pt-BR');
 
   document.getElementById('rel-hero-geracao').textContent = fmtNum(totalReal) + ' kWh';
   document.getElementById('rel-kpi-meta').textContent = meta ? fmtNum(meta) : '—';
@@ -4159,13 +5098,7 @@ async function renderRelatorio(){
   document.getElementById('rel-kpi-consumo-interno').textContent = consumoInterno!=null ? fmtNum(consumoInterno) : '—';
 
   // --- gráfico diário ---
-  const dailyReal = Array(nDays).fill(0);
-  entriesUsina.forEach(en=>{
-    const day = parseInt(en.data.slice(8,10),10) - 1;
-    if(day>=0 && day<nDays) dailyReal[day] += en.geracaoReal||0;
-  });
-  const dailyMetaFlat = Array(nDays).fill(metaMensal(usina, monthNum) / nDays);
-  document.getElementById('rel-chart-diario-meta').textContent = new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'});
+  document.getElementById('rel-chart-diario-meta').textContent = faturaCiclo ? periodoTexto : new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'});
 
   if(typeof Chart !== 'undefined'){
     destroyChart('relDiario');
@@ -4174,15 +5107,15 @@ async function renderRelatorio(){
       plugins: (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [],
       data:{ labels, datasets:[
         { label:'Geração real (kWh)', data:dailyReal, backgroundColor:'#F2703C', borderRadius:4,
-          datalabels:{ anchor:'end', align:'top', color:'#EDF0F5', font:{size:9, weight:'bold'}, rotation:-90, formatter:v=>v?fmtNum(v):'' } },
-        { label:'Meta do dia (kWh)', data:dailyMetaFlat, type:'line', borderColor:'#5C6672', borderDash:[5,4], pointRadius:0, borderWidth:2,
+          datalabels:{ anchor:'end', align:'top', color:'#1B2333', font:{size:9, weight:'bold'}, rotation:-90, formatter:v=>v?fmtNum(v):'' } },
+        { label:'Meta do dia (kWh)', data:dailyMetaFlat, type:'line', borderColor:'#8991A3', borderDash:[5,4], pointRadius:0, borderWidth:2,
           datalabels:{ display:false } }
       ]},
       options:{
         responsive:true, maintainAspectRatio:false,
         layout:{ padding:{ top:24 } },
         plugins:{ legend:{ labels:{ boxWidth:12, boxHeight:2, padding:16 } } },
-        scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#1B2530'}, ticks:{ callback:v=>fmtNum(v) } } }
+        scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#EDEFF3'}, ticks:{ callback:v=>fmtNum(v) } } }
       }
     });
   }
@@ -4194,8 +5127,8 @@ async function renderRelatorio(){
   for(const m of MESES){
     const mk = year + '-' + m.n;
     const mEntries = await loadMonth(mk);
-    realByMonth.push(mEntries.filter(en=>en.codigo===codigo).reduce((s,en)=>s+(en.geracaoReal||0),0));
-    expByMonth.push(metaMensal(usina, m.n));
+    realByMonth.push(mEntries.filter(en=>en.codigo===codigo || (usina2 && en.codigo===codigo2)).reduce((s,en)=>s+(en.geracaoReal||0),0));
+    expByMonth.push(metaMensal(usina, m.n) + (usina2 ? metaMensal(usina2, m.n) : 0));
   }
   if(typeof Chart !== 'undefined'){
     destroyChart('relAnual');
@@ -4204,15 +5137,15 @@ async function renderRelatorio(){
       plugins: (typeof ChartDataLabels !== 'undefined') ? [ChartDataLabels] : [],
       data:{ labels: MESES.map(m=>m.l), datasets:[
         { label:'Real (kWh)', data:realByMonth, backgroundColor:'#F2703C', borderRadius:4,
-          datalabels:{ anchor:'end', align:'top', color:'#EDF0F5', font:{size:10, weight:'bold'}, formatter:v=>v?fmtNum(v):'' } },
-        { label:'Esperado (kWh)', data:expByMonth, backgroundColor:'#3A4568', borderRadius:4,
-          datalabels:{ anchor:'end', align:'top', color:'#9CACC9', font:{size:10, weight:'bold'}, formatter:v=>v?fmtNum(v):'' } }
+          datalabels:{ anchor:'end', align:'top', color:'#1B2333', font:{size:10, weight:'bold'}, formatter:v=>v?fmtNum(v):'' } },
+        { label:'Esperado (kWh)', data:expByMonth, backgroundColor:'#E3E6EB', borderRadius:4,
+          datalabels:{ anchor:'end', align:'top', color:'#5B6478', font:{size:10, weight:'bold'}, formatter:v=>v?fmtNum(v):'' } }
       ]},
       options:{
         responsive:true, maintainAspectRatio:false,
         layout:{ padding:{ top:20 } },
         plugins:{ legend:{ labels:{ boxWidth:12, boxHeight:12, padding:16 } } },
-        scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#1B2530'}, ticks:{ callback:v=>fmtNum(v) } } }
+        scales:{ x:{ grid:{display:false} }, y:{ grid:{color:'#EDEFF3'}, ticks:{ callback:v=>fmtNum(v) } } }
       }
     });
   }
@@ -4225,7 +5158,7 @@ async function renderRelatorio(){
 
   const clientesRows = clientesVinculados.map(c=>{
     const registro = compensacoes.find(comp=>comp.mes===month && comp.codigoCliente===c.codigo);
-    const kwh = registro ? (registro.detalhe||[]).filter(d=>d.codigo===codigo).reduce((s,d)=>s+(d.kwh||0),0) : 0;
+    const kwh = registro && registro.kwhCompensado!=null ? registro.kwhCompensado : 0;
     const creditoMes = registro && registro.credito!=null ? registro.credito : null;
     const creditoTotal = compensacoes
       .filter(comp=>comp.codigoCliente===c.codigo && comp.credito!=null)
@@ -4233,9 +5166,17 @@ async function renderRelatorio(){
     const temCredito = compensacoes.some(comp=>comp.codigoCliente===c.codigo && comp.credito!=null);
     const usinaDetalhe = registro ? (registro.detalhe||[]).find(d=>d.codigo===codigo) : null;
     const economia = registro ? calcEconomiaCliente(c, kwh, usinaDetalhe?usinaDetalhe.kwhPonta:0, usinaDetalhe?usinaDetalhe.kwhForaPonta:0) : null;
+    const detalheUsinas = registro ? (registro.detalhe||[]) : [];
+    const detalheMultiplo = detalheUsinas.length > 1
+      ? detalheUsinas.map(d=>{
+          const u = USINAS.find(uu=>uu.codigo===d.codigo);
+          return escapeHtml(u?u.nome:d.codigo) + ': ' + fmtNum(d.kwh||0) + ' kWh';
+        }).join(' · ')
+      : null;
     return {
       nome: c.nome, conta: c.contaContrato||'—',
       compensado: registro ? fmtNum(kwh) : '—',
+      detalheMultiplo,
       consumo: registro && registro.consumo!=null ? fmtNum(registro.consumo) : '—',
       creditoMes: creditoMes!=null ? fmtNum(creditoMes) : '—',
       creditoTotal: temCredito ? fmtNum(creditoTotal) : '—',
@@ -4251,7 +5192,7 @@ async function renderRelatorio(){
       <tr>
         <td class="txt">${escapeHtml(r.nome)}</td>
         <td class="txt">${escapeHtml(r.conta)}</td>
-        <td class="num">${r.compensado}</td>
+        <td class="num">${r.compensado}${r.detalheMultiplo ? `<div class="hint" style="margin:2px 0 0; text-align:right;">${r.detalheMultiplo}</div>` : ''}</td>
         <td class="num">${r.consumo}</td>
         <td class="num">${r.creditoMes}</td>
         <td class="num">${r.creditoTotal}</td>
@@ -4330,7 +5271,7 @@ function exportarRelatorioHTML(){
     <tr>
       <td>${escapeHtml(r.nome)}</td><td>${escapeHtml(r.conta)}</td><td class="num">${r.compensado}</td>
       <td class="num">${r.consumo}</td><td class="num">${r.creditoMes}</td><td class="num">${r.creditoTotal}</td><td class="num">${r.economia}</td>
-    </tr>`).join('') : `<tr><td colspan="7" style="text-align:center; color:#8091b4; padding:20px;">Nenhum cliente vinculado.</td></tr>`;
+    </tr>`).join('') : `<tr><td colspan="7" style="text-align:center; color:#8991A3; padding:20px;">Nenhum cliente vinculado.</td></tr>`;
 
   const manCardsHtml = d.manutencoes.length ? d.manutencoes.map(m=>`
     <div class="man-card">
@@ -4338,37 +5279,37 @@ function exportarRelatorioHTML(){
       <div class="man-cliente">${escapeHtml(m.cliente)}</div>
       <div class="man-desc">${escapeHtml(m.descricao)}</div>
       <div class="man-resp">Responsável: ${escapeHtml(m.responsavel)}</div>
-    </div>`).join('') : `<div style="color:#8091b4;">Nenhuma manutenção registrada neste mês.</div>`;
+    </div>`).join('') : `<div style="color:#8991A3;">Nenhuma manutenção registrada neste mês.</div>`;
 
   const htmlDoc = '<!DOCTYPE html>\n<html lang="pt-BR"><head><meta charset="UTF-8">'
     + '<title>Relatório — ' + escapeHtml(d.usinaNome) + '</title>'
     + '<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>'
     + '<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"><\/script>'
     + '<style>'
-    + 'body{background:#1B2A45; color:#EDF0F5; font-family:Arial,Helvetica,sans-serif; margin:0; padding:32px;}'
-    + 'h1{font-size:26px; margin-bottom:4px;} .sub{color:#9CACC9; font-size:13px; margin-bottom:24px;}'
+    + 'body{background:#F4F5F7; color:#1B2333; font-family:Arial,Helvetica,sans-serif; margin:0; padding:32px;}'
+    + 'h1{font-size:26px; margin-bottom:4px;} .sub{color:#5B6478; font-size:13px; margin-bottom:24px;}'
     + '.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:28px;}'
-    + '.kpi{background:#213353; border:1px solid #3A4F79; border-radius:10px; padding:16px;}'
-    + '.kpi .lbl{font-size:11px; color:#9CACC9; text-transform:uppercase; letter-spacing:0.5px;}'
+    + '.kpi{background:#FFFFFF; border:1px solid #E3E6EB; border-radius:10px; padding:16px;}'
+    + '.kpi .lbl{font-size:11px; color:#5B6478; text-transform:uppercase; letter-spacing:0.5px;}'
     + '.kpi .val{font-size:24px; font-weight:700; margin-top:6px; color:#F2703C;}'
-    + '.kpi .subv{font-size:11px; color:#6376A0; margin-top:4px;}'
-    + '.panel{background:#213353; border:1px solid #3A4F79; border-radius:10px; padding:20px; margin-bottom:24px;}'
+    + '.kpi .subv{font-size:11px; color:#8991A3; margin-top:4px;}'
+    + '.panel{background:#FFFFFF; border:1px solid #E3E6EB; border-radius:10px; padding:20px; margin-bottom:24px;}'
     + '.panel h2{font-size:15px; margin:0 0 14px;} canvas{max-height:340px;}'
     + 'table{width:100%; border-collapse:collapse; font-size:12.5px;}'
-    + 'th,td{padding:8px 10px; text-align:left; border-bottom:1px solid #3A4F79;}'
-    + 'th{color:#9CACC9; font-size:11px; text-transform:uppercase;} .num{text-align:right; font-family:monospace;}'
-    + '.man-card{background:#1B2A45; border:1px solid #3A4F79; border-radius:8px; padding:12px; margin-bottom:10px;}'
+    + 'th,td{padding:8px 10px; text-align:left; border-bottom:1px solid #E3E6EB;}'
+    + 'th{color:#5B6478; font-size:11px; text-transform:uppercase;} .num{text-align:right; font-family:monospace;}'
+    + '.man-card{background:#FFFFFF; border:1px solid #E3E6EB; border-radius:8px; padding:12px; margin-bottom:10px;}'
     + '.man-date{color:#F2703C; font-size:11px; font-family:monospace;} .man-cliente{font-weight:700; margin:4px 0;}'
-    + '.man-desc{color:#9CACC9; font-size:13px;} .man-resp{color:#6376A0; font-size:11px; margin-top:8px;}'
-    + '.footer{text-align:center; color:#6376A0; font-size:11px; padding:20px 0;}'
+    + '.man-desc{color:#5B6478; font-size:13px;} .man-resp{color:#8991A3; font-size:11px; margin-top:8px;}'
+    + '.footer{text-align:center; color:#8991A3; font-size:11px; padding:20px 0;}'
     + '</style></head><body>'
     + '<h1>' + escapeHtml(d.usinaNome) + '</h1>'
     + '<div class="sub">' + escapeHtml(d.periodo) + ' — gerado em ' + escapeHtml(d.geradoEm) + '</div>'
     + '<div class="kpis">'
     + '<div class="kpi"><div class="lbl">Geração no mês</div><div class="val">' + d.kpis.geracao + '</div><div class="subv">kWh gerados</div></div>'
-    + '<div class="kpi"><div class="lbl">Meta no mês</div><div class="val" style="color:#EDF0F5;">' + d.kpis.meta + '</div><div class="subv">' + escapeHtml(d.kpis.metaSub) + '</div></div>'
-    + '<div class="kpi"><div class="lbl">Atingimento</div><div class="val" style="color:#EDF0F5;">' + d.kpis.pr + '</div><div class="subv">performance ratio</div></div>'
-    + '<div class="kpi"><div class="lbl">Energia injetada</div><div class="val" style="color:#34D9C4;">' + d.kpis.injetada + '</div><div class="subv">kWh no mês, na rede</div></div>'
+    + '<div class="kpi"><div class="lbl">Meta no mês</div><div class="val" style="color:#1B2333;">' + d.kpis.meta + '</div><div class="subv">' + escapeHtml(d.kpis.metaSub) + '</div></div>'
+    + '<div class="kpi"><div class="lbl">Atingimento</div><div class="val" style="color:#1B2333;">' + d.kpis.pr + '</div><div class="subv">performance ratio</div></div>'
+    + '<div class="kpi"><div class="lbl">Energia injetada</div><div class="val" style="color:#0EA989;">' + d.kpis.injetada + '</div><div class="subv">kWh no mês, na rede</div></div>'
     + '<div class="kpi"><div class="lbl">Economia total no mês</div><div class="val">' + d.kpis.economiaMes + '</div><div class="subv">soma de todos os clientes desta usina</div></div>'
     + '<div class="kpi"><div class="lbl">Economia total desde o início</div><div class="val">' + d.kpis.economiaTotal + '</div><div class="subv">acumulado desde o funcionamento</div></div>'
     + '</div>'
@@ -4381,13 +5322,13 @@ function exportarRelatorioHTML(){
     + '<div class="footer">Relatório interativo — passe o mouse nos gráficos para ver os valores — SolarSafe</div>'
     + '<script>'
     + 'new Chart(document.getElementById("chartDiario"), { type:"bar", plugins:[ChartDataLabels], data:{ labels:' + JSON.stringify(d.chartDiario.labels) + ', datasets:['
-    + '{ label:"Geração real (kWh)", data:' + JSON.stringify(d.chartDiario.dailyReal) + ', backgroundColor:"#F2703C", borderRadius:4, datalabels:{ anchor:"end", align:"top", color:"#EDF0F5", font:{size:9}, rotation:-90, formatter:v=>v?Math.round(v).toLocaleString("pt-BR"):"" } },'
-    + '{ label:"Meta do dia (kWh)", data:' + JSON.stringify(d.chartDiario.dailyMetaFlat) + ', type:"line", borderColor:"#8091b4", borderDash:[5,4], pointRadius:0, borderWidth:2, datalabels:{ display:false } }'
-    + ']}, options:{ responsive:true, layout:{padding:{top:24}}, plugins:{legend:{labels:{color:"#EDF0F5"}}}, scales:{ x:{ticks:{color:"#9CACC9"}, grid:{display:false}}, y:{ticks:{color:"#9CACC9"}, grid:{color:"#3A4F79"}} } } });'
+    + '{ label:"Geração real (kWh)", data:' + JSON.stringify(d.chartDiario.dailyReal) + ', backgroundColor:"#F2703C", borderRadius:4, datalabels:{ anchor:"end", align:"top", color:"#1B2333", font:{size:9}, rotation:-90, formatter:v=>v?Math.round(v).toLocaleString("pt-BR"):"" } },'
+    + '{ label:"Meta do dia (kWh)", data:' + JSON.stringify(d.chartDiario.dailyMetaFlat) + ', type:"line", borderColor:"#8991A3", borderDash:[5,4], pointRadius:0, borderWidth:2, datalabels:{ display:false } }'
+    + ']}, options:{ responsive:true, layout:{padding:{top:24}}, plugins:{legend:{labels:{color:"#1B2333"}}}, scales:{ x:{ticks:{color:"#5B6478"}, grid:{display:false}}, y:{ticks:{color:"#5B6478"}, grid:{color:"#E3E6EB"}} } } });'
     + 'new Chart(document.getElementById("chartAnual"), { type:"bar", plugins:[ChartDataLabels], data:{ labels:' + JSON.stringify(d.chartAnual.labels) + ', datasets:['
-    + '{ label:"Real (kWh)", data:' + JSON.stringify(d.chartAnual.realByMonth) + ', backgroundColor:"#F2703C", borderRadius:4, datalabels:{ anchor:"end", align:"top", color:"#EDF0F5", font:{size:10}, formatter:v=>v?Math.round(v).toLocaleString("pt-BR"):"" } },'
-    + '{ label:"Esperado (kWh)", data:' + JSON.stringify(d.chartAnual.expByMonth) + ', backgroundColor:"#3A4568", borderRadius:4, datalabels:{ anchor:"end", align:"top", color:"#9CACC9", font:{size:10}, formatter:v=>v?Math.round(v).toLocaleString("pt-BR"):"" } }'
-    + ']}, options:{ responsive:true, layout:{padding:{top:20}}, plugins:{legend:{labels:{color:"#EDF0F5"}}}, scales:{ x:{ticks:{color:"#9CACC9"}, grid:{display:false}}, y:{ticks:{color:"#9CACC9"}, grid:{color:"#3A4F79"}} } } });'
+    + '{ label:"Real (kWh)", data:' + JSON.stringify(d.chartAnual.realByMonth) + ', backgroundColor:"#F2703C", borderRadius:4, datalabels:{ anchor:"end", align:"top", color:"#1B2333", font:{size:10}, formatter:v=>v?Math.round(v).toLocaleString("pt-BR"):"" } },'
+    + '{ label:"Esperado (kWh)", data:' + JSON.stringify(d.chartAnual.expByMonth) + ', backgroundColor:"#E3E6EB", borderRadius:4, datalabels:{ anchor:"end", align:"top", color:"#5B6478", font:{size:10}, formatter:v=>v?Math.round(v).toLocaleString("pt-BR"):"" } }'
+    + ']}, options:{ responsive:true, layout:{padding:{top:20}}, plugins:{legend:{labels:{color:"#1B2333"}}}, scales:{ x:{ticks:{color:"#5B6478"}, grid:{display:false}}, y:{ticks:{color:"#5B6478"}, grid:{color:"#E3E6EB"}} } } });'
     + '<\/script></body></html>';
 
   const blob = new Blob([htmlDoc], {type:'text/html'});
@@ -4401,7 +5342,8 @@ function exportarRelatorioHTML(){
   URL.revokeObjectURL(url);
 }
 
-document.getElementById('rel-usina').addEventListener('change', renderRelatorio);
+document.getElementById('rel-usina-busca').addEventListener('input', renderRelatorio);
+document.getElementById('rel-usina2-busca').addEventListener('input', renderRelatorio);
 document.getElementById('rel-month').addEventListener('change', renderRelatorio);
 document.getElementById('rel-print').addEventListener('click', ()=>window.print());
 window.addEventListener('beforeprint', ()=>{
@@ -4439,7 +5381,7 @@ async function init(){
   try{ populateInjUsinaFilterSelect(); }catch(e){ console.error(e); }
   try{ await renderInjGrid(); }catch(e){ console.error(e); }
   try{ await renderInjHistory(); }catch(e){ console.error(e); }
-  try{ renderClientesTable(); }catch(e){ console.error(e); }
+  try{ renderClientesTable(); renderCliMasterList(); }catch(e){ console.error(e); }
   try{ populateClienteFilterSelect(); populateManutencaoClienteSelects(); }catch(e){ console.error(e); }
   try{ await renderDashboard(); }catch(e){ console.error(e); }
   try{ refreshLiveStatus(); }catch(e){ console.error(e); }
@@ -4450,19 +5392,16 @@ async function init(){
 function applyRolePermissions(){
   if(!AUTH) return;
   document.getElementById('user-name').textContent = AUTH.nome + (AUTH.papel==='Admin' ? ' (admin)' : '');
-  const clientesBtn = document.querySelector('nav.tabs > button[data-view="clientes"]');
-  const faturasBtn = document.querySelector('nav.tabs > button[data-view="faturas"]');
-  const gcBtn = document.querySelector('nav.tabs > button[data-view="graficos-clientes"]');
-  const lancSub = document.querySelector('.tab-dropdown-menu button[data-subview="lancamento"]');
-  const cadSub = document.querySelector('.tab-dropdown-menu button[data-subview="cadastro"]');
-  const usBtn = document.querySelector('nav.tabs > button[data-view="usuarios"]');
   const isAdmin = AUTH.papel === 'Admin';
-  if(clientesBtn) clientesBtn.style.display = isAdmin ? '' : 'none';
-  if(faturasBtn) faturasBtn.style.display = isAdmin ? '' : 'none';
-  if(gcBtn) gcBtn.style.display = isAdmin ? '' : 'none';
-  if(lancSub) lancSub.style.display = isAdmin ? '' : 'none';
-  if(cadSub) cadSub.style.display = isAdmin ? '' : 'none';
-  if(usBtn) usBtn.style.display = isAdmin ? '' : 'none';
+  // Grupos inteiros visíveis só pra Admin
+  const navOperacao = document.getElementById('nav-operacao-dropdown');
+  const navRelatorios = document.getElementById('nav-relatorios-dropdown');
+  const navCadastros = document.getElementById('nav-cadastros-dropdown');
+  const navAdmin = document.querySelector('nav.tabs > button[data-nav="administracao"]');
+  if(navOperacao) navOperacao.style.display = isAdmin ? '' : 'none';
+  if(navRelatorios) navRelatorios.style.display = isAdmin ? '' : 'none';
+  if(navCadastros) navCadastros.style.display = isAdmin ? '' : 'none';
+  if(navAdmin) navAdmin.style.display = isAdmin ? '' : 'none';
 
   document.getElementById('top10-panel').style.display = isAdmin ? '' : 'none';
   document.getElementById('clientes-da-usina-panel').style.display = isAdmin ? 'none' : '';
@@ -4566,6 +5505,20 @@ document.getElementById('popup-atraso-fechar-2').addEventListener('click', fecha
 document.getElementById('popup-atraso-ir').addEventListener('click', ()=>{
   fecharPopupAtraso();
   goToView('faturas');
+});
+
+/* ============================================================
+   Menu lateral dentro das abas com vários painéis
+   ============================================================ */
+document.querySelectorAll('.view-sidebar-nav').forEach(nav=>{
+  nav.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.vsn-item');
+    if(!btn) return;
+    const layout = nav.closest('.view-sidebar-layout');
+    const group = btn.dataset.panelGroup;
+    layout.querySelectorAll('.vsn-item').forEach(b=>b.classList.toggle('active', b===btn));
+    layout.querySelectorAll('.view-sidebar-content').forEach(c=>c.classList.toggle('active', c.dataset.panelGroup===group));
+  });
 });
 
 document.getElementById('login-form').addEventListener('submit', async (e)=>{
