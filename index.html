@@ -5457,8 +5457,10 @@ async function autoSyncHistorico(){
           : '2026-01-01';
         if(dataInicio >= dataFim) continue; // já está em dia
 
-        const url = `${SYNC_HISTORICO_API}?token=${encodeURIComponent(token)}&codigo=${encodeURIComponent(codigo)}&data_inicio=${dataInicio}&data_fim=${dataFim}`;
-        const res = await fetch(url);
+        const url = `${SYNC_HISTORICO_API}?codigo=${encodeURIComponent(codigo)}&data_inicio=${dataInicio}&data_fim=${dataFim}`;
+        const res = await fetch(url, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
         if(!res.ok){ erros.push(`${codigo}: HTTP ${res.status}`); continue; }
         const payload = await res.json();
         if(payload.ok){
