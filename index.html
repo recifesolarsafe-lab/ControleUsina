@@ -1529,6 +1529,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // que precisa de credenciais que não podem ficar expostas no navegador.
 // Edge Function — status ao vivo e listagem de usinas (mais rápido)
 const LIVE_STATUS_API = 'https://vrkibkamnxfxghdgzgcu.supabase.co/functions/v1/live-status';
+const SYNC_HISTORICO_API = 'https://vrkibkamnxfxghdgzgcu.supabase.co/functions/v1/sync-historico';
 // Apps Script — OCR de fatura e outras operações que dependem do Google
 const APPS_SCRIPT_API = 'https://script.google.com/macros/s/AKfycbwzOmUSW3ZJ5U5PV3qo3Ns-VhC40-KcwdZtrdvyJS2DrgDeL37b1rU91e3SXUoOwviv/exec';
 
@@ -1619,7 +1620,7 @@ function nextMonthStr(month){
   return ny + '-' + String(nm).padStart(2,'0') + '-01';
 }
 async function loadMonth(month){
-  if(MONTH_CACHE[month]) return MONTH_CACHE[month];
+  if(MONTH_CACHE[month] !== undefined) return MONTH_CACHE[month];
   try{
     const { data, error } = await sb.from('lancamentos').select('*')
       .gte('data', month+'-01').lt('data', nextMonthStr(month));
@@ -1734,7 +1735,7 @@ function activateSubview(name){
   if(subBtn) subBtn.classList.add('active');
 }
 async function renderSubview(name){
-  if(name === 'dashboard'){ renderDashboard(); refreshLiveStatus(); }
+  if(name === 'dashboard'){ if(BASE_DATA_READY) await BASE_DATA_READY; renderDashboard(); refreshLiveStatus(); }
   if(name === 'lancamento'){ renderGrid(); renderLancTable(); }
   if(name === 'graficos') renderCharts();
   if(name === 'cadastro'){ renderInjGrid(); renderInjHistory(); populateIntegracaoUsinaSelect(); renderIntegracoesTable(); populateRateioUsinaSelect(); renderRateioLinhas(); renderRateioTabela(); }
@@ -2408,9 +2409,30 @@ function setGauge(pct){
   });
   document.getElementById('gauge-text').textContent = isFinite(pct) ? Math.round(pct)+'%' : '—';
 }
+function prevMonthStr(month){
+  const y = parseInt(month.slice(0,4),10), m = parseInt(month.slice(5,7),10);
+  const py = m===1 ? y-1 : y;
+  const pm = m===1 ? 12 : m-1;
+  return py + '-' + String(pm).padStart(2,'0');
+}
+
 async function renderDashboard(){
-  const month = document.getElementById('dash-month').value || currentMonth();
+  let month = document.getElementById('dash-month').value || currentMonth();
   document.getElementById('dash-month').value = month;
+
+  // Se o mês selecionado é o mês atual e não há dados, tenta automaticamente o mês anterior
+  if(month === currentMonth()){
+    const entries0 = await loadMonth(month);
+    if(!entries0.length){
+      const prev = prevMonthStr(month);
+      const entriesPrev = await loadMonth(prev);
+      if(entriesPrev.length){
+        month = prev;
+        document.getElementById('dash-month').value = month;
+      }
+    }
+  }
+
   const monthNum = month.slice(5,7);
   const entries = await loadMonth(month);
   const tbody = document.getElementById('dash-tbody');
@@ -2459,7 +2481,17 @@ async function renderDashboard(){
   const fleetPct = totalMeta ? (totalReal/totalMeta*100) : 0;
   setGauge(fleetPct);
   document.getElementById('gauge-sub').textContent = usinasComDado ? (usinasComDado + ' usina(s) com lançamento') : 'sem dados no mês';
-  document.getElementById('dash-table-meta').textContent = new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'}) + (month === currentMonth() ? ' — meta proporcional aos dias já passados' : '');
+  const nomeDoMes = new Date(month+'-02').toLocaleDateString('pt-BR',{month:'long', year:'numeric'});
+  document.getElementById('dash-table-meta').textContent = nomeDoMes + (month === currentMonth() ? ' — meta proporcional aos dias já passados' : '');
+
+  if(!entries.length){
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty" style="padding:18px 0;">
+      Nenhum lançamento encontrado para <strong>${nomeDoMes}</strong>.<br>
+      <span style="font-size:12px;color:var(--text-faint);">Insira lançamentos de geração na aba <em>Lançamentos</em> para visualizar o desempenho.</span>
+    </div></td></tr>`;
+    renderDashboardRanking(month, monthNum, entries, dashUsinas);
+    return;
+  }
 
   tbody.innerHTML = rows.map(r=>{
     const prClass = r.prAvg==null ? '' : (r.prAvg>=95?'ok':(r.prAvg>=80?'warn':'bad'));
@@ -2474,15 +2506,15 @@ async function renderDashboard(){
     </tr>`;
   }).join('');
 
-  renderDashboardRanking(month, monthNum, entries);
+  renderDashboardRanking(month, monthNum, entries, dashUsinas);
 }
 
-function renderDashboardRanking(month, monthNum, entries){
+function renderDashboardRanking(month, monthNum, entries, dashUsinas){
   if(typeof Chart === 'undefined'){ chartsUnavailable(); return; }
 
   const realByCod = {};
   entries.forEach(en=>{ realByCod[en.codigo] = (realByCod[en.codigo]||0) + (en.geracaoReal||0); });
-  const ranking = USINAS.filter(u=>metaMensalProporcional(u, month)>0).map(u=>{
+  const ranking = (dashUsinas || USINAS).filter(u=>metaMensalProporcional(u, month)>0).map(u=>{
     const meta = metaMensalProporcional(u, month);
     const real = realByCod[u.codigo] || 0;
     return { codigo:u.codigo, nome:u.nome, pct: real/meta*100 };
@@ -2529,7 +2561,13 @@ function renderDashboardRanking(month, monthNum, entries){
   }
 }
 document.getElementById('dash-month').addEventListener('change', ()=>{ renderDashboard(); if(AUTH && AUTH.papel!=='Admin') renderClientesDaUsina(); });
-document.getElementById('dash-refresh').addEventListener('click', ()=>{ renderDashboard(); if(AUTH && AUTH.papel!=='Admin') renderClientesDaUsina(); });
+document.getElementById('dash-refresh').addEventListener('click', ()=>{
+  const month = document.getElementById('dash-month').value || currentMonth();
+  delete MONTH_CACHE[month]; // força reload do banco ao clicar em Atualizar
+  delete MONTH_CACHE[currentMonth()]; // limpa também o mês atual (caso tenha sido auto-trocado)
+  renderDashboard();
+  if(AUTH && AUTH.papel!=='Admin') renderClientesDaUsina();
+});
 document.getElementById('dash-status-chips').addEventListener('click', (e)=>{
   const chip = e.target.closest('.chip');
   if(!chip) return;
@@ -5360,6 +5398,95 @@ window.addEventListener('beforeprint', ()=>{
 });
 
 /* ============================================================
+   Sync histórico automático (chamado em background após login)
+   Para cada usina com integração cadastrada, verifica se há
+   lançamentos desde 2026-01-01. Se não houver (ou o último for
+   anterior a 7 dias), chama sync-historico silenciosamente.
+   ============================================================ */
+async function autoSyncHistorico(){
+  try{
+    if(!AUTH) return;
+    const session = (await sb.auth.getSession()).data.session;
+    if(!session) return;
+    const token = session.access_token;
+
+    // Integracoes já foram carregadas em BASE_DATA_READY
+    const integracoes = INTEGRACOES || [];
+    if(!integracoes.length) return;
+
+    // Obtém o último lançamento por usina (max data)
+    const codigos = [...new Set(integracoes.map(i => i.codigo_usina))];
+    const { data: ultimosLanc } = await sb
+      .from('lancamentos')
+      .select('codigo_usina, data')
+      .in('codigo_usina', codigos)
+      .gte('data', '2026-01-01')
+      .order('data', { ascending: false });
+
+    // Mapeia ultimo lançamento por usina
+    const ultimoPorUsina = {};
+    (ultimosLanc || []).forEach(l => {
+      if(!ultimoPorUsina[l.codigo_usina]) ultimoPorUsina[l.codigo_usina] = l.data;
+    });
+
+    // Ontem como data_fim
+    const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+    const dataFim = ontem.toISOString().slice(0,10);
+
+    // Filtra usinas que precisam de sync
+    const usinasPendentes = codigos.filter(cod => {
+      const ultimo = ultimoPorUsina[cod];
+      if(!ultimo) return true; // sem nenhum lançamento desde 2026 → precisa
+      // Se último lançamento é mais de 7 dias atrás → precisa atualizar
+      const diffMs = new Date(dataFim) - new Date(ultimo);
+      return diffMs > 7 * 24 * 60 * 60 * 1000;
+    });
+
+    if(!usinasPendentes.length) return;
+
+    // Toast sutil de início
+    toast(`Sincronizando histórico de ${usinasPendentes.length} usina(s)…`);
+
+    let totalSalvo = 0;
+    const erros = [];
+
+    for(const codigo of usinasPendentes){
+      try{
+        const dataInicio = ultimoPorUsina[codigo]
+          ? (() => { const d = new Date(ultimoPorUsina[codigo]); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })()
+          : '2026-01-01';
+        if(dataInicio >= dataFim) continue; // já está em dia
+
+        const url = `${SYNC_HISTORICO_API}?token=${encodeURIComponent(token)}&codigo=${encodeURIComponent(codigo)}&data_inicio=${dataInicio}&data_fim=${dataFim}`;
+        const res = await fetch(url);
+        if(!res.ok){ erros.push(`${codigo}: HTTP ${res.status}`); continue; }
+        const payload = await res.json();
+        if(payload.ok){
+          totalSalvo += payload.totalSalvo || 0;
+          // Limpa cache dos meses afetados para forçar recarga
+          if(payload.totalSalvo > 0){
+            // Limpa todo o MONTH_CACHE para garantir que o dashboard vai recarregar
+            for(const k in MONTH_CACHE) delete MONTH_CACHE[k];
+          }
+        } else {
+          erros.push(`${codigo}: ${payload.erro || 'erro desconhecido'}`);
+        }
+      } catch(e){ erros.push(`${codigo}: ${e.message}`); }
+    }
+
+    if(totalSalvo > 0){
+      toast(`Histórico sincronizado: ${totalSalvo} lançamento(s) importado(s).`);
+      // Re-renderiza o dashboard com os novos dados
+      try{ await renderDashboard(); }catch(e){}
+    } else if(erros.length){
+      console.warn('autoSyncHistorico erros:', erros);
+    }
+  }catch(e){
+    console.warn('autoSyncHistorico falhou silenciosamente:', e.message);
+  }
+}
+
+/* ============================================================
    Init
    ============================================================ */
 async function init(){
@@ -5382,6 +5509,9 @@ async function init(){
   // evita que um clique rápido em outra aba (ex: Clientes) renderize com dados ainda vazios
   BASE_DATA_READY = Promise.all([loadUsinas(), loadClientes(), loadIntegracoes()]);
   try{ await BASE_DATA_READY; }catch(e){ console.error(e); }
+
+  // Sync histórico em background — não bloqueia a UI
+  autoSyncHistorico(); // fire-and-forget intencional
 
   try{ populateUsinaSelects(); }catch(e){ console.error(e); }
   try{ renderClienteUsinasChips([]); }catch(e){ console.error(e); }
