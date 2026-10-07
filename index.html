@@ -5459,7 +5459,11 @@ async function autoSyncHistorico(){
 
         const url = `${SYNC_HISTORICO_API}?codigo=${encodeURIComponent(codigo)}&data_inicio=${dataInicio}&data_fim=${dataFim}`;
         const res = await fetch(url, {
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+          headers: {
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'x-user-token': token,
+            'Content-Type': 'application/json'
+          }
         });
         if(!res.ok){ erros.push(`${codigo}: HTTP ${res.status}`); continue; }
         const payload = await res.json();
