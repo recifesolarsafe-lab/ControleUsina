@@ -5457,6 +5457,8 @@ async function autoSyncHistorico(){
           : '2026-01-01';
         if(dataInicio >= dataFim) continue; // já está em dia
 
+        // A Edge Function processa até 3 meses por vez (os mais recentes primeiro)
+        // para evitar rate limit. A cada login avança mais 3 meses para trás até completar.
         const url = `${SYNC_HISTORICO_API}?codigo=${encodeURIComponent(codigo)}&data_inicio=${dataInicio}&data_fim=${dataFim}`;
         const res = await fetch(url, {
           headers: {
@@ -5469,13 +5471,9 @@ async function autoSyncHistorico(){
         const payload = await res.json();
         if(payload.ok){
           totalSalvo += payload.totalSalvo || 0;
-          // Limpa cache dos meses afetados para forçar recarga
-          if(payload.totalSalvo > 0){
-            // Limpa todo o MONTH_CACHE para garantir que o dashboard vai recarregar
-            for(const k in MONTH_CACHE) delete MONTH_CACHE[k];
-          }
+          if(payload.totalSalvo > 0){ for(const k in MONTH_CACHE) delete MONTH_CACHE[k]; }
         } else {
-          erros.push(`${codigo}: ${payload.erro || 'erro desconhecido'}`);
+          erros.push(`${codigo}: ${payload.erro || payload.error || 'erro desconhecido'}`);
         }
       } catch(e){ erros.push(`${codigo}: ${e.message}`); }
     }
