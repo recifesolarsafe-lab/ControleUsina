@@ -5414,19 +5414,21 @@ async function autoSyncHistorico(){
     const integracoes = INTEGRACOES || [];
     if(!integracoes.length) return;
 
-    // Obtém o último lançamento por usina (max data)
+    // Obtém o último lançamento por usina (max data) — inclui geracao_real e obs para detectar zeros
     const codigos = [...new Set(integracoes.map(i => i.codigo_usina))];
     const { data: ultimosLanc } = await sb
       .from('lancamentos')
-      .select('codigo_usina, data')
+      .select('codigo_usina, data, geracao_real, obs')
       .in('codigo_usina', codigos)
       .gte('data', '2026-01-01')
       .order('data', { ascending: false });
 
-    // Mapeia ultimo lançamento por usina
+    // Mapeia ultimo lançamento por usina (data + flag de dado válido)
     const ultimoPorUsina = {};
+    const temDadoRealPorUsina = {}; // true se existe pelo menos 1 lançamento com geracao_real > 0
     (ultimosLanc || []).forEach(l => {
       if(!ultimoPorUsina[l.codigo_usina]) ultimoPorUsina[l.codigo_usina] = l.data;
+      if((l.geracao_real||0) > 0) temDadoRealPorUsina[l.codigo_usina] = true;
     });
 
     // Ontem como data_fim
@@ -5437,6 +5439,8 @@ async function autoSyncHistorico(){
     const usinasPendentes = codigos.filter(cod => {
       const ultimo = ultimoPorUsina[cod];
       if(!ultimo) return true; // sem nenhum lançamento desde 2026 → precisa
+      // Se não tem nenhum dado real (só zeros/placeholders) → força re-sync
+      if(!temDadoRealPorUsina[cod]) return true;
       // Se último lançamento é mais de 7 dias atrás → precisa atualizar
       const diffMs = new Date(dataFim) - new Date(ultimo);
       return diffMs > 7 * 24 * 60 * 60 * 1000;
