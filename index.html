@@ -1046,7 +1046,12 @@ Usina Solar Serra Alta; 4800; BA; Operação"></textarea>
     </div>
 
     <div class="panel">
-      <div class="panel-title">Integrações cadastradas<small id="ig-count"></small></div>
+      <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Integrações cadastradas<small id="ig-count"></small></span>
+        <button id="btn-sync-historico" class="btn-sm" onclick="syncHistoricoManual()" style="font-size:12px;padding:4px 10px;">
+          ⟳ Sincronizar Histórico
+        </button>
+      </div>
       <div class="table-wrap" style="max-height:420px;">
         <table>
           <thead><tr><th>Usina</th><th>Plataforma</th><th>Station ID</th><th>ECU ID</th><th></th></tr></thead>
@@ -5403,25 +5408,35 @@ window.addEventListener('beforeprint', ()=>{
    lançamentos desde 2026-01-01. Se não houver (ou o último for
    anterior a 7 dias), chama sync-historico silenciosamente.
    ============================================================ */
-async function autoSyncHistorico(){
+async function autoSyncHistorico(forcarTodas = false){
+  console.log('[autoSyncHistorico] iniciando... (forcarTodas=' + forcarTodas + ')');
   try{
-    if(!AUTH) return;
-    const session = (await sb.auth.getSession()).data.session;
-    if(!session) return;
+    if(!AUTH){ console.warn('[autoSyncHistorico] abortado: AUTH falso'); return; }
+    const sessionRes = await sb.auth.getSession();
+    const session = sessionRes.data.session;
+    if(!session){ console.warn('[autoSyncHistorico] abortado: sem sessão ativa'); return; }
     const token = session.access_token;
+    console.log('[autoSyncHistorico] sessão OK, user:', session.user?.email);
 
-    // Integracoes já foram carregadas em BASE_DATA_READY
+    // Aguarda BASE_DATA_READY caso ainda esteja carregando
+    if(BASE_DATA_READY) try{ await BASE_DATA_READY; }catch(e){}
+
     const integracoes = INTEGRACOES || [];
-    if(!integracoes.length) return;
+    console.log('[autoSyncHistorico] INTEGRACOES:', integracoes.length, 'registros');
+    if(!integracoes.length){ console.warn('[autoSyncHistorico] abortado: INTEGRACOES vazio'); return; }
 
     // Obtém o último lançamento por usina (max data) — inclui geracao_real e obs para detectar zeros
     const codigos = [...new Set(integracoes.map(i => i.codigo_usina))];
-    const { data: ultimosLanc } = await sb
+    console.log('[autoSyncHistorico] codigos com integração:', codigos);
+
+    const { data: ultimosLanc, error: lancErr } = await sb
       .from('lancamentos')
       .select('codigo_usina, data, geracao_real, obs')
       .in('codigo_usina', codigos)
       .gte('data', '2026-01-01')
       .order('data', { ascending: false });
+
+    if(lancErr) console.warn('[autoSyncHistorico] erro ao buscar lancamentos:', lancErr);
 
     // Mapeia ultimo lançamento por usina (data + flag de dado válido)
     const ultimoPorUsina = {};
@@ -5430,13 +5445,14 @@ async function autoSyncHistorico(){
       if(!ultimoPorUsina[l.codigo_usina]) ultimoPorUsina[l.codigo_usina] = l.data;
       if((l.geracao_real||0) > 0) temDadoRealPorUsina[l.codigo_usina] = true;
     });
+    console.log('[autoSyncHistorico] ultimoPorUsina:', ultimoPorUsina);
 
     // Ontem como data_fim
     const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
     const dataFim = ontem.toISOString().slice(0,10);
 
     // Filtra usinas que precisam de sync
-    const usinasPendentes = codigos.filter(cod => {
+    const usinasPendentes = forcarTodas ? codigos : codigos.filter(cod => {
       const ultimo = ultimoPorUsina[cod];
       if(!ultimo) return true; // sem nenhum lançamento desde 2026 → precisa
       // Se não tem nenhum dado real (só zeros/placeholders) → força re-sync
@@ -5446,7 +5462,8 @@ async function autoSyncHistorico(){
       return diffMs > 7 * 24 * 60 * 60 * 1000;
     });
 
-    if(!usinasPendentes.length) return;
+    console.log('[autoSyncHistorico] usinas pendentes:', usinasPendentes);
+    if(!usinasPendentes.length){ console.log('[autoSyncHistorico] nenhuma usina pendente, saindo.'); return; }
 
     // Toast sutil de início
     toast(`Sincronizando histórico de ${usinasPendentes.length} usina(s)…`);
@@ -5456,14 +5473,13 @@ async function autoSyncHistorico(){
 
     for(const codigo of usinasPendentes){
       try{
-        const dataInicio = ultimoPorUsina[codigo]
+        const dataInicio = (!forcarTodas && ultimoPorUsina[codigo])
           ? (() => { const d = new Date(ultimoPorUsina[codigo]); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })()
           : '2026-01-01';
-        if(dataInicio >= dataFim) continue; // já está em dia
+        if(dataInicio >= dataFim){ console.log('[autoSyncHistorico]', codigo, 'já em dia (dataInicio='+dataInicio+')'); continue; }
 
-        // A Edge Function processa até 3 meses por vez (os mais recentes primeiro)
-        // para evitar rate limit. A cada login avança mais 3 meses para trás até completar.
         const url = `${SYNC_HISTORICO_API}?codigo=${encodeURIComponent(codigo)}&data_inicio=${dataInicio}&data_fim=${dataFim}`;
+        console.log('[autoSyncHistorico] chamando Edge Function:', url);
         const res = await fetch(url, {
           headers: {
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
@@ -5471,15 +5487,25 @@ async function autoSyncHistorico(){
             'Content-Type': 'application/json'
           }
         });
-        if(!res.ok){ erros.push(`${codigo}: HTTP ${res.status}`); continue; }
+        console.log('[autoSyncHistorico]', codigo, 'HTTP', res.status);
+        if(!res.ok){
+          const errBody = await res.text().catch(()=>'');
+          console.error('[autoSyncHistorico]', codigo, 'HTTP', res.status, errBody);
+          erros.push(`${codigo}: HTTP ${res.status}`);
+          continue;
+        }
         const payload = await res.json();
+        console.log('[autoSyncHistorico]', codigo, 'resposta:', payload);
         if(payload.ok){
           totalSalvo += payload.totalSalvo || 0;
           if(payload.totalSalvo > 0){ for(const k in MONTH_CACHE) delete MONTH_CACHE[k]; }
         } else {
           erros.push(`${codigo}: ${payload.erro || payload.error || 'erro desconhecido'}`);
         }
-      } catch(e){ erros.push(`${codigo}: ${e.message}`); }
+      } catch(e){
+        console.error('[autoSyncHistorico]', codigo, 'exception:', e);
+        erros.push(`${codigo}: ${e.message}`);
+      }
     }
 
     if(totalSalvo > 0){
@@ -5487,12 +5513,28 @@ async function autoSyncHistorico(){
       // Re-renderiza o dashboard com os novos dados
       try{ await renderDashboard(); }catch(e){}
     } else if(erros.length){
-      console.warn('autoSyncHistorico erros:', erros);
+      console.warn('[autoSyncHistorico] erros:', erros);
+      toast('Sync erros: ' + erros.slice(0,2).join(' | '), true);
+    } else {
+      console.log('[autoSyncHistorico] sync concluído, 0 novos lançamentos.');
     }
   }catch(e){
-    console.warn('autoSyncHistorico falhou silenciosamente:', e.message);
+    console.error('[autoSyncHistorico] falhou:', e);
   }
 }
+
+/* ============================================================
+   Sync histórico manual (botão na aba de Integrações)
+   ============================================================ */
+window.syncHistoricoManual = async function(){
+  const btn = document.getElementById('btn-sync-historico');
+  if(btn){ btn.disabled = true; btn.textContent = '⟳ Sincronizando…'; }
+  try{
+    await autoSyncHistorico(true); // forcarTodas=true
+  } finally {
+    if(btn){ btn.disabled = false; btn.textContent = '⟳ Sincronizar Histórico'; }
+  }
+};
 
 /* ============================================================
    Init
