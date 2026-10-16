@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-16m
+// Supabase Edge Function: sync-historico  v2026-10-16n
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -678,6 +678,8 @@ serve(async (req) => {
       const loginToken = loginBody.result_data?.token || null
       debugInfo.login_token_found = !!loginToken
       debugInfo.login_token_len   = String(loginToken || '').length
+      // Expõe o token diretamente para testes (sem truncar)
+      if (loginToken) debugInfo.login_token = loginToken
 
       // Passo 1b: tenta trocar user token por OAuth2 access_token via getToken
       if (loginToken) {
@@ -691,17 +693,17 @@ serve(async (req) => {
         debugInfo.gettoken_code   = getTokenBody.result_code
         debugInfo.gettoken_msg    = getTokenBody.result_msg
         debugInfo.gettoken_data_keys = Object.keys(getTokenBody.result_data || {})
-        debugInfo.gettoken_full   = JSON.stringify(getTokenBody).slice(0, 400)
+        debugInfo.gettoken_full   = JSON.stringify(getTokenBody)
       }
 
-      // Passo 2: se login OK, testa chamada de dados com token no BODY (não como Bearer)
+      // Passo 2: se login OK, testa chamada de dados
       if (loginToken && psId) {
         const [y, m] = mes.split('-').map(Number)
         const daysInMonth = new Date(y, m, 0).getDate()
         const startTime = mes.replace('-', '') + '01'
         const endTime   = mes.replace('-', '') + String(daysInMonth).padStart(2, '0')
 
-        // Variante A: token no body (conforme documentação original)
+        // Variante A: /platform/ com token no body
         const dataPayloadA = { token: loginToken, appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
         const dataResA = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
           method: 'POST',
@@ -709,11 +711,11 @@ serve(async (req) => {
           body: JSON.stringify(dataPayloadA),
         })
         const dataBodyA = await dataResA.json().catch(() => ({}))
-        debugInfo.data_tokenInBody_status = dataResA.status
-        debugInfo.data_tokenInBody_code   = dataBodyA.result_code
-        debugInfo.data_tokenInBody_msg    = dataBodyA.result_msg || dataBodyA.error_description
+        debugInfo.data_platform_tokenInBody_status = dataResA.status
+        debugInfo.data_platform_tokenInBody_code   = dataBodyA.result_code
+        debugInfo.data_platform_tokenInBody_msg    = dataBodyA.result_msg || dataBodyA.error_description
 
-        // Variante B: token como Bearer + x-access-key no header
+        // Variante B: /platform/ com token como Bearer
         const dataPayloadB = { appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
         const dataResB = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
           method: 'POST',
@@ -725,12 +727,32 @@ serve(async (req) => {
           body: JSON.stringify(dataPayloadB),
         })
         const dataBodyB = await dataResB.json().catch(() => ({}))
-        debugInfo.data_tokenBearer_status = dataResB.status
-        debugInfo.data_tokenBearer_code   = dataBodyB.result_code
-        debugInfo.data_tokenBearer_msg    = dataBodyB.result_msg || dataBodyB.error_description
-        debugInfo.data_tokenBearer_sample = dataBodyB.result_code === '1'
+        debugInfo.data_platform_tokenBearer_status = dataResB.status
+        debugInfo.data_platform_tokenBearer_code   = dataBodyB.result_code
+        debugInfo.data_platform_tokenBearer_msg    = dataBodyB.result_msg || dataBodyB.error_description
+        debugInfo.data_platform_tokenBearer_sample = dataBodyB.result_code === '1'
           ? JSON.stringify(dataBodyB.result_data).slice(0, 300)
           : JSON.stringify(dataBodyB).slice(0, 300)
+
+        // Variante C: endpoint /api/ (sem platform) com token no body — API legada
+        const dataPayloadC = { token: loginToken, appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
+        const dataResC = await fetch(`${ISOLAR_BASE}/api/getPowerStationPointDayMonthYearDataList`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-key': accessKey,
+            'sys_code': '901',
+            'lang': '_en_US',
+          },
+          body: JSON.stringify(dataPayloadC),
+        })
+        const dataBodyC = await dataResC.json().catch(() => ({}))
+        debugInfo.data_api_tokenInBody_status = dataResC.status
+        debugInfo.data_api_tokenInBody_code   = dataBodyC.result_code
+        debugInfo.data_api_tokenInBody_msg    = dataBodyC.result_msg || dataBodyC.error_description
+        debugInfo.data_api_tokenInBody_sample = dataBodyC.result_code === '1'
+          ? JSON.stringify(dataBodyC.result_data).slice(0, 300)
+          : JSON.stringify(dataBodyC).slice(0, 300)
       }
       return json({ ok: true, debug: debugInfo })
     } catch (e: any) {
