@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-16g
+// Supabase Edge Function: sync-historico  v2026-10-16h
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -552,7 +552,7 @@ async function salvarLancamentos(sb: ReturnType<typeof createClient>, codigo: st
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() })
 
-  console.log('[sync-historico] versão v2026-10-16g — isolar OAuth2 x-access-key fix')
+  console.log('[sync-historico] versão v2026-10-16h — debug token prefix')
 
   const url = new URL(req.url)
 
@@ -569,7 +569,10 @@ serve(async (req) => {
       const debugInfo: any = {
         conta,
         appkey_len: appkey.length,
+        appkey_prefix: appkey.slice(0, 8),
         refresh_token_len: refreshTok.length,
+        refresh_token_prefix: refreshTok.slice(0, 8),
+        refresh_token_suffix: refreshTok.slice(-4),
         endpoint_refresh: `${ISOLAR_BASE}/apiManage/refreshToken`,
       }
 
@@ -585,9 +588,10 @@ serve(async (req) => {
         body: JSON.stringify({ appkey, refresh_token: refreshTok }),
       })
       const refreshBody = await refreshRes.json()
-      debugInfo.refresh_status     = refreshRes.status
+      debugInfo.refresh_status      = refreshRes.status
       debugInfo.refresh_result_code = refreshBody.result_code
       debugInfo.refresh_result_msg  = refreshBody.result_msg
+      debugInfo.refresh_full_body   = JSON.stringify(refreshBody).slice(0, 500)
       debugInfo.refresh_data_keys   = Object.keys(refreshBody.result_data || {})
       const accessToken = refreshBody.result_data?.access_token || null
       debugInfo.access_token_found  = !!accessToken
