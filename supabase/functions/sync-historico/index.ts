@@ -351,24 +351,36 @@ async function fusionMonthly(stationCode: string, conta: string, yearMonth: stri
 
 // ─── iSolarCloud — histórico diário ──────────────────────────
 //
-// ─── iSolarCloud: login por usuário/senha com cache de sessão ─────────────────
-// Igual ao FusionSolar — credenciais estáticas nos secrets, nunca expiram.
-// Env vars: ISOLAR_USER_<conta>, ISOLAR_PASS_<conta>, ISOLAR_APPKEY_<conta>
-// Sessão cacheada por 20min na tabela cache_sessoes (mesma do FusionSolar).
+// Autenticação iSolarCloud (API Solarman/Sungrow):
+//   POST /openapi/login
+//   Headers: sys_code=901, lang=_en_US, x-access-key=<ISOLAR_ACCESS_KEY>
+//   Body: { appkey, user_account, user_password }
+//   Resposta: result_data.token  ← token de sessão
+//
+// Requisições subsequentes:
+//   Headers: sys_code=901, lang=_en_US, x-access-key=<ISOLAR_ACCESS_KEY>
+//   Body: { token, appkey, ...params }   ← token NO BODY, não no header
+//
+// Env vars:
+//   ISOLAR_APPKEY        — App Key registrado no portal developer
+//   ISOLAR_ACCESS_KEY    — Access Key pessoal (header x-access-key)
+//   ISOLAR_USER          — e-mail do usuário
+//   ISOLAR_PASS / ISOLAR_PASSWORD — senha
+// Sessão cacheada por 20min na tabela cache_sessoes.
 
-async function isolarLoginComCache(conta: string): Promise<{ accessToken: string; appkey: string }> {
-  const suffix  = conta === 'padrao' ? '' : '_' + conta
-  // ISOLAR_ACCESS_KEY é o appkey real registrado no portal developer.isolarcloud.com
-  // ISOLAR_APPKEY é um fallback (pode ter sido configurado com valor errado)
-  const appkey  = Deno.env.get('ISOLAR_ACCESS_KEY' + suffix)
-             || Deno.env.get('ISOLAR_APPKEY'       + suffix)!
-  const usuario = Deno.env.get('ISOLAR_USER'    + suffix)!
-  const senha   = Deno.env.get('ISOLAR_PASS'    + suffix)
-             || Deno.env.get('ISOLAR_PASSWORD'  + suffix)!
+async function isolarLoginComCache(conta: string): Promise<{ token: string; appkey: string; accessKey: string }> {
+  const suffix    = conta === 'padrao' ? '' : '_' + conta
+  const appkey    = Deno.env.get('ISOLAR_APPKEY'      + suffix)!
+  const accessKey = Deno.env.get('ISOLAR_ACCESS_KEY'  + suffix)!
+  const usuario   = Deno.env.get('ISOLAR_USER'        + suffix)!
+  const senha     = Deno.env.get('ISOLAR_PASS'        + suffix)
+               || Deno.env.get('ISOLAR_PASSWORD'     + suffix)!
+  if (!appkey)   throw new Error(`iSolarCloud: ISOLAR_APPKEY${suffix} não configurado`)
+  if (!accessKey) throw new Error(`iSolarCloud: ISOLAR_ACCESS_KEY${suffix} não configurado`)
   if (!usuario || !senha) throw new Error(`iSolarCloud: ISOLAR_USER${suffix} / ISOLAR_PASS${suffix} não configurados`)
 
-  const sbAdmin   = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-  const cacheKey  = `isolar_session_${conta}`
+  const sbAdmin  = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+  const cacheKey = `isolar_session_${conta}`
 
   // Tenta cache
   const { data: cached } = await sbAdmin
@@ -380,28 +392,30 @@ async function isolarLoginComCache(conta: string): Promise<{ accessToken: string
     const idadeSeg = (Date.now() - new Date(cached.criado_em).getTime()) / 1000
     if (idadeSeg < 1200) {
       console.log(`[iSolarCloud] sessão cacheada para conta="${conta}" (${Math.round(idadeSeg)}s)`)
-      return cached.dados as { accessToken: string; appkey: string }
+      return cached.dados as { token: string; appkey: string; accessKey: string }
     }
   }
 
-  console.log(`[iSolarCloud] fazendo login para conta="${conta}", user=${usuario}`)
-  const res = await fetch(`${ISOLAR_BASE}/userService/login`, {
+  console.log(`[iSolarCloud] login para conta="${conta}", user=${usuario}, appkey_prefix=${appkey.slice(0,8)}`)
+  const res = await fetch(`${ISOLAR_BASE}/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-access-key': appkey,
+      'sys_code': '901',
+      'lang': '_en_US',
+      'x-access-key': accessKey,
     },
-    body: JSON.stringify({ appkey, user_id: usuario, user_password: senha }),
+    body: JSON.stringify({ appkey, user_account: usuario, user_password: senha }),
   })
   const body = await res.json()
   console.log(`[iSolarCloud] login result_code=${body.result_code} msg=${body.result_msg}`)
   console.log(`[iSolarCloud] login result_data keys: ${Object.keys(body.result_data || {}).join(', ')}`)
   if (body.result_code !== '1') throw new Error('iSolarCloud login: ' + JSON.stringify(body))
 
-  const accessToken = body.result_data?.token || body.result_data?.access_token
-  if (!accessToken) throw new Error('iSolarCloud login: token ausente em ' + JSON.stringify(body.result_data))
+  const token = body.result_data?.token
+  if (!token) throw new Error('iSolarCloud login: token ausente em ' + JSON.stringify(body.result_data))
 
-  const session = { accessToken, appkey }
+  const session = { token, appkey, accessKey }
   await sbAdmin.from('cache_sessoes').upsert(
     { chave: cacheKey, dados: session, criado_em: new Date().toISOString() },
     { onConflict: 'chave' }
@@ -410,16 +424,18 @@ async function isolarLoginComCache(conta: string): Promise<{ accessToken: string
   return session
 }
 
-async function isolarPlatformRequest(path: string, payload: object, session: { accessToken: string; appkey: string }) {
+async function isolarPlatformRequest(path: string, payload: object, session: { token: string; appkey: string; accessKey: string }) {
   console.log(`[iSolarCloud] platform request ${path}`)
   const res = await fetch(`${ISOLAR_BASE}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.accessToken}`,
-      'x-access-key': session.appkey,
+      'sys_code': '901',
+      'lang': '_en_US',
+      'x-access-key': session.accessKey,
     },
-    body: JSON.stringify({ appkey: session.appkey, ...payload }),
+    // token e appkey vão no BODY (não no header Authorization)
+    body: JSON.stringify({ token: session.token, appkey: session.appkey, ...payload }),
   })
   const body = await res.json()
   console.log(`[iSolarCloud] response ${path}: result_code=${body.result_code} msg=${body.result_msg || body.error_description}`)
@@ -554,62 +570,49 @@ serve(async (req) => {
     const psId   = url.searchParams.get('ps_id')  || ''
     const mes    = url.searchParams.get('mes')     || '2026-09'
     try {
-      const suffix       = conta === 'padrao' ? '' : '_' + conta
-      const appkey       = Deno.env.get('ISOLAR_ACCESS_KEY' + suffix)
-                        || Deno.env.get('ISOLAR_APPKEY'     + suffix) || ''
-      const usuario      = Deno.env.get('ISOLAR_USER'       + suffix) || ''
-      const senha        = Deno.env.get('ISOLAR_PASS'       + suffix)
-                        || Deno.env.get('ISOLAR_PASSWORD'   + suffix) || ''
-      const refreshToken = Deno.env.get('ISOLAR_REFRESH_TOKEN' + suffix) || ''
+      const suffix    = conta === 'padrao' ? '' : '_' + conta
+      const appkey    = Deno.env.get('ISOLAR_APPKEY'      + suffix) || ''
+      const accessKey = Deno.env.get('ISOLAR_ACCESS_KEY'  + suffix) || ''
+      const usuario   = Deno.env.get('ISOLAR_USER'        + suffix) || ''
+      const senha     = Deno.env.get('ISOLAR_PASS'        + suffix)
+                     || Deno.env.get('ISOLAR_PASSWORD'   + suffix) || ''
       const debugInfo: any = {
         conta,
         appkey_len: appkey.length,
+        access_key_len: accessKey.length,
         usuario,
-        has_refresh_token: !!refreshToken,
-        refresh_token_preview: refreshToken ? refreshToken.slice(0, 20) + '...' : null,
+        endpoint: `${ISOLAR_BASE}/login`,
       }
 
-      // Método A: login por username/password
-      const loginRes = await fetch(`${ISOLAR_BASE}/userService/login`, {
+      // Login usando o endpoint e headers corretos da API Solarman/iSolarCloud
+      const loginRes = await fetch(`${ISOLAR_BASE}/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-access-key': appkey },
-        body: JSON.stringify({ appkey, user_id: usuario, user_password: senha }),
+        headers: {
+          'Content-Type': 'application/json',
+          'sys_code': '901',
+          'lang': '_en_US',
+          'x-access-key': accessKey,
+        },
+        body: JSON.stringify({ appkey, user_account: usuario, user_password: senha }),
       })
       const loginBody = await loginRes.json()
-      const tokenFromLogin = loginBody.result_data?.token || loginBody.result_data?.access_token || null
+      const token = loginBody.result_data?.token || null
+      debugInfo.login_status      = loginRes.status
       debugInfo.login_result_code = loginBody.result_code
       debugInfo.login_result_msg  = loginBody.result_msg
-      debugInfo.login_token_found = !!tokenFromLogin
+      debugInfo.login_result_data_keys = Object.keys(loginBody.result_data || {})
+      debugInfo.token_found       = !!token
 
-      // Método B: OAuth2 refresh_token
-      let tokenFromOAuth: string | null = null
-      if (refreshToken) {
-        const rfRes = await fetch(`${ISOLAR_BASE}/apiManage/refreshToken`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-access-key': appkey },
-          body: JSON.stringify({ appkey, refresh_token: refreshToken }),
-        })
-        const rfBody = await rfRes.json()
-        tokenFromOAuth = rfBody.result_data?.access_token || null
-        debugInfo.oauth_result_code = rfBody.result_code
-        debugInfo.oauth_result_msg  = rfBody.result_msg
-        debugInfo.oauth_token_found = !!tokenFromOAuth
-        debugInfo.oauth_result_data_keys = Object.keys(rfBody.result_data || {})
-      }
-
-      // Usar o primeiro token que funcionou
-      const accessToken = tokenFromLogin || tokenFromOAuth
-
-      // Passo 2: buscar dados se ps_id fornecido e algum token funcionou
-      if (accessToken && psId) {
+      // Buscar dados se login OK e ps_id fornecido
+      if (token && psId) {
         const [y, m] = mes.split('-').map(Number)
         const daysInMonth = new Date(y, m, 0).getDate()
         const startTime = mes.replace('-', '') + '01'
         const endTime   = mes.replace('-', '') + String(daysInMonth).padStart(2, '0')
         const dataRes = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}`, 'x-access-key': appkey },
-          body: JSON.stringify({ appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }),
+          headers: { 'Content-Type': 'application/json', 'sys_code': '901', 'lang': '_en_US', 'x-access-key': accessKey },
+          body: JSON.stringify({ token, appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }),
         })
         const dataBody = await dataRes.json()
         debugInfo.data_result_code  = dataBody.result_code
