@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-16a
+// Supabase Edge Function: sync-historico  v2026-10-16b
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -362,12 +362,43 @@ async function fusionMonthly(stationCode: string, conta: string, yearMonth: stri
 //   Acesse https://developer-api.isolarcloud.com.hk, faça login, autorize o app,
 //   copie o refresh_token da resposta e salve como env var ISOLAR_REFRESH_TOKEN.
 
+// ─── iSolarCloud: tokens auto-renováveis via tabela isolar_tokens ─────────────
+//
+// A tabela isolar_tokens tem: conta (PK), appkey, refresh_token, access_token,
+//   updated_at. A Edge Function:
+//   1. Lê refresh_token da tabela (fallback: env var ISOLAR_REFRESH_TOKEN_<conta>)
+//   2. Chama /refreshToken → obtém access_token (+ novo refresh_token se vier)
+//   3. Salva de volta na tabela para a próxima chamada
+//   Assim o token nunca expira enquanto o sistema rodar pelo menos 1x por mês.
+
 async function isolarOAuth2Token(conta: string): Promise<{ accessToken: string; appkey: string }> {
   const suffix = conta === 'padrao' ? '' : '_' + conta
-  const appkey       = Deno.env.get('ISOLAR_APPKEY' + suffix)!
-  const refreshToken = Deno.env.get('ISOLAR_REFRESH_TOKEN' + suffix)!
-  if (!refreshToken) throw new Error(`iSolarCloud: ISOLAR_REFRESH_TOKEN${suffix} não configurado`)
-  console.log(`[iSolarCloud] refreshToken para conta="${conta}", appkey=${appkey?.slice(0,8)}...`)
+  const appkeyEnv = Deno.env.get('ISOLAR_APPKEY' + suffix)!
+
+  // 1. Tenta ler token da tabela isolar_tokens
+  const sbAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+  let refreshToken: string | null = null
+  let appkey: string = appkeyEnv
+
+  const { data: tokenRow, error: tokenErr } = await sbAdmin
+    .from('isolar_tokens')
+    .select('appkey, refresh_token')
+    .eq('conta', conta)
+    .single()
+
+  if (tokenRow && !tokenErr) {
+    refreshToken = tokenRow.refresh_token
+    if (tokenRow.appkey) appkey = tokenRow.appkey
+    console.log(`[iSolarCloud] token lido da tabela para conta="${conta}"`)
+  } else {
+    // Fallback: env var (para primeira execução antes de criar a tabela)
+    refreshToken = Deno.env.get('ISOLAR_REFRESH_TOKEN' + suffix) || null
+    console.log(`[iSolarCloud] token lido do env para conta="${conta}" (tabela vazia ou ausente)`)
+  }
+
+  if (!refreshToken) throw new Error(`iSolarCloud: refresh_token não encontrado para conta="${conta}". Configure na tabela isolar_tokens ou no secret ISOLAR_REFRESH_TOKEN${suffix}.`)
+
+  console.log(`[iSolarCloud] chamando refreshToken para conta="${conta}", appkey=${appkey?.slice(0,8)}...`)
   const res = await fetch(`${ISOLAR_BASE}/apiManage/refreshToken`, {
     method: 'POST',
     headers: {
@@ -378,9 +409,31 @@ async function isolarOAuth2Token(conta: string): Promise<{ accessToken: string; 
   })
   const body = await res.json()
   console.log(`[iSolarCloud] refreshToken result_code=${body.result_code} msg=${body.result_msg}`)
+  console.log(`[iSolarCloud] result_data keys: ${Object.keys(body.result_data || {}).join(', ')}`)
   if (body.result_code !== '1') throw new Error('iSolarCloud refreshToken: ' + JSON.stringify(body))
+
   const accessToken = body.result_data?.access_token
   if (!accessToken) throw new Error('iSolarCloud refreshToken: access_token ausente em ' + JSON.stringify(body.result_data))
+
+  // 2. Salva de volta na tabela — atualiza refresh_token se a API retornou um novo
+  const newRefreshToken: string = body.result_data?.refresh_token || refreshToken
+  const upsertData: Record<string, string> = {
+    conta,
+    appkey,
+    refresh_token: newRefreshToken,
+    access_token: accessToken,
+    updated_at: new Date().toISOString(),
+  }
+  const { error: upsertErr } = await sbAdmin
+    .from('isolar_tokens')
+    .upsert(upsertData, { onConflict: 'conta' })
+  if (upsertErr) {
+    console.warn(`[iSolarCloud] aviso: falhou ao salvar token na tabela: ${upsertErr.message}`)
+  } else {
+    const rotou = newRefreshToken !== refreshToken ? ' (refresh_token rotacionado!)' : ''
+    console.log(`[iSolarCloud] token salvo na tabela para conta="${conta}"${rotou}`)
+  }
+
   console.log(`[iSolarCloud] access_token obtido: ${String(accessToken).slice(0,20)}...`)
   return { accessToken, appkey }
 }
