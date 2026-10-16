@@ -554,30 +554,53 @@ serve(async (req) => {
     const psId   = url.searchParams.get('ps_id')  || ''
     const mes    = url.searchParams.get('mes')     || '2026-09'
     try {
-      // Passo 1: login
-      const suffix   = conta === 'padrao' ? '' : '_' + conta
-      const appkey   = Deno.env.get('ISOLAR_ACCESS_KEY' + suffix)
-                    || Deno.env.get('ISOLAR_APPKEY'     + suffix) || ''
-      const usuario  = Deno.env.get('ISOLAR_USER'   + suffix) || ''
-      const senha    = Deno.env.get('ISOLAR_PASS'   + suffix)
-                    || Deno.env.get('ISOLAR_PASSWORD' + suffix) || ''
+      const suffix       = conta === 'padrao' ? '' : '_' + conta
+      const appkey       = Deno.env.get('ISOLAR_ACCESS_KEY' + suffix)
+                        || Deno.env.get('ISOLAR_APPKEY'     + suffix) || ''
+      const usuario      = Deno.env.get('ISOLAR_USER'       + suffix) || ''
+      const senha        = Deno.env.get('ISOLAR_PASS'       + suffix)
+                        || Deno.env.get('ISOLAR_PASSWORD'   + suffix) || ''
+      const refreshToken = Deno.env.get('ISOLAR_REFRESH_TOKEN' + suffix) || ''
+      const debugInfo: any = {
+        conta,
+        appkey_len: appkey.length,
+        usuario,
+        has_refresh_token: !!refreshToken,
+        refresh_token_preview: refreshToken ? refreshToken.slice(0, 20) + '...' : null,
+      }
+
+      // Método A: login por username/password
       const loginRes = await fetch(`${ISOLAR_BASE}/userService/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-access-key': appkey },
         body: JSON.stringify({ appkey, user_id: usuario, user_password: senha }),
       })
       const loginBody = await loginRes.json()
-      const accessToken = loginBody.result_data?.token || loginBody.result_data?.access_token || null
-      const debugInfo: any = {
-        conta, appkey_len: appkey.length, usuario,
-        login_status: loginRes.status,
-        login_result_code: loginBody.result_code,
-        login_result_msg:  loginBody.result_msg,
-        login_result_data_keys: Object.keys(loginBody.result_data || {}),
-        token_found: !!accessToken,
+      const tokenFromLogin = loginBody.result_data?.token || loginBody.result_data?.access_token || null
+      debugInfo.login_result_code = loginBody.result_code
+      debugInfo.login_result_msg  = loginBody.result_msg
+      debugInfo.login_token_found = !!tokenFromLogin
+
+      // Método B: OAuth2 refresh_token
+      let tokenFromOAuth: string | null = null
+      if (refreshToken) {
+        const rfRes = await fetch(`${ISOLAR_BASE}/apiManage/refreshToken`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-access-key': appkey },
+          body: JSON.stringify({ appkey, refresh_token: refreshToken }),
+        })
+        const rfBody = await rfRes.json()
+        tokenFromOAuth = rfBody.result_data?.access_token || null
+        debugInfo.oauth_result_code = rfBody.result_code
+        debugInfo.oauth_result_msg  = rfBody.result_msg
+        debugInfo.oauth_token_found = !!tokenFromOAuth
+        debugInfo.oauth_result_data_keys = Object.keys(rfBody.result_data || {})
       }
 
-      // Passo 2: buscar dados se login OK e ps_id fornecido
+      // Usar o primeiro token que funcionou
+      const accessToken = tokenFromLogin || tokenFromOAuth
+
+      // Passo 2: buscar dados se ps_id fornecido e algum token funcionou
       if (accessToken && psId) {
         const [y, m] = mes.split('-').map(Number)
         const daysInMonth = new Date(y, m, 0).getDate()
@@ -585,42 +608,13 @@ serve(async (req) => {
         const endTime   = mes.replace('-', '') + String(daysInMonth).padStart(2, '0')
         const dataRes = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-            'x-access-key': appkey,
-          },
-          body: JSON.stringify({
-            appkey,
-            query_type: 'day',
-            data_type:  '2',
-            data_point: 'p83022',
-            start_time: startTime,
-            end_time:   endTime,
-            order:      0,
-            ps_id_list: [String(psId)],
-          }),
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}`, 'x-access-key': appkey },
+          body: JSON.stringify({ appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }),
         })
         const dataBody = await dataRes.json()
-        debugInfo.data_status       = dataRes.status
         debugInfo.data_result_code  = dataBody.result_code
         debugInfo.data_result_msg   = dataBody.result_msg || dataBody.error_description
         debugInfo.data_result_data  = JSON.stringify(dataBody.result_data).slice(0, 1000)
-        // Tentar também sem Authorization Bearer, só com x-access-key + token no body
-        const dataRes2 = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-access-key': appkey },
-          body: JSON.stringify({
-            appkey, token: accessToken,
-            query_type: 'day', data_type: '2', data_point: 'p83022',
-            start_time: startTime, end_time: endTime, order: 0,
-            ps_id_list: [String(psId)],
-          }),
-        })
-        const dataBody2 = await dataRes2.json()
-        debugInfo.data2_result_code  = dataBody2.result_code
-        debugInfo.data2_result_msg   = dataBody2.result_msg
-        debugInfo.data2_result_data  = JSON.stringify(dataBody2.result_data).slice(0, 1000)
       }
       return json({ ok: true, debug: debugInfo })
     } catch (e: any) {
