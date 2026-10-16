@@ -609,14 +609,20 @@ serve(async (req) => {
         const daysInMonth = new Date(y, m, 0).getDate()
         const startTime = mes.replace('-', '') + '01'
         const endTime   = mes.replace('-', '') + String(daysInMonth).padStart(2, '0')
+        const dataPayload = { token, appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
+        debugInfo.data_payload_token_len = String(token || '').length
         const dataRes = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'sys_code': '901', 'lang': '_en_US', 'x-access-key': accessKey },
-          body: JSON.stringify({ token, appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }),
+          body: JSON.stringify(dataPayload),
         })
-        const dataBody = await dataRes.json()
+        const dataBodyRaw = await dataRes.text()
+        let dataBody: any = {}
+        try { dataBody = JSON.parse(dataBodyRaw) } catch { dataBody = { raw: dataBodyRaw.slice(0, 500) } }
+        debugInfo.data_status       = dataRes.status
         debugInfo.data_result_code  = dataBody.result_code
         debugInfo.data_result_msg   = dataBody.result_msg || dataBody.error_description
+        debugInfo.data_full_keys    = Object.keys(dataBody)
         debugInfo.data_result_data  = JSON.stringify(dataBody.result_data ?? null).slice(0, 1000)
       }
       return json({ ok: true, debug: debugInfo })
