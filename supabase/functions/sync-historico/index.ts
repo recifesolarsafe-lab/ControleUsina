@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-16i
+// Supabase Edge Function: sync-historico  v2026-10-16j
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -373,10 +373,13 @@ async function fusionMonthly(stationCode: string, conta: string, yearMonth: stri
 
 async function isolarOAuth2Token(conta: string): Promise<{ accessToken: string; appkey: string }> {
   const suffix   = conta === 'padrao' ? '' : '_' + conta
-  const appkey   = Deno.env.get('ISOLAR_APPKEY'         + suffix) || ''
+  // ISOLAR_ACCESS_KEY é o appkey real registrado no portal developer.isolarcloud.com
+  // ISOLAR_APPKEY é fallback (pode ter sido configurado com valor incorreto em alguns ambientes)
+  const appkey   = Deno.env.get('ISOLAR_ACCESS_KEY'     + suffix)
+               || Deno.env.get('ISOLAR_APPKEY'          + suffix) || ''
   const refreshToken = Deno.env.get('ISOLAR_REFRESH_TOKEN' + suffix) || ''
 
-  if (!appkey)       throw new Error(`iSolarCloud: ISOLAR_APPKEY${suffix} não configurado`)
+  if (!appkey)       throw new Error(`iSolarCloud: ISOLAR_ACCESS_KEY${suffix} não configurado`)
   if (!refreshToken) throw new Error(`iSolarCloud: ISOLAR_REFRESH_TOKEN${suffix} não configurado`)
 
   const sbAdmin  = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
@@ -552,7 +555,7 @@ async function salvarLancamentos(sb: ReturnType<typeof createClient>, codigo: st
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() })
 
-  console.log('[sync-historico] versão v2026-10-16i — debug login bearer test')
+  console.log('[sync-historico] versão v2026-10-16j — fix: usa ISOLAR_ACCESS_KEY como appkey real')
 
   const url = new URL(req.url)
 
@@ -564,12 +567,15 @@ serve(async (req) => {
     const mes    = url.searchParams.get('mes')     || '2026-09'
     try {
       const suffix      = conta === 'padrao' ? '' : '_' + conta
-      const appkey      = Deno.env.get('ISOLAR_APPKEY'         + suffix) || ''
+      const appkey      = Deno.env.get('ISOLAR_ACCESS_KEY'     + suffix)
+                       || Deno.env.get('ISOLAR_APPKEY'         + suffix) || ''
       const refreshTok  = Deno.env.get('ISOLAR_REFRESH_TOKEN'  + suffix) || ''
       const debugInfo: any = {
         conta,
         appkey_len: appkey.length,
         appkey_prefix: appkey.slice(0, 8),
+        access_key_configured: !!(Deno.env.get('ISOLAR_ACCESS_KEY' + suffix)),
+        appkey_configured:     !!(Deno.env.get('ISOLAR_APPKEY'     + suffix)),
         refresh_token_len: refreshTok.length,
         refresh_token_prefix: refreshTok.slice(0, 8),
         refresh_token_suffix: refreshTok.slice(-4),
@@ -635,13 +641,17 @@ serve(async (req) => {
     const mes    = url.searchParams.get('mes')     || '2026-09'
     try {
       const suffix   = conta === 'padrao' ? '' : '_' + conta
-      const appkey   = Deno.env.get('ISOLAR_APPKEY'    + suffix) || ''
+      const appkey   = Deno.env.get('ISOLAR_ACCESS_KEY' + suffix)
+                    || Deno.env.get('ISOLAR_APPKEY'     + suffix) || ''
       const usuario  = Deno.env.get('ISOLAR_USER'      + suffix) || ''
-      const senha    = Deno.env.get('ISOLAR_PASSWORD'  + suffix) || ''
+      const senha    = Deno.env.get('ISOLAR_PASS'      + suffix)
+                    || Deno.env.get('ISOLAR_PASSWORD'  + suffix) || ''
       const debugInfo: any = {
         conta,
         appkey_len: appkey.length,
         appkey_prefix: appkey.slice(0, 8),
+        access_key_configured: !!(Deno.env.get('ISOLAR_ACCESS_KEY' + suffix)),
+        appkey_configured:     !!(Deno.env.get('ISOLAR_APPKEY'     + suffix)),
         usuario_configured: !!usuario,
         senha_configured: !!senha,
       }
