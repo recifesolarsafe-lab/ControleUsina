@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-15f
+// Supabase Edge Function: sync-historico  v2026-10-15i
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -350,30 +350,50 @@ async function fusionMonthly(stationCode: string, conta: string, yearMonth: stri
 }
 
 // ─── iSolarCloud — histórico diário ──────────────────────────
+//
+// Autenticação: OAuth2 com refresh_token
+// Fluxo:
+//   1. Usar refresh_token (env ISOLAR_REFRESH_TOKEN / ISOLAR_REFRESH_TOKEN_<conta>)
+//      para obter access_token via POST /openapi/apiManage/refreshToken
+//   2. Passar access_token no header: Authorization: Bearer <access_token>
+//   3. Passar appkey no body (obrigatório em todas as chamadas de plataforma)
+//
+// Para obter o refresh_token inicial:
+//   Acesse https://developer-api.isolarcloud.com.hk, faça login, autorize o app,
+//   copie o refresh_token da resposta e salve como env var ISOLAR_REFRESH_TOKEN.
 
-async function isolarLogin(conta: string) {
+async function isolarOAuth2Token(conta: string): Promise<{ accessToken: string; appkey: string }> {
   const suffix = conta === 'padrao' ? '' : '_' + conta
-  const appkey = Deno.env.get('ISOLAR_APPKEY' + suffix)!
-  const accessKey = Deno.env.get('ISOLAR_ACCESS_KEY' + suffix)!
-  const userAccount = Deno.env.get('ISOLAR_USER' + suffix)!
-  const userPassword = Deno.env.get('ISOLAR_PASSWORD' + suffix)!
-  const res = await fetch(`${ISOLAR_BASE}/login`, {
+  const appkey       = Deno.env.get('ISOLAR_APPKEY' + suffix)!
+  const refreshToken = Deno.env.get('ISOLAR_REFRESH_TOKEN' + suffix)!
+  if (!refreshToken) throw new Error(`iSolarCloud: ISOLAR_REFRESH_TOKEN${suffix} não configurado`)
+  console.log(`[iSolarCloud] refreshToken para conta="${conta}", appkey=${appkey?.slice(0,8)}...`)
+  const res = await fetch(`${ISOLAR_BASE}/apiManage/refreshToken`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'sys_code': '901', 'lang': '_en_US', 'x-access-key': accessKey },
-    body: JSON.stringify({ appkey, user_account: userAccount, user_password: userPassword }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ appkey, refresh_token: refreshToken }),
   })
   const body = await res.json()
-  if (body.result_code !== '1') throw new Error('iSolarCloud login: ' + JSON.stringify(body))
-  return { token: body.result_data.token, appkey, accessKey }
+  console.log(`[iSolarCloud] refreshToken result_code=${body.result_code} msg=${body.result_msg}`)
+  if (body.result_code !== '1') throw new Error('iSolarCloud refreshToken: ' + JSON.stringify(body))
+  const accessToken = body.result_data?.access_token
+  if (!accessToken) throw new Error('iSolarCloud refreshToken: access_token ausente em ' + JSON.stringify(body.result_data))
+  console.log(`[iSolarCloud] access_token obtido: ${String(accessToken).slice(0,20)}...`)
+  return { accessToken, appkey }
 }
 
-async function isolarRequest(path: string, payload: object, session: { token: string; appkey: string; accessKey: string }) {
+async function isolarPlatformRequest(path: string, payload: object, session: { accessToken: string; appkey: string }) {
+  console.log(`[iSolarCloud] platform request ${path}`)
   const res = await fetch(`${ISOLAR_BASE}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'sys_code': '901', 'lang': '_en_US', 'x-access-key': session.accessKey },
-    body: JSON.stringify({ token: session.token, appkey: session.appkey, ...payload }),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.accessToken}`,
+    },
+    body: JSON.stringify({ appkey: session.appkey, ...payload }),
   })
   const body = await res.json()
+  console.log(`[iSolarCloud] response ${path}: result_code=${body.result_code} msg=${body.result_msg || body.error_description}`)
   if (body.result_code !== '1') throw new Error('iSolarCloud: ' + JSON.stringify(body))
   return body.result_data
 }
@@ -382,14 +402,14 @@ async function isolarRequest(path: string, payload: object, session: { token: st
 // Endpoint: /platform/getPowerStationPointDayMonthYearDataList
 // p83022 = Daily Plant Yield (Wh) — data_type=2 (Peak/Total for daily)
 async function isolarMonthly(psId: string, conta: string, yearMonth: string): Promise<Map<string, number>> {
-  const session = await isolarLogin(conta)
-  console.log(`[iSolarCloud] login ok, buscando psId=${psId} yearMonth=${yearMonth}`)
+  const session = await isolarOAuth2Token(conta)
+  console.log(`[iSolarCloud] token ok, buscando psId=${psId} yearMonth=${yearMonth}`)
   const [y, m] = yearMonth.split('-').map(Number)
   const daysInMonth = new Date(y, m, 0).getDate()
   const startTime = yearMonth.replace('-', '') + '01'            // yyyyMMdd
   const endTime   = yearMonth.replace('-', '') + String(daysInMonth).padStart(2, '0')
   console.log(`[iSolarCloud] getPowerStationPointDayMonthYearDataList psId=${psId} ${startTime}→${endTime}`)
-  const data = await isolarRequest('/platform/getPowerStationPointDayMonthYearDataList', {
+  const data = await isolarPlatformRequest('/platform/getPowerStationPointDayMonthYearDataList', {
     query_type:  'day',
     data_type:   '2',          // Peak (for daily generation)
     data_point:  'p83022',     // Plant daily yield (Wh)
@@ -400,7 +420,7 @@ async function isolarMonthly(psId: string, conta: string, yearMonth: string): Pr
   }, session)
   console.log(`[iSolarCloud] resposta: ${JSON.stringify(data).slice(0, 400)}`)
   const result = new Map<string, number>()
-  // Response: result_data[ps_id].p83022 = [{data_type: "2", time_stamp: "20240823"}, ...]
+  // Response: result_data[ps_id].p83022 = [{data_type: "2", time_stamp: "20240823", "2": "12345"}, ...]
   const psData = data?.[String(psId)] || data?.[psId]
   const entries = psData?.p83022 || []
   for (const entry of entries) {
