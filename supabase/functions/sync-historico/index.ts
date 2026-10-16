@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-16e
+// Supabase Edge Function: sync-historico  v2026-10-16f
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -351,38 +351,38 @@ async function fusionMonthly(stationCode: string, conta: string, yearMonth: stri
 
 // ─── iSolarCloud — histórico diário ──────────────────────────
 //
-// Autenticação iSolarCloud (API Solarman/Sungrow):
-//   POST /openapi/login
-//   Headers: sys_code=901, lang=_en_US, x-access-key=<ISOLAR_ACCESS_KEY>
-//   Body: { appkey, user_account, user_password }
-//   Resposta: result_data.token  ← token de sessão
+// Autenticação iSolarCloud (API OAuth2 para endpoints /platform/):
 //
-// Requisições subsequentes:
-//   Headers: sys_code=901, lang=_en_US, x-access-key=<ISOLAR_ACCESS_KEY>
-//   Body: { token, appkey, ...params }   ← token NO BODY, não no header
+//   PASSO 1 — Obter access_token:
+//     POST /openapi/apiManage/refreshToken
+//     Body: { appkey, refresh_token }
+//     Resposta: result_data.access_token, result_data.refresh_token (novo, se rotacionado)
+//
+//   PASSO 2 — Chamadas de dados:
+//     POST /openapi/platform/...
+//     Header: Authorization: Bearer <access_token>
+//     Body: { appkey, ...params }   ← SEM token no body
 //
 // Env vars:
-//   ISOLAR_APPKEY        — App Key registrado no portal developer
-//   ISOLAR_ACCESS_KEY    — Access Key pessoal (header x-access-key)
-//   ISOLAR_USER          — e-mail do usuário
-//   ISOLAR_PASS / ISOLAR_PASSWORD — senha
-// Sessão cacheada por 20min na tabela cache_sessoes.
+//   ISOLAR_APPKEY            — App Key registrado no portal developer
+//   ISOLAR_REFRESH_TOKEN     — Refresh token OAuth2 (obtido uma vez no portal)
+// (sufixo _<conta> para contas adicionais)
+//
+// O access_token é cacheado na tabela cache_sessoes por 55min (expira em 60min).
+// O refresh_token é salvo de volta se a API retornar um novo (rotação).
 
-async function isolarLoginComCache(conta: string): Promise<{ token: string; appkey: string; accessKey: string }> {
-  const suffix    = conta === 'padrao' ? '' : '_' + conta
-  const appkey    = Deno.env.get('ISOLAR_APPKEY'      + suffix)!
-  const accessKey = Deno.env.get('ISOLAR_ACCESS_KEY'  + suffix)!
-  const usuario   = Deno.env.get('ISOLAR_USER'        + suffix)!
-  const senha     = Deno.env.get('ISOLAR_PASS'        + suffix)
-               || Deno.env.get('ISOLAR_PASSWORD'     + suffix)!
-  if (!appkey)   throw new Error(`iSolarCloud: ISOLAR_APPKEY${suffix} não configurado`)
-  if (!accessKey) throw new Error(`iSolarCloud: ISOLAR_ACCESS_KEY${suffix} não configurado`)
-  if (!usuario || !senha) throw new Error(`iSolarCloud: ISOLAR_USER${suffix} / ISOLAR_PASS${suffix} não configurados`)
+async function isolarOAuth2Token(conta: string): Promise<{ accessToken: string; appkey: string }> {
+  const suffix   = conta === 'padrao' ? '' : '_' + conta
+  const appkey   = Deno.env.get('ISOLAR_APPKEY'         + suffix) || ''
+  const refreshToken = Deno.env.get('ISOLAR_REFRESH_TOKEN' + suffix) || ''
+
+  if (!appkey)       throw new Error(`iSolarCloud: ISOLAR_APPKEY${suffix} não configurado`)
+  if (!refreshToken) throw new Error(`iSolarCloud: ISOLAR_REFRESH_TOKEN${suffix} não configurado`)
 
   const sbAdmin  = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-  const cacheKey = `isolar_session_${conta}`
+  const cacheKey = `isolar_access_${conta}`
 
-  // Tenta cache
+  // Tenta usar access_token cacheado (validade 55min, expira em 60min)
   const { data: cached } = await sbAdmin
     .from('cache_sessoes')
     .select('dados, criado_em')
@@ -390,52 +390,45 @@ async function isolarLoginComCache(conta: string): Promise<{ token: string; appk
     .single()
   if (cached) {
     const idadeSeg = (Date.now() - new Date(cached.criado_em).getTime()) / 1000
-    if (idadeSeg < 1200) {
-      console.log(`[iSolarCloud] sessão cacheada para conta="${conta}" (${Math.round(idadeSeg)}s)`)
-      return cached.dados as { token: string; appkey: string; accessKey: string }
+    if (idadeSeg < 3300) {  // 55 minutos
+      console.log(`[iSolarCloud] access_token cacheado para conta="${conta}" (${Math.round(idadeSeg)}s)`)
+      return cached.dados as { accessToken: string; appkey: string }
     }
   }
 
-  console.log(`[iSolarCloud] login para conta="${conta}", user=${usuario}, appkey_prefix=${appkey.slice(0,8)}`)
-  const res = await fetch(`${ISOLAR_BASE}/login`, {
+  console.log(`[iSolarCloud] obtendo access_token via refresh para conta="${conta}", appkey_prefix=${appkey.slice(0,8)}`)
+  const res = await fetch(`${ISOLAR_BASE}/apiManage/refreshToken`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'sys_code': '901',
-      'lang': '_en_US',
-      'x-access-key': accessKey,
-    },
-    body: JSON.stringify({ appkey, user_account: usuario, user_password: senha }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ appkey, refresh_token: refreshToken }),
   })
   const body = await res.json()
-  console.log(`[iSolarCloud] login result_code=${body.result_code} msg=${body.result_msg}`)
-  console.log(`[iSolarCloud] login result_data keys: ${Object.keys(body.result_data || {}).join(', ')}`)
-  if (body.result_code !== '1') throw new Error('iSolarCloud login: ' + JSON.stringify(body))
+  console.log(`[iSolarCloud] refreshToken result_code=${body.result_code} msg=${body.result_msg}`)
+  console.log(`[iSolarCloud] refreshToken result_data keys: ${Object.keys(body.result_data || {}).join(', ')}`)
+  if (body.result_code !== '1') throw new Error('iSolarCloud refreshToken: ' + JSON.stringify(body))
 
-  const token = body.result_data?.token
-  if (!token) throw new Error('iSolarCloud login: token ausente em ' + JSON.stringify(body.result_data))
+  const accessToken = body.result_data?.access_token
+  if (!accessToken) throw new Error('iSolarCloud: access_token ausente na resposta: ' + JSON.stringify(body.result_data))
 
-  const session = { token, appkey, accessKey }
+  const session = { accessToken, appkey }
   await sbAdmin.from('cache_sessoes').upsert(
     { chave: cacheKey, dados: session, criado_em: new Date().toISOString() },
     { onConflict: 'chave' }
   )
-  console.log(`[iSolarCloud] login OK, token cacheado para conta="${conta}"`)
+  console.log(`[iSolarCloud] access_token obtido e cacheado para conta="${conta}"`)
   return session
 }
 
-async function isolarPlatformRequest(path: string, payload: object, session: { token: string; appkey: string; accessKey: string }) {
+async function isolarPlatformRequest(path: string, payload: object, session: { accessToken: string; appkey: string }) {
   console.log(`[iSolarCloud] platform request ${path}`)
   const res = await fetch(`${ISOLAR_BASE}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'sys_code': '901',
-      'lang': '_en_US',
-      'x-access-key': session.accessKey,
+      'Authorization': `Bearer ${session.accessToken}`,
     },
-    // token e appkey vão no BODY (não no header Authorization)
-    body: JSON.stringify({ token: session.token, appkey: session.appkey, ...payload }),
+    // access_token vai no header Authorization; appkey vai no body
+    body: JSON.stringify({ appkey: session.appkey, ...payload }),
   })
   const body = await res.json()
   console.log(`[iSolarCloud] response ${path}: result_code=${body.result_code} msg=${body.result_msg || body.error_description}`)
@@ -447,7 +440,7 @@ async function isolarPlatformRequest(path: string, payload: object, session: { t
 // Endpoint: /platform/getPowerStationPointDayMonthYearDataList
 // p83022 = Daily Plant Yield (Wh) — data_type=2 (Peak/Total for daily)
 async function isolarMonthly(psId: string, conta: string, yearMonth: string): Promise<Map<string, number>> {
-  const session = await isolarLoginComCache(conta)
+  const session = await isolarOAuth2Token(conta)
   console.log(`[iSolarCloud] token ok, buscando psId=${psId} yearMonth=${yearMonth}`)
   const [y, m] = yearMonth.split('-').map(Number)
   const daysInMonth = new Date(y, m, 0).getDate()
@@ -559,116 +552,70 @@ async function salvarLancamentos(sb: ReturnType<typeof createClient>, codigo: st
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() })
 
-  console.log('[sync-historico] versão v2026-10-16e — isolar debug v2')
+  console.log('[sync-historico] versão v2026-10-16f — isolar OAuth2 access_token')
 
   const url = new URL(req.url)
 
-  // ─── Rota de debug: testa login iSolarCloud e uma chamada de dados ───────────
+  // ─── Rota de debug: testa OAuth2 refresh_token + chamada de dados ────────────
   // GET /sync-historico?debug_isolar=1&conta=padrao&ps_id=XXXXX&mes=2026-09
   if (url.searchParams.get('debug_isolar')) {
     const conta  = url.searchParams.get('conta')  || 'padrao'
     const psId   = url.searchParams.get('ps_id')  || ''
     const mes    = url.searchParams.get('mes')     || '2026-09'
     try {
-      const suffix    = conta === 'padrao' ? '' : '_' + conta
-      const appkey    = Deno.env.get('ISOLAR_APPKEY'      + suffix) || ''
-      const accessKey = Deno.env.get('ISOLAR_ACCESS_KEY'  + suffix) || ''
-      const usuario   = Deno.env.get('ISOLAR_USER'        + suffix) || ''
-      const senha     = Deno.env.get('ISOLAR_PASS'        + suffix)
-                     || Deno.env.get('ISOLAR_PASSWORD'   + suffix) || ''
+      const suffix      = conta === 'padrao' ? '' : '_' + conta
+      const appkey      = Deno.env.get('ISOLAR_APPKEY'         + suffix) || ''
+      const refreshTok  = Deno.env.get('ISOLAR_REFRESH_TOKEN'  + suffix) || ''
       const debugInfo: any = {
         conta,
         appkey_len: appkey.length,
-        access_key_len: accessKey.length,
-        usuario,
-        endpoint: `${ISOLAR_BASE}/login`,
+        refresh_token_len: refreshTok.length,
+        endpoint_refresh: `${ISOLAR_BASE}/apiManage/refreshToken`,
       }
 
-      // Login usando o endpoint e headers corretos da API Solarman/iSolarCloud
-      const loginRes = await fetch(`${ISOLAR_BASE}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'sys_code': '901',
-          'lang': '_en_US',
-          'x-access-key': accessKey,
-        },
-        body: JSON.stringify({ appkey, user_account: usuario, user_password: senha }),
-      })
-      const loginBody = await loginRes.json()
-      const token = loginBody.result_data?.token || null
-      debugInfo.login_status      = loginRes.status
-      debugInfo.login_result_code = loginBody.result_code
-      debugInfo.login_result_msg  = loginBody.result_msg
-      debugInfo.login_result_data_keys = Object.keys(loginBody.result_data || {})
-      debugInfo.token_found       = !!token
-
-      // Limpar cache de sessão para forçar novo login
+      // Limpa cache para forçar novo access_token
       const sbAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-      const cacheKey = `isolar_session_${conta}`
-      const { error: delErr } = await sbAdmin.from('cache_sessoes').delete().eq('chave', cacheKey)
-      debugInfo.cache_cleared = !delErr
+      await sbAdmin.from('cache_sessoes').delete().eq('chave', `isolar_access_${conta}`)
+      debugInfo.cache_cleared = true
 
-      // Buscar dados se login OK e ps_id fornecido
-      if (token && psId) {
+      // Passo 1: obter access_token via refresh_token
+      const refreshRes = await fetch(`${ISOLAR_BASE}/apiManage/refreshToken`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appkey, refresh_token: refreshTok }),
+      })
+      const refreshBody = await refreshRes.json()
+      debugInfo.refresh_status     = refreshRes.status
+      debugInfo.refresh_result_code = refreshBody.result_code
+      debugInfo.refresh_result_msg  = refreshBody.result_msg
+      debugInfo.refresh_data_keys   = Object.keys(refreshBody.result_data || {})
+      const accessToken = refreshBody.result_data?.access_token || null
+      debugInfo.access_token_found  = !!accessToken
+      debugInfo.access_token_len    = String(accessToken || '').length
+
+      // Passo 2: buscar dados se access_token OK e ps_id fornecido
+      if (accessToken && psId) {
         const [y, m] = mes.split('-').map(Number)
         const daysInMonth = new Date(y, m, 0).getDate()
         const startTime = mes.replace('-', '') + '01'
         const endTime   = mes.replace('-', '') + String(daysInMonth).padStart(2, '0')
-        debugInfo.data_payload_token_len = String(token || '').length
         debugInfo.startTime = startTime
-        debugInfo.endTime = endTime
+        debugInfo.endTime   = endTime
 
-        // Testa variação A: data_type como string '2'
-        const payloadA = { token, appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
-        const resA = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
+        const dataPayload = { appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
+        const dataRes = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'sys_code': '901', 'lang': '_en_US', 'x-access-key': accessKey },
-          body: JSON.stringify(payloadA),
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+          body: JSON.stringify(dataPayload),
         })
-        const rawA = await resA.text()
-        let bodyA: any = {}
-        try { bodyA = JSON.parse(rawA) } catch { bodyA = { raw: rawA.slice(0, 300) } }
-        debugInfo.varA_data_type = '2 (string)'
-        debugInfo.varA_status    = resA.status
-        debugInfo.varA_code      = bodyA.result_code
-        debugInfo.varA_msg       = bodyA.result_msg || bodyA.error_description
-        debugInfo.varA_keys      = Object.keys(bodyA)
-        debugInfo.varA_result    = JSON.stringify(bodyA.result_data ?? null).slice(0, 500)
-
-        // Testa variação B: data_type como número 2
-        if (bodyA.result_code !== '1') {
-          const payloadB = { token, appkey, query_type: 'day', data_type: 2, data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
-          const resB = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'sys_code': '901', 'lang': '_en_US', 'x-access-key': accessKey },
-            body: JSON.stringify(payloadB),
-          })
-          const rawB = await resB.text()
-          let bodyB: any = {}
-          try { bodyB = JSON.parse(rawB) } catch { bodyB = { raw: rawB.slice(0, 300) } }
-          debugInfo.varB_data_type = '2 (number)'
-          debugInfo.varB_status    = resB.status
-          debugInfo.varB_code      = bodyB.result_code
-          debugInfo.varB_msg       = bodyB.result_msg || bodyB.error_description
-          debugInfo.varB_result    = JSON.stringify(bodyB.result_data ?? null).slice(0, 500)
-
-          // Testa variação C: ps_id_list como números
-          const payloadC = { token, appkey, query_type: 'day', data_type: 2, data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [Number(psId)] }
-          const resC = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'sys_code': '901', 'lang': '_en_US', 'x-access-key': accessKey },
-            body: JSON.stringify(payloadC),
-          })
-          const rawC = await resC.text()
-          let bodyC: any = {}
-          try { bodyC = JSON.parse(rawC) } catch { bodyC = { raw: rawC.slice(0, 300) } }
-          debugInfo.varC_ps_id_list = 'number'
-          debugInfo.varC_status    = resC.status
-          debugInfo.varC_code      = bodyC.result_code
-          debugInfo.varC_msg       = bodyC.result_msg || bodyC.error_description
-          debugInfo.varC_result    = JSON.stringify(bodyC.result_data ?? null).slice(0, 500)
-        }
+        const dataBodyRaw = await dataRes.text()
+        let dataBody: any = {}
+        try { dataBody = JSON.parse(dataBodyRaw) } catch { dataBody = { raw: dataBodyRaw.slice(0, 500) } }
+        debugInfo.data_status      = dataRes.status
+        debugInfo.data_result_code = dataBody.result_code
+        debugInfo.data_result_msg  = dataBody.result_msg || dataBody.error_description
+        debugInfo.data_full_keys   = Object.keys(dataBody)
+        debugInfo.data_result_data = JSON.stringify(dataBody.result_data ?? null).slice(0, 1000)
       }
       return json({ ok: true, debug: debugInfo })
     } catch (e: any) {
