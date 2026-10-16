@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-16j
+// Supabase Edge Function: sync-historico  v2026-10-16k
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -555,7 +555,7 @@ async function salvarLancamentos(sb: ReturnType<typeof createClient>, codigo: st
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() })
 
-  console.log('[sync-historico] versão v2026-10-16j — fix: usa ISOLAR_ACCESS_KEY como appkey real')
+  console.log('[sync-historico] versão v2026-10-16k — debug login: appkey no body, accessKey no header')
 
   const url = new URL(req.url)
 
@@ -633,65 +633,82 @@ serve(async (req) => {
     }
   }
 
-  // ─── Rota de debug 2: testa login user/senha → Bearer token nos /platform/ ──
+  // ─── Rota de debug 2: testa login user/senha (APPKEY no body, ACCESS_KEY no header) ──
   // GET /sync-historico?debug_login=1&conta=padrao&ps_id=XXXXX&mes=2026-09
   if (url.searchParams.get('debug_login')) {
     const conta  = url.searchParams.get('conta')  || 'padrao'
     const psId   = url.searchParams.get('ps_id')  || ''
     const mes    = url.searchParams.get('mes')     || '2026-09'
     try {
-      const suffix   = conta === 'padrao' ? '' : '_' + conta
-      const appkey   = Deno.env.get('ISOLAR_ACCESS_KEY' + suffix)
-                    || Deno.env.get('ISOLAR_APPKEY'     + suffix) || ''
-      const usuario  = Deno.env.get('ISOLAR_USER'      + suffix) || ''
-      const senha    = Deno.env.get('ISOLAR_PASS'      + suffix)
-                    || Deno.env.get('ISOLAR_PASSWORD'  + suffix) || ''
+      const suffix    = conta === 'padrao' ? '' : '_' + conta
+      // IMPORTANTE: appkey vai no BODY, accessKey vai no HEADER x-access-key
+      const appkey    = Deno.env.get('ISOLAR_APPKEY'      + suffix) || ''
+      const accessKey = Deno.env.get('ISOLAR_ACCESS_KEY'  + suffix) || appkey
+      const usuario   = Deno.env.get('ISOLAR_USER'        + suffix) || ''
+      const senha     = Deno.env.get('ISOLAR_PASS'        + suffix)
+                     || Deno.env.get('ISOLAR_PASSWORD'    + suffix) || ''
       const debugInfo: any = {
         conta,
-        appkey_len: appkey.length,
-        appkey_prefix: appkey.slice(0, 8),
-        access_key_configured: !!(Deno.env.get('ISOLAR_ACCESS_KEY' + suffix)),
-        appkey_configured:     !!(Deno.env.get('ISOLAR_APPKEY'     + suffix)),
+        appkey_len:       appkey.length,
+        appkey_prefix:    appkey.slice(0, 8),
+        access_key_len:   accessKey.length,
+        access_key_prefix: accessKey.slice(0, 8),
+        access_key_same_as_appkey: appkey === accessKey,
         usuario_configured: !!usuario,
         senha_configured: !!senha,
       }
 
-      // Passo 1: login para obter user_token
+      // Passo 1: login — appkey no body, accessKey no header
       const loginRes = await fetch(`${ISOLAR_BASE}/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-access-key': appkey },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-access-key': accessKey,
+          'sys_code': '901',
+          'lang': '_en_US',
+        },
         body: JSON.stringify({ appkey, user_account: usuario, user_password: senha }),
       })
       const loginBody = await loginRes.json()
       debugInfo.login_status      = loginRes.status
       debugInfo.login_result_code = loginBody.result_code
       debugInfo.login_result_msg  = loginBody.result_msg
+      debugInfo.login_full_body   = JSON.stringify(loginBody).slice(0, 300)
       debugInfo.login_data_keys   = Object.keys(loginBody.result_data || {})
       const loginToken = loginBody.result_data?.token || null
       debugInfo.login_token_found = !!loginToken
       debugInfo.login_token_len   = String(loginToken || '').length
-      debugInfo.login_token_prefix = loginToken ? String(loginToken).slice(0, 12) : 'N/A'
 
-      // Passo 2: tenta usar login_token como Bearer nos /platform/
+      // Passo 2: se login OK, testa chamada de dados com token no BODY (não como Bearer)
       if (loginToken && psId) {
         const [y, m] = mes.split('-').map(Number)
         const daysInMonth = new Date(y, m, 0).getDate()
         const startTime = mes.replace('-', '') + '01'
         const endTime   = mes.replace('-', '') + String(daysInMonth).padStart(2, '0')
 
-        const dataPayload = { appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
-        const dataRes = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
+        // Variante A: token no body (conforme documentação original)
+        const dataPayloadA = { token: loginToken, appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
+        const dataResA = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-access-key': accessKey },
+          body: JSON.stringify(dataPayloadA),
+        })
+        const dataBodyA = await dataResA.json().catch(() => ({}))
+        debugInfo.data_tokenInBody_status = dataResA.status
+        debugInfo.data_tokenInBody_code   = dataBodyA.result_code
+        debugInfo.data_tokenInBody_msg    = dataBodyA.result_msg || dataBodyA.error_description
+
+        // Variante B: token como Bearer no header
+        const dataPayloadB = { appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
+        const dataResB = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${loginToken}` },
-          body: JSON.stringify(dataPayload),
+          body: JSON.stringify(dataPayloadB),
         })
-        const dataBodyRaw = await dataRes.text()
-        let dataBody: any = {}
-        try { dataBody = JSON.parse(dataBodyRaw) } catch { dataBody = { raw: dataBodyRaw.slice(0, 500) } }
-        debugInfo.data_status      = dataRes.status
-        debugInfo.data_result_code = dataBody.result_code
-        debugInfo.data_result_msg  = dataBody.result_msg || dataBody.error_description
-        debugInfo.data_full_body   = JSON.stringify(dataBody).slice(0, 500)
+        const dataBodyB = await dataResB.json().catch(() => ({}))
+        debugInfo.data_tokenBearer_status = dataResB.status
+        debugInfo.data_tokenBearer_code   = dataBodyB.result_code
+        debugInfo.data_tokenBearer_msg    = dataBodyB.result_msg || dataBodyB.error_description
       }
       return json({ ok: true, debug: debugInfo })
     } catch (e: any) {
