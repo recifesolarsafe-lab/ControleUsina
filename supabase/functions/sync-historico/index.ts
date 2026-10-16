@@ -539,9 +539,90 @@ async function salvarLancamentos(sb: ReturnType<typeof createClient>, codigo: st
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() })
 
-  console.log('[sync-historico] versão v2026-10-15e — isolar dual-endpoint fallback')
+  console.log('[sync-historico] versão v2026-10-16d — isolar debug route')
 
   const url = new URL(req.url)
+
+  // ─── Rota de debug: testa login iSolarCloud e uma chamada de dados ───────────
+  // GET /sync-historico?debug_isolar=1&conta=padrao&ps_id=XXXXX&mes=2026-09
+  if (url.searchParams.get('debug_isolar')) {
+    const conta  = url.searchParams.get('conta')  || 'padrao'
+    const psId   = url.searchParams.get('ps_id')  || ''
+    const mes    = url.searchParams.get('mes')     || '2026-09'
+    try {
+      // Passo 1: login
+      const suffix   = conta === 'padrao' ? '' : '_' + conta
+      const appkey   = Deno.env.get('ISOLAR_APPKEY' + suffix) || ''
+      const usuario  = Deno.env.get('ISOLAR_USER'   + suffix) || ''
+      const senha    = Deno.env.get('ISOLAR_PASS'   + suffix) || ''
+      const loginRes = await fetch(`${ISOLAR_BASE}/userService/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-access-key': appkey },
+        body: JSON.stringify({ appkey, user_id: usuario, user_password: senha }),
+      })
+      const loginBody = await loginRes.json()
+      const accessToken = loginBody.result_data?.token || loginBody.result_data?.access_token || null
+      const debugInfo: any = {
+        conta, appkey_len: appkey.length, usuario,
+        login_status: loginRes.status,
+        login_result_code: loginBody.result_code,
+        login_result_msg:  loginBody.result_msg,
+        login_result_data_keys: Object.keys(loginBody.result_data || {}),
+        token_found: !!accessToken,
+      }
+
+      // Passo 2: buscar dados se login OK e ps_id fornecido
+      if (accessToken && psId) {
+        const [y, m] = mes.split('-').map(Number)
+        const daysInMonth = new Date(y, m, 0).getDate()
+        const startTime = mes.replace('-', '') + '01'
+        const endTime   = mes.replace('-', '') + String(daysInMonth).padStart(2, '0')
+        const dataRes = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+            'x-access-key': appkey,
+          },
+          body: JSON.stringify({
+            appkey,
+            query_type: 'day',
+            data_type:  '2',
+            data_point: 'p83022',
+            start_time: startTime,
+            end_time:   endTime,
+            order:      0,
+            ps_id_list: [String(psId)],
+          }),
+        })
+        const dataBody = await dataRes.json()
+        debugInfo.data_status       = dataRes.status
+        debugInfo.data_result_code  = dataBody.result_code
+        debugInfo.data_result_msg   = dataBody.result_msg || dataBody.error_description
+        debugInfo.data_result_data  = JSON.stringify(dataBody.result_data).slice(0, 1000)
+        // Tentar também sem Authorization Bearer, só com x-access-key + token no body
+        const dataRes2 = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-access-key': appkey },
+          body: JSON.stringify({
+            appkey, token: accessToken,
+            query_type: 'day', data_type: '2', data_point: 'p83022',
+            start_time: startTime, end_time: endTime, order: 0,
+            ps_id_list: [String(psId)],
+          }),
+        })
+        const dataBody2 = await dataRes2.json()
+        debugInfo.data2_result_code  = dataBody2.result_code
+        debugInfo.data2_result_msg   = dataBody2.result_msg
+        debugInfo.data2_result_data  = JSON.stringify(dataBody2.result_data).slice(0, 1000)
+      }
+      return json({ ok: true, debug: debugInfo })
+    } catch (e: any) {
+      return json({ ok: false, error: e.message })
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────────
+
   // Token do usuário: lido do header x-user-token (evita conflito com gateway JWT do Supabase)
   const token = req.headers.get('x-user-token') || ''
   const codigo     = url.searchParams.get('codigo') || ''
