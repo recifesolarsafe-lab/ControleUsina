@@ -358,9 +358,13 @@ async function fusionMonthly(stationCode: string, conta: string, yearMonth: stri
 
 async function isolarLoginComCache(conta: string): Promise<{ accessToken: string; appkey: string }> {
   const suffix  = conta === 'padrao' ? '' : '_' + conta
-  const appkey  = Deno.env.get('ISOLAR_APPKEY'  + suffix)!
+  // ISOLAR_ACCESS_KEY é o appkey real registrado no portal developer.isolarcloud.com
+  // ISOLAR_APPKEY é um fallback (pode ter sido configurado com valor errado)
+  const appkey  = Deno.env.get('ISOLAR_ACCESS_KEY' + suffix)
+             || Deno.env.get('ISOLAR_APPKEY'       + suffix)!
   const usuario = Deno.env.get('ISOLAR_USER'    + suffix)!
-  const senha   = Deno.env.get('ISOLAR_PASS'    + suffix)!
+  const senha   = Deno.env.get('ISOLAR_PASS'    + suffix)
+             || Deno.env.get('ISOLAR_PASSWORD'  + suffix)!
   if (!usuario || !senha) throw new Error(`iSolarCloud: ISOLAR_USER${suffix} / ISOLAR_PASS${suffix} não configurados`)
 
   const sbAdmin   = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
@@ -552,9 +556,11 @@ serve(async (req) => {
     try {
       // Passo 1: login
       const suffix   = conta === 'padrao' ? '' : '_' + conta
-      const appkey   = Deno.env.get('ISOLAR_APPKEY' + suffix) || ''
+      const appkey   = Deno.env.get('ISOLAR_ACCESS_KEY' + suffix)
+                    || Deno.env.get('ISOLAR_APPKEY'     + suffix) || ''
       const usuario  = Deno.env.get('ISOLAR_USER'   + suffix) || ''
-      const senha    = Deno.env.get('ISOLAR_PASS'   + suffix) || ''
+      const senha    = Deno.env.get('ISOLAR_PASS'   + suffix)
+                    || Deno.env.get('ISOLAR_PASSWORD' + suffix) || ''
       const loginRes = await fetch(`${ISOLAR_BASE}/userService/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-access-key': appkey },
