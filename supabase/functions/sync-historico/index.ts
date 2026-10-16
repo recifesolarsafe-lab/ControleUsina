@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-16c
+// Supabase Edge Function: sync-historico  v2026-10-16e
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -559,7 +559,7 @@ async function salvarLancamentos(sb: ReturnType<typeof createClient>, codigo: st
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() })
 
-  console.log('[sync-historico] versão v2026-10-16d — isolar debug route')
+  console.log('[sync-historico] versão v2026-10-16e — isolar debug v2')
 
   const url = new URL(req.url)
 
@@ -603,27 +603,72 @@ serve(async (req) => {
       debugInfo.login_result_data_keys = Object.keys(loginBody.result_data || {})
       debugInfo.token_found       = !!token
 
+      // Limpar cache de sessão para forçar novo login
+      const sbAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+      const cacheKey = `isolar_session_${conta}`
+      const { error: delErr } = await sbAdmin.from('cache_sessoes').delete().eq('chave', cacheKey)
+      debugInfo.cache_cleared = !delErr
+
       // Buscar dados se login OK e ps_id fornecido
       if (token && psId) {
         const [y, m] = mes.split('-').map(Number)
         const daysInMonth = new Date(y, m, 0).getDate()
         const startTime = mes.replace('-', '') + '01'
         const endTime   = mes.replace('-', '') + String(daysInMonth).padStart(2, '0')
-        const dataPayload = { token, appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
         debugInfo.data_payload_token_len = String(token || '').length
-        const dataRes = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
+        debugInfo.startTime = startTime
+        debugInfo.endTime = endTime
+
+        // Testa variação A: data_type como string '2'
+        const payloadA = { token, appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
+        const resA = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'sys_code': '901', 'lang': '_en_US', 'x-access-key': accessKey },
-          body: JSON.stringify(dataPayload),
+          body: JSON.stringify(payloadA),
         })
-        const dataBodyRaw = await dataRes.text()
-        let dataBody: any = {}
-        try { dataBody = JSON.parse(dataBodyRaw) } catch { dataBody = { raw: dataBodyRaw.slice(0, 500) } }
-        debugInfo.data_status       = dataRes.status
-        debugInfo.data_result_code  = dataBody.result_code
-        debugInfo.data_result_msg   = dataBody.result_msg || dataBody.error_description
-        debugInfo.data_full_keys    = Object.keys(dataBody)
-        debugInfo.data_result_data  = JSON.stringify(dataBody.result_data ?? null).slice(0, 1000)
+        const rawA = await resA.text()
+        let bodyA: any = {}
+        try { bodyA = JSON.parse(rawA) } catch { bodyA = { raw: rawA.slice(0, 300) } }
+        debugInfo.varA_data_type = '2 (string)'
+        debugInfo.varA_status    = resA.status
+        debugInfo.varA_code      = bodyA.result_code
+        debugInfo.varA_msg       = bodyA.result_msg || bodyA.error_description
+        debugInfo.varA_keys      = Object.keys(bodyA)
+        debugInfo.varA_result    = JSON.stringify(bodyA.result_data ?? null).slice(0, 500)
+
+        // Testa variação B: data_type como número 2
+        if (bodyA.result_code !== '1') {
+          const payloadB = { token, appkey, query_type: 'day', data_type: 2, data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
+          const resB = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'sys_code': '901', 'lang': '_en_US', 'x-access-key': accessKey },
+            body: JSON.stringify(payloadB),
+          })
+          const rawB = await resB.text()
+          let bodyB: any = {}
+          try { bodyB = JSON.parse(rawB) } catch { bodyB = { raw: rawB.slice(0, 300) } }
+          debugInfo.varB_data_type = '2 (number)'
+          debugInfo.varB_status    = resB.status
+          debugInfo.varB_code      = bodyB.result_code
+          debugInfo.varB_msg       = bodyB.result_msg || bodyB.error_description
+          debugInfo.varB_result    = JSON.stringify(bodyB.result_data ?? null).slice(0, 500)
+
+          // Testa variação C: ps_id_list como números
+          const payloadC = { token, appkey, query_type: 'day', data_type: 2, data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [Number(psId)] }
+          const resC = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'sys_code': '901', 'lang': '_en_US', 'x-access-key': accessKey },
+            body: JSON.stringify(payloadC),
+          })
+          const rawC = await resC.text()
+          let bodyC: any = {}
+          try { bodyC = JSON.parse(rawC) } catch { bodyC = { raw: rawC.slice(0, 300) } }
+          debugInfo.varC_ps_id_list = 'number'
+          debugInfo.varC_status    = resC.status
+          debugInfo.varC_code      = bodyC.result_code
+          debugInfo.varC_msg       = bodyC.result_msg || bodyC.error_description
+          debugInfo.varC_result    = JSON.stringify(bodyC.result_data ?? null).slice(0, 500)
+        }
       }
       return json({ ok: true, debug: debugInfo })
     } catch (e: any) {
