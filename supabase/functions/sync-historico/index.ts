@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-16n
+// Supabase Edge Function: sync-historico  v2026-10-16o
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -753,6 +753,48 @@ serve(async (req) => {
         debugInfo.data_api_tokenInBody_sample = dataBodyC.result_code === '1'
           ? JSON.stringify(dataBodyC.result_data).slice(0, 300)
           : JSON.stringify(dataBodyC).slice(0, 300)
+
+        // Variante D: endpoint /v1/ (GoSungrow API — sem OAuth2) com token no body
+        // Base: https://gateway.isolarcloud.com.hk/v1 (diferente de /openapi)
+        const V1_BASE = 'https://gateway.isolarcloud.com.hk'
+        const dataPayloadD = { token: loginToken, appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
+        const dataResD = await fetch(`${V1_BASE}/v1/powerStationService/getPowerStationPointDayMonthYearDataList`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-key': accessKey,
+            'sys_code': '901',
+            'lang': '_en_US',
+          },
+          body: JSON.stringify(dataPayloadD),
+        })
+        const dataBodyD = await dataResD.json().catch(() => ({}))
+        debugInfo.data_v1_status = dataResD.status
+        debugInfo.data_v1_code   = dataBodyD.result_code
+        debugInfo.data_v1_msg    = dataBodyD.result_msg || dataBodyD.error_description || dataBodyD.message
+        debugInfo.data_v1_sample = dataBodyD.result_code === '1'
+          ? JSON.stringify(dataBodyD.result_data).slice(0, 300)
+          : JSON.stringify(dataBodyD).slice(0, 300)
+
+        // Variante E: /v1/commonService/queryDevicePointDayMonthYearDataList (outro endpoint V1)
+        const dataPayloadE = { token: loginToken, appkey, start_time_stamp: startTime + '000000', end_time_stamp: endTime + '235959', minute_interval: '1440', ps_key: `${psId}_11_0_0`, points: 'p83022' }
+        const dataResE = await fetch(`${V1_BASE}/v1/commonService/queryDevicePointDayMonthYearDataList`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-access-key': accessKey,
+            'sys_code': '901',
+            'lang': '_en_US',
+          },
+          body: JSON.stringify(dataPayloadE),
+        })
+        const dataBodyE = await dataResE.json().catch(() => ({}))
+        debugInfo.data_v1common_status = dataResE.status
+        debugInfo.data_v1common_code   = dataBodyE.result_code
+        debugInfo.data_v1common_msg    = dataBodyE.result_msg || dataBodyE.error_description || dataBodyE.message
+        debugInfo.data_v1common_sample = dataBodyE.result_code === '1'
+          ? JSON.stringify(dataBodyE.result_data).slice(0, 300)
+          : JSON.stringify(dataBodyE).slice(0, 300)
       }
       return json({ ok: true, debug: debugInfo })
     } catch (e: any) {
