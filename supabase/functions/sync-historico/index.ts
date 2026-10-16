@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-16f
+// Supabase Edge Function: sync-historico  v2026-10-16g
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -399,7 +399,7 @@ async function isolarOAuth2Token(conta: string): Promise<{ accessToken: string; 
   console.log(`[iSolarCloud] obtendo access_token via refresh para conta="${conta}", appkey_prefix=${appkey.slice(0,8)}`)
   const res = await fetch(`${ISOLAR_BASE}/apiManage/refreshToken`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-access-key': appkey },
     body: JSON.stringify({ appkey, refresh_token: refreshToken }),
   })
   const body = await res.json()
@@ -552,7 +552,7 @@ async function salvarLancamentos(sb: ReturnType<typeof createClient>, codigo: st
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() })
 
-  console.log('[sync-historico] versão v2026-10-16f — isolar OAuth2 access_token')
+  console.log('[sync-historico] versão v2026-10-16g — isolar OAuth2 x-access-key fix')
 
   const url = new URL(req.url)
 
@@ -581,7 +581,7 @@ serve(async (req) => {
       // Passo 1: obter access_token via refresh_token
       const refreshRes = await fetch(`${ISOLAR_BASE}/apiManage/refreshToken`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-access-key': appkey },
         body: JSON.stringify({ appkey, refresh_token: refreshTok }),
       })
       const refreshBody = await refreshRes.json()
