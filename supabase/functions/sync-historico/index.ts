@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-16l
+// Supabase Edge Function: sync-historico  v2026-10-16m
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -555,7 +555,7 @@ async function salvarLancamentos(sb: ReturnType<typeof createClient>, codigo: st
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() })
 
-  console.log('[sync-historico] versão v2026-10-16l — debug: Bearer + x-access-key juntos')
+  console.log('[sync-historico] versão v2026-10-16m — debug: testa getToken para trocar login por access_token')
 
   const url = new URL(req.url)
 
@@ -678,6 +678,21 @@ serve(async (req) => {
       const loginToken = loginBody.result_data?.token || null
       debugInfo.login_token_found = !!loginToken
       debugInfo.login_token_len   = String(loginToken || '').length
+
+      // Passo 1b: tenta trocar user token por OAuth2 access_token via getToken
+      if (loginToken) {
+        const getTokenRes = await fetch(`${ISOLAR_BASE}/apiManage/getToken`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-access-key': accessKey },
+          body: JSON.stringify({ appkey, token: loginToken }),
+        })
+        const getTokenBody = await getTokenRes.json().catch(() => ({}))
+        debugInfo.gettoken_status = getTokenRes.status
+        debugInfo.gettoken_code   = getTokenBody.result_code
+        debugInfo.gettoken_msg    = getTokenBody.result_msg
+        debugInfo.gettoken_data_keys = Object.keys(getTokenBody.result_data || {})
+        debugInfo.gettoken_full   = JSON.stringify(getTokenBody).slice(0, 400)
+      }
 
       // Passo 2: se login OK, testa chamada de dados com token no BODY (não como Bearer)
       if (loginToken && psId) {
