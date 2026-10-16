@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-15i
+// Supabase Edge Function: sync-historico  v2026-10-16a
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -370,7 +370,10 @@ async function isolarOAuth2Token(conta: string): Promise<{ accessToken: string; 
   console.log(`[iSolarCloud] refreshToken para conta="${conta}", appkey=${appkey?.slice(0,8)}...`)
   const res = await fetch(`${ISOLAR_BASE}/apiManage/refreshToken`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-access-key': appkey,
+    },
     body: JSON.stringify({ appkey, refresh_token: refreshToken }),
   })
   const body = await res.json()
@@ -389,6 +392,7 @@ async function isolarPlatformRequest(path: string, payload: object, session: { a
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.accessToken}`,
+      'x-access-key': session.appkey,
     },
     body: JSON.stringify({ appkey: session.appkey, ...payload }),
   })
