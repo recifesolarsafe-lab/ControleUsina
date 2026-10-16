@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-16k
+// Supabase Edge Function: sync-historico  v2026-10-16l
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -555,7 +555,7 @@ async function salvarLancamentos(sb: ReturnType<typeof createClient>, codigo: st
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() })
 
-  console.log('[sync-historico] versão v2026-10-16k — debug login: appkey no body, accessKey no header')
+  console.log('[sync-historico] versão v2026-10-16l — debug: Bearer + x-access-key juntos')
 
   const url = new URL(req.url)
 
@@ -698,17 +698,24 @@ serve(async (req) => {
         debugInfo.data_tokenInBody_code   = dataBodyA.result_code
         debugInfo.data_tokenInBody_msg    = dataBodyA.result_msg || dataBodyA.error_description
 
-        // Variante B: token como Bearer no header
+        // Variante B: token como Bearer + x-access-key no header
         const dataPayloadB = { appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
         const dataResB = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${loginToken}` },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${loginToken}`,
+            'x-access-key': accessKey,
+          },
           body: JSON.stringify(dataPayloadB),
         })
         const dataBodyB = await dataResB.json().catch(() => ({}))
         debugInfo.data_tokenBearer_status = dataResB.status
         debugInfo.data_tokenBearer_code   = dataBodyB.result_code
         debugInfo.data_tokenBearer_msg    = dataBodyB.result_msg || dataBodyB.error_description
+        debugInfo.data_tokenBearer_sample = dataBodyB.result_code === '1'
+          ? JSON.stringify(dataBodyB.result_data).slice(0, 300)
+          : JSON.stringify(dataBodyB).slice(0, 300)
       }
       return json({ ok: true, debug: debugInfo })
     } catch (e: any) {
