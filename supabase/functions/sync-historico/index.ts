@@ -617,7 +617,7 @@ serve(async (req) => {
         const dataBody = await dataRes.json()
         debugInfo.data_result_code  = dataBody.result_code
         debugInfo.data_result_msg   = dataBody.result_msg || dataBody.error_description
-        debugInfo.data_result_data  = JSON.stringify(dataBody.result_data).slice(0, 1000)
+        debugInfo.data_result_data  = JSON.stringify(dataBody.result_data ?? null).slice(0, 1000)
       }
       return json({ ok: true, debug: debugInfo })
     } catch (e: any) {
