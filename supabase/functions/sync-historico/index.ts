@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-16b
+// Supabase Edge Function: sync-historico  v2026-10-16c
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -351,91 +351,59 @@ async function fusionMonthly(stationCode: string, conta: string, yearMonth: stri
 
 // ─── iSolarCloud — histórico diário ──────────────────────────
 //
-// Autenticação: OAuth2 com refresh_token
-// Fluxo:
-//   1. Usar refresh_token (env ISOLAR_REFRESH_TOKEN / ISOLAR_REFRESH_TOKEN_<conta>)
-//      para obter access_token via POST /openapi/apiManage/refreshToken
-//   2. Passar access_token no header: Authorization: Bearer <access_token>
-//   3. Passar appkey no body (obrigatório em todas as chamadas de plataforma)
-//
-// Para obter o refresh_token inicial:
-//   Acesse https://developer-api.isolarcloud.com.hk, faça login, autorize o app,
-//   copie o refresh_token da resposta e salve como env var ISOLAR_REFRESH_TOKEN.
+// ─── iSolarCloud: login por usuário/senha com cache de sessão ─────────────────
+// Igual ao FusionSolar — credenciais estáticas nos secrets, nunca expiram.
+// Env vars: ISOLAR_USER_<conta>, ISOLAR_PASS_<conta>, ISOLAR_APPKEY_<conta>
+// Sessão cacheada por 20min na tabela cache_sessoes (mesma do FusionSolar).
 
-// ─── iSolarCloud: tokens auto-renováveis via tabela isolar_tokens ─────────────
-//
-// A tabela isolar_tokens tem: conta (PK), appkey, refresh_token, access_token,
-//   updated_at. A Edge Function:
-//   1. Lê refresh_token da tabela (fallback: env var ISOLAR_REFRESH_TOKEN_<conta>)
-//   2. Chama /refreshToken → obtém access_token (+ novo refresh_token se vier)
-//   3. Salva de volta na tabela para a próxima chamada
-//   Assim o token nunca expira enquanto o sistema rodar pelo menos 1x por mês.
+async function isolarLoginComCache(conta: string): Promise<{ accessToken: string; appkey: string }> {
+  const suffix  = conta === 'padrao' ? '' : '_' + conta
+  const appkey  = Deno.env.get('ISOLAR_APPKEY'  + suffix)!
+  const usuario = Deno.env.get('ISOLAR_USER'    + suffix)!
+  const senha   = Deno.env.get('ISOLAR_PASS'    + suffix)!
+  if (!usuario || !senha) throw new Error(`iSolarCloud: ISOLAR_USER${suffix} / ISOLAR_PASS${suffix} não configurados`)
 
-async function isolarOAuth2Token(conta: string): Promise<{ accessToken: string; appkey: string }> {
-  const suffix = conta === 'padrao' ? '' : '_' + conta
-  const appkeyEnv = Deno.env.get('ISOLAR_APPKEY' + suffix)!
+  const sbAdmin   = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+  const cacheKey  = `isolar_session_${conta}`
 
-  // 1. Tenta ler token da tabela isolar_tokens
-  const sbAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-  let refreshToken: string | null = null
-  let appkey: string = appkeyEnv
-
-  const { data: tokenRow, error: tokenErr } = await sbAdmin
-    .from('isolar_tokens')
-    .select('appkey, refresh_token')
-    .eq('conta', conta)
+  // Tenta cache
+  const { data: cached } = await sbAdmin
+    .from('cache_sessoes')
+    .select('dados, criado_em')
+    .eq('chave', cacheKey)
     .single()
-
-  if (tokenRow && !tokenErr) {
-    refreshToken = tokenRow.refresh_token
-    if (tokenRow.appkey) appkey = tokenRow.appkey
-    console.log(`[iSolarCloud] token lido da tabela para conta="${conta}"`)
-  } else {
-    // Fallback: env var (para primeira execução antes de criar a tabela)
-    refreshToken = Deno.env.get('ISOLAR_REFRESH_TOKEN' + suffix) || null
-    console.log(`[iSolarCloud] token lido do env para conta="${conta}" (tabela vazia ou ausente)`)
+  if (cached) {
+    const idadeSeg = (Date.now() - new Date(cached.criado_em).getTime()) / 1000
+    if (idadeSeg < 1200) {
+      console.log(`[iSolarCloud] sessão cacheada para conta="${conta}" (${Math.round(idadeSeg)}s)`)
+      return cached.dados as { accessToken: string; appkey: string }
+    }
   }
 
-  if (!refreshToken) throw new Error(`iSolarCloud: refresh_token não encontrado para conta="${conta}". Configure na tabela isolar_tokens ou no secret ISOLAR_REFRESH_TOKEN${suffix}.`)
-
-  console.log(`[iSolarCloud] chamando refreshToken para conta="${conta}", appkey=${appkey?.slice(0,8)}...`)
-  const res = await fetch(`${ISOLAR_BASE}/apiManage/refreshToken`, {
+  console.log(`[iSolarCloud] fazendo login para conta="${conta}", user=${usuario}`)
+  const res = await fetch(`${ISOLAR_BASE}/userService/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-access-key': appkey,
     },
-    body: JSON.stringify({ appkey, refresh_token: refreshToken }),
+    body: JSON.stringify({ appkey, user_id: usuario, user_password: senha }),
   })
   const body = await res.json()
-  console.log(`[iSolarCloud] refreshToken result_code=${body.result_code} msg=${body.result_msg}`)
-  console.log(`[iSolarCloud] result_data keys: ${Object.keys(body.result_data || {}).join(', ')}`)
-  if (body.result_code !== '1') throw new Error('iSolarCloud refreshToken: ' + JSON.stringify(body))
+  console.log(`[iSolarCloud] login result_code=${body.result_code} msg=${body.result_msg}`)
+  console.log(`[iSolarCloud] login result_data keys: ${Object.keys(body.result_data || {}).join(', ')}`)
+  if (body.result_code !== '1') throw new Error('iSolarCloud login: ' + JSON.stringify(body))
 
-  const accessToken = body.result_data?.access_token
-  if (!accessToken) throw new Error('iSolarCloud refreshToken: access_token ausente em ' + JSON.stringify(body.result_data))
+  const accessToken = body.result_data?.token || body.result_data?.access_token
+  if (!accessToken) throw new Error('iSolarCloud login: token ausente em ' + JSON.stringify(body.result_data))
 
-  // 2. Salva de volta na tabela — atualiza refresh_token se a API retornou um novo
-  const newRefreshToken: string = body.result_data?.refresh_token || refreshToken
-  const upsertData: Record<string, string> = {
-    conta,
-    appkey,
-    refresh_token: newRefreshToken,
-    access_token: accessToken,
-    updated_at: new Date().toISOString(),
-  }
-  const { error: upsertErr } = await sbAdmin
-    .from('isolar_tokens')
-    .upsert(upsertData, { onConflict: 'conta' })
-  if (upsertErr) {
-    console.warn(`[iSolarCloud] aviso: falhou ao salvar token na tabela: ${upsertErr.message}`)
-  } else {
-    const rotou = newRefreshToken !== refreshToken ? ' (refresh_token rotacionado!)' : ''
-    console.log(`[iSolarCloud] token salvo na tabela para conta="${conta}"${rotou}`)
-  }
-
-  console.log(`[iSolarCloud] access_token obtido: ${String(accessToken).slice(0,20)}...`)
-  return { accessToken, appkey }
+  const session = { accessToken, appkey }
+  await sbAdmin.from('cache_sessoes').upsert(
+    { chave: cacheKey, dados: session, criado_em: new Date().toISOString() },
+    { onConflict: 'chave' }
+  )
+  console.log(`[iSolarCloud] login OK, token cacheado para conta="${conta}"`)
+  return session
 }
 
 async function isolarPlatformRequest(path: string, payload: object, session: { accessToken: string; appkey: string }) {
@@ -459,7 +427,7 @@ async function isolarPlatformRequest(path: string, payload: object, session: { a
 // Endpoint: /platform/getPowerStationPointDayMonthYearDataList
 // p83022 = Daily Plant Yield (Wh) — data_type=2 (Peak/Total for daily)
 async function isolarMonthly(psId: string, conta: string, yearMonth: string): Promise<Map<string, number>> {
-  const session = await isolarOAuth2Token(conta)
+  const session = await isolarLoginComCache(conta)
   console.log(`[iSolarCloud] token ok, buscando psId=${psId} yearMonth=${yearMonth}`)
   const [y, m] = yearMonth.split('-').map(Number)
   const daysInMonth = new Date(y, m, 0).getDate()
