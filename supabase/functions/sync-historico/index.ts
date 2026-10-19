@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-19b
+// Supabase Edge Function: sync-historico  v2026-10-19c
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -21,7 +21,8 @@ const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const SOLIS_KEY_ID       = Deno.env.get('SOLIS_KEY_ID')!
 const SOLIS_KEY_SECRET   = Deno.env.get('SOLIS_KEY_SECRET')!
 const FUSION_BASE        = 'https://la5.fusionsolar.huawei.com'
-const ISOLAR_BASE        = 'https://gateway.isolarcloud.com.hk/openapi'
+// Conta lmalta007@gmail.com está no servidor internacional (site=9): gateway.isolarcloud.in
+const ISOLAR_BASE        = 'https://gateway.isolarcloud.in/openapi'
 
 function corsHeaders() {
   return {
@@ -760,7 +761,8 @@ serve(async (req) => {
         debugInfo.login_user_id   = loginUserId
         debugInfo.login_state_val = loginState
 
-        const V1_BASE = 'https://gateway.isolarcloud.com.hk'
+        // gateway.isolarcloud.in = servidor internacional (site=9), onde está a conta lmalta007@gmail.com
+        const V1_BASE = 'https://gateway.isolarcloud.in'
         const v1Headers = {
           'Content-Type': 'application/json',
           'x-access-key': accessKey,
