@@ -1,0 +1,15 @@
+name: Test Debug Login (one-shot)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test debug_login endpoint
+        run: |
+          ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZya2lia2FtbnhmeGdoZGd6Z2N1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc1ODY3ODMsImV4cCI6MjEwMzE2Mjc4M30.KHYF3_R6_vkIW6XSghdl7-AuED7yqrwUUTMrMp1Ppb4"
+          echo "=== debug_login ==="
+          curl -s "https://vrkibkamnxfxghdgzgcu.supabase.co/functions/v1/sync-historico?debug_login=1" \
+            -H "Authorization: Bearer $ANON_KEY" | python3 -m json.tool 2>/dev/null || echo "raw response above"
