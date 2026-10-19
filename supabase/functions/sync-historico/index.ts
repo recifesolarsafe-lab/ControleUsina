@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-19a
+// Supabase Edge Function: sync-historico  v2026-10-19b
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -820,8 +820,22 @@ serve(async (req) => {
         debugInfo.data_v1f_msg    = dataBodyF.result_msg || dataBodyF.message
         debugInfo.data_v1f_sample = JSON.stringify(dataBodyF).slice(0, 300)
 
-        // Variante G: endpoint de LISTA de plantas (mais simples — sem ps_id)
-        const dataPayloadG = { token: loginToken, user_id: loginUserId, login_state: loginState, appkey }
+        // Variante F2: token sem prefixo + user_id separado (combinação)
+        const dataPayloadF2 = {
+          token: tokenSemPrefixo, user_id: loginUserId, appkey,
+          query_type: 'day', data_type: '2', data_point: 'p83022',
+          start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)]
+        }
+        const dataResF2 = await fetch(`${V1_BASE}/v1/powerStationService/getPowerStationPointDayMonthYearDataList`, {
+          method: 'POST', headers: v1Headers, body: JSON.stringify(dataPayloadF2),
+        })
+        const dataBodyF2 = await dataResF2.json().catch(() => ({}))
+        debugInfo.data_v1f2_code   = dataBodyF2.result_code
+        debugInfo.data_v1f2_msg    = dataBodyF2.result_msg || dataBodyF2.message
+        debugInfo.data_v1f2_sample = JSON.stringify(dataBodyF2).slice(0, 400)
+
+        // Variante G: token sem prefixo — lista de plantas (sem ps_id, teste mais simples)
+        const dataPayloadG = { token: tokenSemPrefixo, appkey }
         const dataResG = await fetch(`${V1_BASE}/v1/powerStationService/getPowerStationList`, {
           method: 'POST', headers: v1Headers, body: JSON.stringify(dataPayloadG),
         })
@@ -830,6 +844,20 @@ serve(async (req) => {
         debugInfo.data_v1list_code   = dataBodyG.result_code
         debugInfo.data_v1list_msg    = dataBodyG.result_msg || dataBodyG.message
         debugInfo.data_v1list_sample = JSON.stringify(dataBodyG).slice(0, 400)
+
+        // Variante H: token sem prefixo + ps_id como number (não string)
+        const dataPayloadH = {
+          token: tokenSemPrefixo, appkey, query_type: 'day', data_type: 2,
+          data_point: 'p83022', start_time: startTime, end_time: endTime,
+          order: 0, ps_id_list: [Number(psId)]
+        }
+        const dataResH = await fetch(`${V1_BASE}/v1/powerStationService/getPowerStationPointDayMonthYearDataList`, {
+          method: 'POST', headers: v1Headers, body: JSON.stringify(dataPayloadH),
+        })
+        const dataBodyH = await dataResH.json().catch(() => ({}))
+        debugInfo.data_v1h_code   = dataBodyH.result_code
+        debugInfo.data_v1h_msg    = dataBodyH.result_msg || dataBodyH.message
+        debugInfo.data_v1h_sample = JSON.stringify(dataBodyH).slice(0, 400)
       }
       return json({ ok: true, debug: debugInfo })
     } catch (e: any) {
