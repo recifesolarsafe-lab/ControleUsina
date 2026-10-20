@@ -1102,11 +1102,25 @@ serve(async (req) => {
   if (url.searchParams.get('isolar_proxy')) {
     const path = url.searchParams.get('path') || ''
     if (!path.startsWith('/v1/')) return json({ ok: false, error: 'path inválido' }, 400)
-    // Repassa todos os headers relevantes do iSolarCloud
-    const forwardHeaders: Record<string, string> = { 'Content-Type': 'text/plain' }
-    for (const h of ['x-access-key','x-random-secret-key','x-sign-code','sys_code','sg_encryption_mode','_pl','lang']) {
-      const v = req.headers.get(h)
-      if (v) forwardHeaders[h] = v
+    // Lê headers iSolarCloud da query string (evita CORS preflight no browser)
+    // O Supabase Gateway intercepta OPTIONS antes da Edge Function e não passa headers customizados.
+    // Passando via query string, o browser usa apenas headers "simples" e não precisa de preflight.
+    const ak  = url.searchParams.get('ak')   || req.headers.get('x-access-key')        || ISOLAR_HK_ACCESSKEY
+    const rsk = url.searchParams.get('rsk')  || req.headers.get('x-random-secret-key') || ''
+    const sc  = url.searchParams.get('sc')   || req.headers.get('x-sign-code')         || '0'
+    const sysc= url.searchParams.get('sysc') || req.headers.get('sys_code')            || '200'
+    const enc = url.searchParams.get('enc')  || req.headers.get('sg_encryption_mode')  || 'aes_ctr'
+    const pl  = url.searchParams.get('pl')   || req.headers.get('_pl')                || 'js'
+    const lang= url.searchParams.get('lang') || req.headers.get('lang')               || '_en_US'
+    const forwardHeaders: Record<string, string> = {
+      'Content-Type': 'text/plain',
+      'x-access-key': ak,
+      'x-random-secret-key': rsk,
+      'x-sign-code': sc,
+      'sys_code': sysc,
+      'sg_encryption_mode': enc,
+      '_pl': pl,
+      'lang': lang,
     }
     const body = await req.text()
     const gwRes = await fetch(`${ISOLAR_BASE}${path}`, {
