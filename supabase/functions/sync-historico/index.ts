@@ -1113,10 +1113,14 @@ serve(async (req) => {
       headers: forwardHeaders,
       body,
     })
-    const gwBody = await gwRes.text()
-    return new Response(gwBody, {
+    // Lê como ArrayBuffer para preservar bytes binários sem corrupção UTF-8
+    const gwBuf = await gwRes.arrayBuffer()
+    const gwBytes = new Uint8Array(gwBuf)
+    // Converte para hex uppercase — o browser sabe desencriptar hex
+    const gwHex = Array.from(gwBytes).map(b => b.toString(16).padStart(2,'0').toUpperCase()).join('')
+    return new Response(gwHex, {
       status: gwRes.status,
-      headers: { ...corsHeaders(), 'Content-Type': 'text/plain' },
+      headers: { ...corsHeaders(), 'Content-Type': 'text/plain', 'x-isolar-proxy': '1' },
     })
   }
 
