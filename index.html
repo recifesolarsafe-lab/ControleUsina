@@ -5681,7 +5681,7 @@ async function _isolarBrowserGetMonthData(psId, yearMonth, session, creds) {
     if (ts.length < 8) continue;
     const dateKey = ts.slice(0,4)+'-'+ts.slice(4,6)+'-'+ts.slice(6,8);
     const rawVal = entry['2'] || entry['1'] || entry['4'] || '0';
-    const kwh = (parseFloat(rawVal) || 0) / 1000;
+    const kwh = parseFloat(rawVal) || 0;
     if (kwh > 0) result[dateKey] = kwh;
   }
   return result;
