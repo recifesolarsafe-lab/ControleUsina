@@ -1102,14 +1102,16 @@ serve(async (req) => {
   if (url.searchParams.get('isolar_proxy')) {
     const path = url.searchParams.get('path') || ''
     if (!path.startsWith('/v1/')) return json({ ok: false, error: 'path inválido' }, 400)
-    // Lê o body como JSON envelope: { rsk, hex, ak? }
-    // O rsk (base64, ~172 chars) é enviado no body para evitar truncamento na query string.
-    // O hex é o payload AES-CTR encriptado que será repassado ao iSolarCloud.
-    let envelope: { rsk?: string; hex?: string; ak?: string } = {}
-    try { envelope = await req.json() } catch { /* body não é JSON */ }
-    const ak  = envelope.ak  || url.searchParams.get('ak')  || ISOLAR_HK_ACCESSKEY
-    const rsk = envelope.rsk || url.searchParams.get('rsk') || ''
-    const hexBody = envelope.hex || ''
+    // Lê o body como texto no formato: RSK_BASE64\nHEX_PAYLOAD
+    // Linha 1: x-random-secret-key (base64, ~172 chars)
+    // Linha 2: hex payload AES-CTR encriptado
+    // Content-Type: text/plain evita preflight CORS (Supabase Gateway bloqueia custom headers em OPTIONS).
+    const rawBody = await req.text()
+    const nlIdx = rawBody.indexOf('\n')
+    if (nlIdx < 0) return json({ ok: false, error: 'formato inválido: esperado rsk\\nhex' }, 400)
+    const ak  = url.searchParams.get('ak') || ISOLAR_HK_ACCESSKEY
+    const rsk = rawBody.slice(0, nlIdx).trim()
+    const hexBody = rawBody.slice(nlIdx + 1).trim()
     if (!hexBody) return json({ ok: false, error: 'hex ausente no body' }, 400)
     const forwardHeaders: Record<string, string> = {
       'Content-Type': 'text/plain',
