@@ -1092,6 +1092,34 @@ serve(async (req) => {
     }
   }
 
+  // ─── Rota: proxy transparente para o gateway iSolarCloud ─────────────────────────────────
+  // POST /sync-historico?isolar_proxy=1&path=/v1/userService/login
+  // O browser manda payload já criptografado + headers necessários.
+  // A Edge Function apenas repassa — sem conhecer as credenciais.
+  // Necessário porque o browser recebe CORS block ao chamar gateway.isolarcloud.com.hk diretamente
+  // de recifesolarsafe-lab.github.io (o servidor não envia Access-Control-Allow-Origin).
+  if (url.searchParams.get('isolar_proxy')) {
+    const path = url.searchParams.get('path') || ''
+    if (!path.startsWith('/v1/')) return json({ ok: false, error: 'path inválido' }, 400)
+    // Repassa todos os headers relevantes do iSolarCloud
+    const forwardHeaders: Record<string, string> = { 'Content-Type': 'text/plain' }
+    for (const h of ['x-access-key','x-random-secret-key','x-sign-code','sys_code','sg_encryption_mode','_pl','lang']) {
+      const v = req.headers.get(h)
+      if (v) forwardHeaders[h] = v
+    }
+    const body = await req.text()
+    const gwRes = await fetch(`${ISOLAR_BASE}${path}`, {
+      method: 'POST',
+      headers: forwardHeaders,
+      body,
+    })
+    const gwBody = await gwRes.text()
+    return new Response(gwBody, {
+      status: gwRes.status,
+      headers: { ...corsHeaders(), 'Content-Type': 'text/plain' },
+    })
+  }
+
   // ─── Rota: retorna credenciais iSolarCloud para o browser fazer a chamada diretamente ─────
   // GET /sync-historico?get_isolar_creds=1&conta=padrao
   // Necessário porque o servidor iSolarCloud HK bloqueia IPs de datacenter/nuvem (504 Gateway Timeout)

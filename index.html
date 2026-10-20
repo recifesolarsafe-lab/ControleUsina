@@ -5588,18 +5588,15 @@ function _isolarClearCachedSession(conta) {
   try { sessionStorage.removeItem('isolar_session_' + conta); } catch {}
 }
 
-// Login iSolarCloud via browser (servidor não bloqueia IP do usuário)
-async function _isolarBrowserLogin(creds) {
-  const { usuario, senha, appkey, accesskey, gateway, rsaPubkey } = creds;
-  const loginPayload = JSON.stringify({
-    appkey,
-    user_account: usuario,
-    user_password: _isolarMd5hex(senha),
-  });
-  const { hexBody, xRandomSecretKey, aesKey } = await _isolarEncrypt(loginPayload, rsaPubkey);
-  const res = await fetch(`${gateway}/v1/userService/login`, {
+// Proxy fetch: envia o payload pelo Edge Function para contornar CORS do gateway iSolarCloud
+// O browser não pode chamar gateway.isolarcloud.com.hk diretamente (bloqueio CORS).
+// A Edge Function repassa o payload já criptografado sem ver as credenciais.
+async function _isolarProxyFetch(path, hexBody, accesskey, xRandomSecretKey) {
+  const proxyUrl = `${SYNC_HISTORICO_API}?isolar_proxy=1&path=${encodeURIComponent(path)}`;
+  return fetch(proxyUrl, {
     method: 'POST',
     headers: {
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       'Content-Type': 'text/plain',
       'x-access-key': accesskey,
       'x-random-secret-key': xRandomSecretKey,
@@ -5611,6 +5608,18 @@ async function _isolarBrowserLogin(creds) {
     },
     body: hexBody,
   });
+}
+
+// Login iSolarCloud via proxy Edge Function (contorna CORS do gateway)
+async function _isolarBrowserLogin(creds) {
+  const { usuario, senha, appkey, accesskey, gateway, rsaPubkey } = creds;
+  const loginPayload = JSON.stringify({
+    appkey,
+    user_account: usuario,
+    user_password: _isolarMd5hex(senha),
+  });
+  const { hexBody, xRandomSecretKey, aesKey } = await _isolarEncrypt(loginPayload, rsaPubkey);
+  const res = await _isolarProxyFetch('/v1/userService/login', hexBody, accesskey, xRandomSecretKey);
   const rawBody = await res.text();
   let body;
   if (/^[0-9A-Fa-f]{10,}$/.test(rawBody.trim())) {
@@ -5649,20 +5658,7 @@ async function _isolarBrowserGetMonthData(psId, yearMonth, session, creds) {
     ps_id_list: [String(psId)],
   });
   const { hexBody, xRandomSecretKey, aesKey } = await _isolarEncrypt(payload, rsaPubkey);
-  const res = await fetch(`${gateway}/v1/powerStationService/getPowerStationPointDayMonthYearDataList`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'text/plain',
-      'x-access-key': accesskey,
-      'x-random-secret-key': xRandomSecretKey,
-      'x-sign-code': '0',
-      'sys_code': '200',
-      'sg_encryption_mode': 'aes_ctr',
-      '_pl': 'js',
-      'lang': '_en_US',
-    },
-    body: hexBody,
-  });
+  const res = await _isolarProxyFetch('/v1/powerStationService/getPowerStationPointDayMonthYearDataList', hexBody, accesskey, xRandomSecretKey);
   const rawBody = await res.text();
   let body;
   if (/^[0-9A-Fa-f]{10,}$/.test(rawBody.trim())) {
