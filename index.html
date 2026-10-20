@@ -5591,29 +5591,18 @@ function _isolarClearCachedSession(conta) {
 // Proxy fetch: envia o payload pelo Edge Function para contornar CORS do gateway iSolarCloud
 // O browser não pode chamar gateway.isolarcloud.com.hk diretamente (bloqueio CORS).
 // A Edge Function repassa o payload já criptografado sem ver as credenciais.
-// IMPORTANTE: os headers iSolarCloud (x-access-key, sys_code, etc.) são passados
-// via query string para evitar CORS preflight — Supabase Gateway intercepta OPTIONS
-// antes da Edge Function e não inclui headers customizados no Access-Control-Allow-Headers.
+// PROTOCOLO: body JSON { rsk, hex, ak } para evitar truncamento do rsk (~172 chars) na query string.
+// O Supabase Gateway limita o tamanho da URL e truncava o rsk, corrompendo a chave AES.
+// Content-Type: application/json não requer preflight adicional além do já permitido.
 async function _isolarProxyFetch(path, hexBody, accesskey, xRandomSecretKey) {
-  const params = new URLSearchParams({
-    isolar_proxy: '1',
-    path,
-    ak: accesskey,
-    rsk: xRandomSecretKey,
-    sc: '0',
-    sysc: '200',
-    enc: 'aes_ctr',
-    pl: 'js',
-    lang: '_en_US',
-  });
-  const proxyUrl = `${SYNC_HISTORICO_API}?${params}`;
+  const proxyUrl = `${SYNC_HISTORICO_API}?isolar_proxy=1&path=${encodeURIComponent(path)}`;
   return fetch(proxyUrl, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'text/plain',
+      'Content-Type': 'application/json',
     },
-    body: hexBody,
+    body: JSON.stringify({ rsk: xRandomSecretKey, hex: hexBody, ak: accesskey }),
   });
 }
 

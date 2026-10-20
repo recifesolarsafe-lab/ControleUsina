@@ -1102,32 +1102,29 @@ serve(async (req) => {
   if (url.searchParams.get('isolar_proxy')) {
     const path = url.searchParams.get('path') || ''
     if (!path.startsWith('/v1/')) return json({ ok: false, error: 'path inválido' }, 400)
-    // Lê headers iSolarCloud da query string (evita CORS preflight no browser)
-    // O Supabase Gateway intercepta OPTIONS antes da Edge Function e não passa headers customizados.
-    // Passando via query string, o browser usa apenas headers "simples" e não precisa de preflight.
-    const ak  = url.searchParams.get('ak')   || req.headers.get('x-access-key')        || ISOLAR_HK_ACCESSKEY
-    const rsk = url.searchParams.get('rsk')  || req.headers.get('x-random-secret-key') || ''
-    console.log('[proxy_debug] path='+path+' rsk_len='+rsk.length+' rsk_first60='+rsk.slice(0,60))
-    const sc  = url.searchParams.get('sc')   || req.headers.get('x-sign-code')         || '0'
-    const sysc= url.searchParams.get('sysc') || req.headers.get('sys_code')            || '200'
-    const enc = url.searchParams.get('enc')  || req.headers.get('sg_encryption_mode')  || 'aes_ctr'
-    const pl  = url.searchParams.get('pl')   || req.headers.get('_pl')                || 'js'
-    const lang= url.searchParams.get('lang') || req.headers.get('lang')               || '_en_US'
+    // Lê o body como JSON envelope: { rsk, hex, ak? }
+    // O rsk (base64, ~172 chars) é enviado no body para evitar truncamento na query string.
+    // O hex é o payload AES-CTR encriptado que será repassado ao iSolarCloud.
+    let envelope: { rsk?: string; hex?: string; ak?: string } = {}
+    try { envelope = await req.json() } catch { /* body não é JSON */ }
+    const ak  = envelope.ak  || url.searchParams.get('ak')  || ISOLAR_HK_ACCESSKEY
+    const rsk = envelope.rsk || url.searchParams.get('rsk') || ''
+    const hexBody = envelope.hex || ''
+    if (!hexBody) return json({ ok: false, error: 'hex ausente no body' }, 400)
     const forwardHeaders: Record<string, string> = {
       'Content-Type': 'text/plain',
       'x-access-key': ak,
       'x-random-secret-key': rsk,
-      'x-sign-code': sc,
-      'sys_code': sysc,
-      'sg_encryption_mode': enc,
-      '_pl': pl,
-      'lang': lang,
+      'x-sign-code': '0',
+      'sys_code': '200',
+      'sg_encryption_mode': 'aes_ctr',
+      '_pl': 'js',
+      'lang': '_en_US',
     }
-    const body = await req.text()
     const gwRes = await fetch(`${ISOLAR_BASE}${path}`, {
       method: 'POST',
       headers: forwardHeaders,
-      body,
+      body: hexBody,
     })
     // Lê como ArrayBuffer para preservar bytes binários sem corrupção UTF-8
     const gwBuf = await gwRes.arrayBuffer()
