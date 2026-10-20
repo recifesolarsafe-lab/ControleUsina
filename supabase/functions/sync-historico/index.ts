@@ -243,8 +243,9 @@ function dateStrToMs(d: string): number {
 
 // As chaves SPA são usadas pelo protocolo de produção do web app
 const ISOLAR_SPA_ACCESSKEY = '9grzgbmxdsp3arfmmgq347xjbza4ysps'  // x-access-key real do web app
-// RSA public key SPA HK — extraída do WASM index_bg-BjKetHzz.wasm (get_api_key)
-const ISOLAR_SPA_RSA_PUBKEY = 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCkecphb6vgsBx4LJknKKes-eyj7-RKQ3fikF5B67EObZ3t4moFZyMGuuJPiadYdaxvRqtxyblIlVM7omAasROtKRhtgKwwRxo2a6878qBhTgUVlsqugpI_7ZC9RmO2Rpmr8WzDeAapGANfHN5bVr7G7GYGwIrjvyxMrAVit_oM4wIDAQAB'
+// RSA public key DEVELOPER HK — extraída do WASM index_bg-BjKetHzz.wasm (get_developer_api_key)
+// NOTA: Tentamos SPA apiKey primeiro (E906), agora tentando developer apiKey
+const ISOLAR_SPA_RSA_PUBKEY = 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCqI34I8N0tg6NsR9_5tseFEeqcPXM0Lt4yT2UeSKgrHq3yMOYs_dCP5L_XYmWXckVWFHS3FIhhzAU9TNKZxEkG_tvPAVOrMUZWCQnPxTS_ZT2M0513pMaAjFLQHV9_k4ysHLoNa27VinetPlIzm_cBaqyCaaLIe3cecyyIBtiZTQIDAQAB'
 
 function toUrlSafeBase64(buf: Uint8Array): string {
   let b = btoa(String.fromCharCode(...buf))
