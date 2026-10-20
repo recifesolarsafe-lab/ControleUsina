@@ -5588,26 +5588,29 @@ function _isolarClearCachedSession(conta) {
   try { sessionStorage.removeItem('isolar_session_' + conta); } catch {}
 }
 
-// Proxy fetch: envia o payload pelo Edge Function para contornar CORS do gateway iSolarCloud
-// O browser não pode chamar gateway.isolarcloud.com.hk diretamente (bloqueio CORS).
-// A Edge Function repassa o payload já criptografado sem ver as credenciais.
-// PROTOCOLO: body text/plain com formato "RSK\nHEX" (separados por newline).
-// - text/plain evita preflight CORS adicional (Supabase Gateway bloqueia OPTIONS com custom headers).
-// - rsk vai no body (não na URL) para evitar truncamento do Supabase Gateway (~172 chars de base64).
-// - path e ak ficam na query string (valores curtos, sem risco de truncamento).
-async function _isolarProxyFetch(path, hexBody, accesskey, xRandomSecretKey) {
-  const proxyUrl = `${SYNC_HISTORICO_API}?isolar_proxy=1&path=${encodeURIComponent(path)}&ak=${encodeURIComponent(accesskey)}`;
-  return fetch(proxyUrl, {
+// Chamada direta ao gateway iSolarCloud (sem proxy).
+// O browser consegue chamar gateway.isolarcloud.com.hk diretamente — sem bloqueio CORS.
+// (O proxy via Edge Function falha pois o gateway HK bloqueia IPs de datacenter com timeout.)
+// gateway é passado como parâmetro para suportar múltiplas regiões (HK, etc.).
+async function _isolarProxyFetch(path, hexBody, accesskey, xRandomSecretKey, gateway) {
+  const gwBase = gateway || 'https://gateway.isolarcloud.com.hk';
+  return fetch(`${gwBase}${path}`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       'Content-Type': 'text/plain',
+      'x-access-key': accesskey,
+      'x-random-secret-key': xRandomSecretKey,
+      'x-sign-code': '0',
+      'sys_code': '200',
+      'sg_encryption_mode': 'aes_ctr',
+      '_pl': 'js',
+      'lang': '_en_US',
     },
-    body: xRandomSecretKey + '\n' + hexBody,
+    body: hexBody,
   });
 }
 
-// Login iSolarCloud via proxy Edge Function (contorna CORS do gateway)
+// Login iSolarCloud direto no browser (sem proxy — gateway HK aceita CORS do browser)
 async function _isolarBrowserLogin(creds) {
   const { usuario, senha, appkey, accesskey, gateway, rsaPubkey } = creds;
   const loginPayload = JSON.stringify({
@@ -5616,7 +5619,7 @@ async function _isolarBrowserLogin(creds) {
     user_password: _isolarMd5hex(senha),
   });
   const { hexBody, xRandomSecretKey, aesKey } = await _isolarEncrypt(loginPayload, rsaPubkey);
-  const res = await _isolarProxyFetch('/v1/userService/login', hexBody, accesskey, xRandomSecretKey);
+  const res = await _isolarProxyFetch('/v1/userService/login', hexBody, accesskey, xRandomSecretKey, gateway);
   const rawBody = await res.text();
   let body;
   if (/^[0-9A-Fa-f]{10,}$/.test(rawBody.trim())) {
@@ -5655,7 +5658,7 @@ async function _isolarBrowserGetMonthData(psId, yearMonth, session, creds) {
     ps_id_list: [String(psId)],
   });
   const { hexBody, xRandomSecretKey, aesKey } = await _isolarEncrypt(payload, rsaPubkey);
-  const res = await _isolarProxyFetch('/v1/powerStationService/getPowerStationPointDayMonthYearDataList', hexBody, accesskey, xRandomSecretKey);
+  const res = await _isolarProxyFetch('/v1/powerStationService/getPowerStationPointDayMonthYearDataList', hexBody, accesskey, xRandomSecretKey, gateway);
   const rawBody = await res.text();
   let body;
   if (/^[0-9A-Fa-f]{10,}$/.test(rawBody.trim())) {
