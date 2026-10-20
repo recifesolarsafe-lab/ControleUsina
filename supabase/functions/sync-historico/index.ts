@@ -25,10 +25,10 @@ const FUSION_BASE        = 'https://la5.fusionsolar.huawei.com'
 const ISOLAR_BASE        = 'https://gateway.isolarcloud.com.hk'
 // Credenciais iSolarCloud HK (cloudId=2) — chaves DEVELOPER extraídas do WASM index_bg-BjKetHzz.wasm
 // via isolarcloudconfig_get_developer_app_key / get_developer_access_key / get_developer_api_key
-const ISOLAR_HK_APPKEY    = '3D6D4AB05A0A4666F7C4FE07EECBA6F0'
-const ISOLAR_HK_ACCESSKEY = 'jn2yd802j5nzjgyd1ivh15c3fyqkq1ed'
-// RSA public key DEVELOPER HK (cloudId=2) — extraída do WASM, formato URL-safe base64
-const ISOLAR_HK_RSA_PUBKEY = 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCqI34I8N0tg6NsR9_5tseFEeqcPXM0Lt4yT2UeSKgrHq3yMOYs_dCP5L_XYmWXckVWFHS3FIhhzAU9TNKZxEkG_tvPAVOrMUZWCQnPxTS_ZT2M0513pMaAjFLQHV9_k4ysHLoNa27VinetPlIzm_cBaqyCaaLIe3cecyyIBtiZTQIDAQAB'
+// appKey SPA (usado no body das chamadas — o web app usa este)
+const ISOLAR_HK_APPKEY    = '5FD913AA74124F88B98E3705E9D29AEF'
+// accessKey SPA (capturado do XHR real do web app — header x-access-key)
+const ISOLAR_HK_ACCESSKEY = '9grzgbmxdsp3arfmmgq347xjbza4ysps'
 
 function corsHeaders() {
   return {
@@ -223,16 +223,28 @@ function dateStrToMs(d: string): number {
   return new Date(d + 'T00:00:00Z').getTime()
 }
 
-// ─── iSolarCloud — Criptografia AES+RSA ──────────────────────
+// ─── iSolarCloud — Criptografia AES-CTR + RSA ────────────────
 //
-// O servidor HK (gateway.isolarcloud.com.hk) exige que o body de TODAS as
-// chamadas seja criptografado:
+// Protocolo real do servidor HK (capturado via XHR do web3.isolarcloud.com.hk):
+//
 //   1. Gera chave AES-128 aleatória (16 bytes)
-//   2. Criptografa o body JSON com AES-128-CBC (IV = 16 zero bytes)
-//   3. Criptografa a chave AES com RSA-OAEP (SHA-1) usando a pubkey do servidor
-//   4. Envia: { params: base64(encBody), time: base64(encAesKey) }
-//
-// O base64 final usa a variante URL-safe (- e _ em vez de + e /)
+//   2. Criptografa a chave AES com RSA-OAEP (SHA-1) usando a pubkey do servidor
+//      → envia no header x-random-secret-key (base64 standard)
+//   3. Criptografa o body JSON com AES-128-CTR (counter = 16 zero bytes)
+//      → envia como hex UPPERCASE no body
+//   4. Headers obrigatórios:
+//      - sys_code: '200'
+//      - sg_encryption_mode: 'aes_ctr'
+//      - x-access-key: <accessKey SPA>
+//      - x-random-secret-key: base64(RSA-encrypt(aesKey))
+//      - x-sign-code: '0'
+//      - _pl: 'js'
+//   5. Resposta: também hex UPPERCASE → decriptar com mesma chave AES
+
+// As chaves SPA são usadas pelo protocolo de produção do web app
+const ISOLAR_SPA_ACCESSKEY = '9grzgbmxdsp3arfmmgq347xjbza4ysps'  // x-access-key real do web app
+// RSA public key SPA HK — extraída do WASM index_bg-BjKetHzz.wasm (get_api_key)
+const ISOLAR_SPA_RSA_PUBKEY = 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCkecphb6vgsBx4LJknKKes-eyj7-RKQ3fikF5B67EObZ3t4moFZyMGuuJPiadYdaxvRqtxyblIlVM7omAasROtKRhtgKwwRxo2a6878qBhTgUVlsqugpI_7ZC9RmO2Rpmr8WzDeAapGANfHN5bVr7G7GYGwIrjvyxMrAVit_oM4wIDAQAB'
 
 function toUrlSafeBase64(buf: Uint8Array): string {
   let b = btoa(String.fromCharCode(...buf))
@@ -246,31 +258,67 @@ function fromUrlSafeBase64(s: string): Uint8Array {
   return Uint8Array.from(atob(b), c => c.charCodeAt(0))
 }
 
-async function isolarEncryptBody(plainBody: string): Promise<{ params: string; time: string }> {
-  // 1. Gerar chave AES aleatória (16 bytes = AES-128)
+function toHexUpper(buf: Uint8Array): string {
+  return Array.from(buf).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join('')
+}
+
+function fromHex(hex: string): Uint8Array {
+  const result = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < hex.length; i += 2) {
+    result[i / 2] = parseInt(hex.slice(i, i + 2), 16)
+  }
+  return result
+}
+
+// Retorna: { hexBody, rsaEncAesKey (base64 standard para x-random-secret-key), aesKey (para decriptar resposta) }
+async function isolarEncryptBodyCtr(plainBody: string): Promise<{
+  hexBody: string;
+  xRandomSecretKey: string;
+  aesKey: Uint8Array;
+}> {
+  // 1. Gerar chave AES-128 aleatória (16 bytes)
   const aesKey = crypto.getRandomValues(new Uint8Array(16))
-  const iv = new Uint8Array(16) // IV = 16 zero bytes
+  // AES-CTR: counter inicial = 16 bytes zero
+  const counter = new Uint8Array(16)
 
-  // 2. AES-128-CBC encrypt
-  const cryptoKey = await crypto.subtle.importKey('raw', aesKey, { name: 'AES-CBC' }, false, ['encrypt'])
+  // 2. AES-128-CTR encrypt
+  const cryptoKey = await crypto.subtle.importKey('raw', aesKey, { name: 'AES-CTR' }, false, ['encrypt'])
   const enc = new TextEncoder()
-  const encBody = await crypto.subtle.encrypt({ name: 'AES-CBC', iv }, cryptoKey, enc.encode(plainBody))
+  const encBody = await crypto.subtle.encrypt(
+    { name: 'AES-CTR', counter, length: 64 },  // length=64 bits = standard CTR
+    cryptoKey,
+    enc.encode(plainBody)
+  )
 
-  // 3. Importar RSA public key (PKCS#8 SubjectPublicKeyInfo, base64 URL-safe → standard)
-  const rsaDer = fromUrlSafeBase64(ISOLAR_HK_RSA_PUBKEY)
+  // 3. RSA-OAEP encrypt da chave AES com a pubkey SPA
+  const rsaDer = fromUrlSafeBase64(ISOLAR_SPA_RSA_PUBKEY)
   const rsaKey = await crypto.subtle.importKey(
     'spki', rsaDer.buffer,
     { name: 'RSA-OAEP', hash: 'SHA-1' },
     false, ['encrypt']
   )
-
-  // 4. Encrypt AES key with RSA-OAEP
   const encAesKey = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, rsaKey, aesKey)
 
+  // x-random-secret-key usa base64 standard (não URL-safe)
+  const xRandomSecretKey = btoa(String.fromCharCode(...new Uint8Array(encAesKey)))
+
   return {
-    params: toUrlSafeBase64(new Uint8Array(encBody)),
-    time:   toUrlSafeBase64(new Uint8Array(encAesKey)),
+    hexBody: toHexUpper(new Uint8Array(encBody)),
+    xRandomSecretKey,
+    aesKey,
   }
+}
+
+async function isolarDecryptResponseCtr(hexResponse: string, aesKey: Uint8Array): Promise<string> {
+  const encData = fromHex(hexResponse)
+  const counter = new Uint8Array(16)
+  const cryptoKey = await crypto.subtle.importKey('raw', aesKey, { name: 'AES-CTR' }, false, ['decrypt'])
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-CTR', counter, length: 64 },
+    cryptoKey,
+    encData
+  )
+  return new TextDecoder().decode(decrypted)
 }
 
 // ─── SolisCloud — histórico diário ───────────────────────────
@@ -456,21 +504,18 @@ async function fusionMonthly(stationCode: string, conta: string, yearMonth: stri
 
 // ─── iSolarCloud — histórico diário ──────────────────────────
 //
-// Autenticação iSolarCloud V1 (servidor HK):
+// Autenticação iSolarCloud V1 (servidor HK) — protocolo real capturado do XHR:
 //
 //   PASSO 1 — Login com user/senha:
 //     POST /v1/userService/login
-//     Body (criptografado): { appkey, user_account, user_password: md5hex(senha) }
-//     Headers: x-access-key: <accessKey>, sys_code: '901', lang: '_en_US'
-//     Resposta: result_data.token, result_data.user_id, result_data.login_state
+//     Body: AES-128-CTR hex uppercase de { appkey, user_account, user_password: md5hex(senha) }
+//     Headers: x-access-key, x-random-secret-key (RSA da chave AES), sys_code: '200',
+//              sg_encryption_mode: 'aes_ctr', x-sign-code: '0', _pl: 'js'
+//     Resposta: hex AES-CTR → decriptar → JSON com result_data.token, user_id, login_state
 //
-//   PASSO 2 — Chamadas de dados (todas precisam de criptografia):
+//   PASSO 2 — Chamadas de dados (mesma criptografia):
 //     POST /v1/powerStationService/...
-//     Headers: x-access-key: <accessKey>, sys_code: '901', lang: '_en_US'
-//     Body (criptografado): { token, user_id, login_state, appkey, ...params }
-//
-// TODOS os bodies precisam ser criptografados: AES-128-CBC + RSA-OAEP
-// (ver função isolarEncryptBody acima)
+//     Body: AES-128-CTR hex uppercase de { token, user_id, login_state, appkey, ...params }
 //
 // Env vars:
 //   ISOLAR_USER     — email/usuário (ex: lmalta007@gmail.com)
@@ -511,19 +556,35 @@ async function isolarV1LoginComCache(conta: string): Promise<{ token: string; us
     user_account: usuario,
     user_password: md5hex(senha),
   })
-  const encrypted = await isolarEncryptBody(loginPayload)
+  const { hexBody, xRandomSecretKey, aesKey } = await isolarEncryptBodyCtr(loginPayload)
 
   const res = await fetch(`${ISOLAR_BASE}/v1/userService/login`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'text/plain',
       'x-access-key': ISOLAR_HK_ACCESSKEY,
-      'sys_code': '901',
+      'x-random-secret-key': xRandomSecretKey,
+      'x-sign-code': '0',
+      'sys_code': '200',
+      'sg_encryption_mode': 'aes_ctr',
+      '_pl': 'js',
       'lang': '_en_US',
     },
-    body: JSON.stringify(encrypted),
+    body: hexBody,
   })
-  const body = await res.json()
+  const rawBody = await res.text()
+  console.log(`[iSolarCloud] login HTTP ${res.status}, raw body (50 chars): ${rawBody.slice(0, 50)}`)
+
+  // Resposta pode ser hex-encriptada ou JSON direto (fallback)
+  let body: any
+  if (/^[0-9A-Fa-f]{10,}$/.test(rawBody.trim())) {
+    const decrypted = await isolarDecryptResponseCtr(rawBody.trim(), aesKey)
+    console.log(`[iSolarCloud] login decrypted: ${decrypted.slice(0, 200)}`)
+    body = JSON.parse(decrypted)
+  } else {
+    try { body = JSON.parse(rawBody) } catch { body = { result_code: 'E_PARSE', raw: rawBody.slice(0, 200) } }
+  }
+
   console.log(`[iSolarCloud] login result_code=${body.result_code} msg=${body.result_msg}`)
   if (body.result_code !== '1') throw new Error('iSolarCloud login: ' + JSON.stringify(body))
 
@@ -549,20 +610,35 @@ async function isolarV1Request(path: string, payload: object, session: { token: 
     appkey:      ISOLAR_HK_APPKEY,
     ...payload,
   })
-  const encrypted = await isolarEncryptBody(fullPayload)
+  const { hexBody, xRandomSecretKey, aesKey } = await isolarEncryptBodyCtr(fullPayload)
   console.log(`[iSolarCloud] V1 request ${path}`)
   const res = await fetch(`${ISOLAR_BASE}${path}`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
+      'Content-Type': 'text/plain',
       'x-access-key': ISOLAR_HK_ACCESSKEY,
-      'sys_code': '901',
+      'x-random-secret-key': xRandomSecretKey,
+      'x-sign-code': '0',
+      'sys_code': '200',
+      'sg_encryption_mode': 'aes_ctr',
+      '_pl': 'js',
       'lang': '_en_US',
     },
-    body: JSON.stringify(encrypted),
+    body: hexBody,
   })
-  const body = await res.json()
-  console.log(`[iSolarCloud] response ${path}: result_code=${body.result_code} msg=${body.result_msg}`)
+  const rawBody = await res.text()
+  console.log(`[iSolarCloud] response ${path} HTTP ${res.status}, raw (50): ${rawBody.slice(0, 50)}`)
+
+  let body: any
+  if (/^[0-9A-Fa-f]{10,}$/.test(rawBody.trim())) {
+    const decrypted = await isolarDecryptResponseCtr(rawBody.trim(), aesKey)
+    console.log(`[iSolarCloud] decrypted ${path}: ${decrypted.slice(0, 300)}`)
+    body = JSON.parse(decrypted)
+  } else {
+    try { body = JSON.parse(rawBody) } catch { body = { result_code: 'E_PARSE', raw: rawBody.slice(0, 200) } }
+  }
+
+  console.log(`[iSolarCloud] result_code=${body.result_code} msg=${body.result_msg}`)
   if (body.result_code !== '1') throw new Error('iSolarCloud V1: ' + JSON.stringify(body))
   return body.result_data
 }
