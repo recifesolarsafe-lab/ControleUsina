@@ -33,7 +33,8 @@ const ISOLAR_HK_ACCESSKEY = '9grzgbmxdsp3arfmmgq347xjbza4ysps'
 function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-token',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-token, x-access-key, x-random-secret-key, x-sign-code, sys_code, sg_encryption_mode, _pl, lang',
+    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
   }
 }
 function json(data: object, status = 200) {
