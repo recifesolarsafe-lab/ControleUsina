@@ -5403,6 +5403,368 @@ window.addEventListener('beforeprint', ()=>{
 });
 
 /* ============================================================
+   iSolarCloud — sync via browser (contorna bloqueio de IPs cloud)
+   O servidor gateway.isolarcloud.com.hk bloqueia IPs de datacenter
+   (retorna 504). O browser do usuário pode chamar diretamente.
+   Esta função implementa toda a criptografia AES-CTR + RSA PKCS1v15
+   em JS puro no browser, faz login no iSolarCloud e salva no Supabase.
+   ============================================================ */
+
+// ── Utilitários de crypto (browser nativo) ───────────────────────
+async function _isolarAesCtrEncrypt(plaintext, aesKey) {
+  const counter = new Uint8Array(16); // 16 zero bytes
+  const cryptoKey = await crypto.subtle.importKey('raw', aesKey, { name: 'AES-CTR' }, false, ['encrypt']);
+  const enc = new TextEncoder();
+  const buf = await crypto.subtle.encrypt({ name: 'AES-CTR', counter, length: 64 }, cryptoKey, enc.encode(plaintext));
+  return new Uint8Array(buf);
+}
+async function _isolarAesCtrDecrypt(cipherBytes, aesKey) {
+  const counter = new Uint8Array(16);
+  const cryptoKey = await crypto.subtle.importKey('raw', aesKey, { name: 'AES-CTR' }, false, ['decrypt']);
+  const buf = await crypto.subtle.decrypt({ name: 'AES-CTR', counter, length: 64 }, cryptoKey, cipherBytes);
+  return new TextDecoder().decode(buf);
+}
+function _isolarToHexUpper(buf) {
+  return Array.from(buf).map(b => b.toString(16).padStart(2,'0').toUpperCase()).join('');
+}
+function _isolarFromHex(hex) {
+  const r = new Uint8Array(hex.length/2);
+  for (let i=0;i<hex.length;i+=2) r[i/2]=parseInt(hex.slice(i,i+2),16);
+  return r;
+}
+function _isolarFromUrlSafeBase64(s) {
+  let b = s.replace(/-/g,'+').replace(/_/g,'/');
+  while (b.length%4) b+='=';
+  return Uint8Array.from(atob(b), c=>c.charCodeAt(0));
+}
+function _isolarParseDerSpki(spkiDer) {
+  let pos = 0;
+  function readLen() {
+    const first = spkiDer[pos++];
+    if (first < 0x80) return first;
+    const nBytes = first & 0x7f;
+    let len = 0;
+    for (let i=0;i<nBytes;i++) len=(len<<8)|spkiDer[pos++];
+    return len;
+  }
+  function readTag(expected) {
+    const tag = spkiDer[pos++];
+    if (tag !== expected) throw new Error(`DER: expected 0x${expected.toString(16)}, got 0x${tag.toString(16)}`);
+    return readLen();
+  }
+  function readBigInt() {
+    const len = readTag(0x02);
+    let start = pos, count = len;
+    if (spkiDer[start] === 0x00) { start++; count--; }
+    const bytes = spkiDer.slice(start, start+count);
+    pos += len;
+    let val = 0n;
+    for (const b of bytes) val = (val<<8n)|BigInt(b);
+    return val;
+  }
+  readTag(0x30);
+  const algLen = readTag(0x30);
+  pos += algLen;
+  readTag(0x03); pos++;
+  readTag(0x30);
+  const n = readBigInt(), e = readBigInt();
+  return { n, e };
+}
+function _isolarModpow(base, exp, mod) {
+  let result = 1n; base = base % mod;
+  while (exp > 0n) {
+    if (exp%2n===1n) result = result*base%mod;
+    exp = exp>>1n; base = base*base%mod;
+  }
+  return result;
+}
+function _isolarRsaPkcs1v15Encrypt(message, n, e) {
+  const k = Math.ceil(n.toString(16).length/2);
+  const psLen = k - message.length - 3;
+  const PS = new Uint8Array(psLen);
+  let filled = 0;
+  while (filled < psLen) {
+    const rand = crypto.getRandomValues(new Uint8Array(psLen-filled+8));
+    for (const b of rand) { if (b!==0&&filled<psLen) PS[filled++]=b; }
+  }
+  const EM = new Uint8Array(k);
+  EM[0]=0x00; EM[1]=0x02; EM.set(PS,2); EM[2+psLen]=0x00; EM.set(message,3+psLen);
+  let m = 0n;
+  for (const b of EM) m=(m<<8n)|BigInt(b);
+  const c = _isolarModpow(m,e,n);
+  const result = new Uint8Array(k);
+  const cHex = c.toString(16).padStart(k*2,'0');
+  for (let i=0;i<k;i++) result[i]=parseInt(cHex.slice(i*2,i*2+2),16);
+  return result;
+}
+// Cache da chave RSA parseada
+let _isolarRsaKeyCache = null;
+function _isolarGetRsaKey(rsaPubkey) {
+  if (_isolarRsaKeyCache) return _isolarRsaKeyCache;
+  const der = _isolarFromUrlSafeBase64(rsaPubkey);
+  _isolarRsaKeyCache = _isolarParseDerSpki(der);
+  return _isolarRsaKeyCache;
+}
+
+// MD5 hex (iSolarCloud usa para senha)
+function _isolarMd5hex(input) {
+  const enc = new TextEncoder(), bytes = enc.encode(input);
+  function safeAdd(x,y){return(x+y)&0xFFFFFFFF}
+  function rol(n,c){return(n<<c)|(n>>>(32-c))}
+  function cmn(q,a,b,x,s,t){return safeAdd(rol(safeAdd(safeAdd(a,q),safeAdd(x,t)),s),b)}
+  function ff(a,b,c,d,x,s,t){return cmn((b&c)|((~b)&d),a,b,x,s,t)}
+  function gg(a,b,c,d,x,s,t){return cmn((b&d)|(c&(~d)),a,b,x,s,t)}
+  function hh(a,b,c,d,x,s,t){return cmn(b^c^d,a,b,x,s,t)}
+  function ii(a,b,c,d,x,s,t){return cmn(c^(b|(~d)),a,b,x,s,t)}
+  const len=bytes.length,extra=len%64<56?55-len%64:119-len%64;
+  const padded=new Uint8Array(len+extra+9);
+  padded.set(bytes);padded[len]=0x80;
+  const bitLen=len*8,dv=new DataView(padded.buffer);
+  dv.setUint32(padded.length-8,bitLen>>>0,true);
+  dv.setUint32(padded.length-4,Math.floor(bitLen/0x100000000),true);
+  let a=0x67452301,b=0xEFCDAB89,c=0x98BADCFE,d=0x10325476;
+  for(let i=0;i<padded.length;i+=64){
+    const M=[]; for(let j=0;j<16;j++) M.push(dv.getInt32(i+j*4,true));
+    const[a0,b0,c0,d0]=[a,b,c,d];
+    a=ff(a,b,c,d,M[0],7,-680876936);d=ff(d,a,b,c,M[1],12,-389564586);c=ff(c,d,a,b,M[2],17,606105819);b=ff(b,c,d,a,M[3],22,-1044525330);
+    a=ff(a,b,c,d,M[4],7,-176418897);d=ff(d,a,b,c,M[5],12,1200080426);c=ff(c,d,a,b,M[6],17,-1473231341);b=ff(b,c,d,a,M[7],22,-45705983);
+    a=ff(a,b,c,d,M[8],7,1770035416);d=ff(d,a,b,c,M[9],12,-1958414417);c=ff(c,d,a,b,M[10],17,-42063);b=ff(b,c,d,a,M[11],22,-1990404162);
+    a=ff(a,b,c,d,M[12],7,1804603682);d=ff(d,a,b,c,M[13],12,-40341101);c=ff(c,d,a,b,M[14],17,-1502002290);b=ff(b,c,d,a,M[15],22,1236535329);
+    a=gg(a,b,c,d,M[1],5,-165796510);d=gg(d,a,b,c,M[6],9,-1069501632);c=gg(c,d,a,b,M[11],14,643717713);b=gg(b,c,d,a,M[0],20,-373897302);
+    a=gg(a,b,c,d,M[5],5,-701558691);d=gg(d,a,b,c,M[10],9,38016083);c=gg(c,d,a,b,M[15],14,-660478335);b=gg(b,c,d,a,M[4],20,-405537848);
+    a=gg(a,b,c,d,M[9],5,568446438);d=gg(d,a,b,c,M[14],9,-1019803690);c=gg(c,d,a,b,M[3],14,-187363961);b=gg(b,c,d,a,M[8],20,1163531501);
+    a=gg(a,b,c,d,M[13],5,-1444681467);d=gg(d,a,b,c,M[2],9,-51403784);c=gg(c,d,a,b,M[7],14,1735328473);b=gg(b,c,d,a,M[12],20,-1926607734);
+    a=hh(a,b,c,d,M[5],4,-378558);d=hh(d,a,b,c,M[8],11,-2022574463);c=hh(c,d,a,b,M[11],16,1839030562);b=hh(b,c,d,a,M[14],23,-35309556);
+    a=hh(a,b,c,d,M[1],4,-1530992060);d=hh(d,a,b,c,M[4],11,1272893353);c=hh(c,d,a,b,M[7],16,-155497632);b=hh(b,c,d,a,M[10],23,-1094730640);
+    a=hh(a,b,c,d,M[13],4,681279174);d=hh(d,a,b,c,M[0],11,-358537222);c=hh(c,d,a,b,M[3],16,-722521979);b=hh(b,c,d,a,M[6],23,76029189);
+    a=hh(a,b,c,d,M[9],4,-640364487);d=hh(d,a,b,c,M[12],11,-421815835);c=hh(c,d,a,b,M[15],16,530742520);b=hh(b,c,d,a,M[2],23,-995338651);
+    a=ii(a,b,c,d,M[0],6,-198630844);d=ii(d,a,b,c,M[7],10,1126891415);c=ii(c,d,a,b,M[14],15,-1416354905);b=ii(b,c,d,a,M[5],21,-57434055);
+    a=ii(a,b,c,d,M[12],6,1700485571);d=ii(d,a,b,c,M[3],10,-1894986606);c=ii(c,d,a,b,M[10],15,-1051523);b=ii(b,c,d,a,M[1],21,-2054922799);
+    a=ii(a,b,c,d,M[8],6,1873313359);d=ii(d,a,b,c,M[15],10,-30611744);c=ii(c,d,a,b,M[6],15,-1560198380);b=ii(b,c,d,a,M[13],21,1309151649);
+    a=ii(a,b,c,d,M[4],6,-145523070);d=ii(d,a,b,c,M[11],10,-1120210379);c=ii(c,d,a,b,M[2],15,718787259);b=ii(b,c,d,a,M[9],21,-343485551);
+    a=safeAdd(a,a0);b=safeAdd(b,b0);c=safeAdd(c,c0);d=safeAdd(d,d0);
+  }
+  const r2=new Uint8Array(16),rv2=new DataView(r2.buffer);
+  rv2.setInt32(0,a,true);rv2.setInt32(4,b,true);rv2.setInt32(8,c,true);rv2.setInt32(12,d,true);
+  return Array.from(r2).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// Encripta payload para iSolarCloud
+async function _isolarEncrypt(plainBody, rsaPubkey) {
+  const aesKey = crypto.getRandomValues(new Uint8Array(16));
+  const encBodyBytes = await _isolarAesCtrEncrypt(plainBody, aesKey);
+  const {n,e} = _isolarGetRsaKey(rsaPubkey);
+  const encAesKey = _isolarRsaPkcs1v15Encrypt(aesKey,n,e);
+  return {
+    hexBody: _isolarToHexUpper(encBodyBytes),
+    xRandomSecretKey: btoa(String.fromCharCode(...encAesKey)),
+    aesKey
+  };
+}
+
+// Decripta resposta iSolarCloud
+async function _isolarDecrypt(hexBody, aesKey) {
+  const encBytes = _isolarFromHex(hexBody);
+  return await _isolarAesCtrDecrypt(encBytes, aesKey);
+}
+
+// Cache de sessão iSolarCloud no sessionStorage (evita login a cada chamada)
+function _isolarGetCachedSession(conta) {
+  try {
+    const key = 'isolar_session_' + conta;
+    const cached = JSON.parse(sessionStorage.getItem(key) || 'null');
+    if (!cached) return null;
+    const ageMs = Date.now() - (cached.ts || 0);
+    if (ageMs > 18 * 60 * 1000) return null; // 18 minutos
+    return cached;
+  } catch { return null; }
+}
+function _isolarSetCachedSession(conta, session) {
+  try {
+    sessionStorage.setItem('isolar_session_' + conta, JSON.stringify({ ...session, ts: Date.now() }));
+  } catch {}
+}
+function _isolarClearCachedSession(conta) {
+  try { sessionStorage.removeItem('isolar_session_' + conta); } catch {}
+}
+
+// Login iSolarCloud via browser (servidor não bloqueia IP do usuário)
+async function _isolarBrowserLogin(creds) {
+  const { usuario, senha, appkey, accesskey, gateway, rsaPubkey } = creds;
+  const loginPayload = JSON.stringify({
+    appkey,
+    user_account: usuario,
+    user_password: _isolarMd5hex(senha),
+  });
+  const { hexBody, xRandomSecretKey, aesKey } = await _isolarEncrypt(loginPayload, rsaPubkey);
+  const res = await fetch(`${gateway}/v1/userService/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain',
+      'x-access-key': accesskey,
+      'x-random-secret-key': xRandomSecretKey,
+      'x-sign-code': '0',
+      'sys_code': '200',
+      'sg_encryption_mode': 'aes_ctr',
+      '_pl': 'js',
+      'lang': '_en_US',
+    },
+    body: hexBody,
+  });
+  const rawBody = await res.text();
+  let body;
+  if (/^[0-9A-Fa-f]{10,}$/.test(rawBody.trim())) {
+    const dec = await _isolarDecrypt(rawBody.trim(), aesKey);
+    body = JSON.parse(dec);
+  } else {
+    try { body = JSON.parse(rawBody); } catch { body = { result_code: 'E_PARSE', raw: rawBody.slice(0,200) }; }
+  }
+  console.log('[iSolarBrowser] login result_code='+body.result_code+' msg='+body.result_msg);
+  if (body.result_code !== '1') throw new Error('iSolarCloud login: ' + JSON.stringify(body));
+  return {
+    token: body.result_data?.token || '',
+    userId: String(body.result_data?.user_id || ''),
+    loginState: String(body.result_data?.login_state || ''),
+  };
+}
+
+// Busca dados de geração mensal iSolarCloud via browser
+async function _isolarBrowserGetMonthData(psId, yearMonth, session, creds) {
+  const { appkey, accesskey, gateway, rsaPubkey } = creds;
+  const [y, m] = yearMonth.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const startTime = yearMonth.replace('-','') + '01';
+  const endTime = yearMonth.replace('-','') + String(daysInMonth).padStart(2,'0');
+  const payload = JSON.stringify({
+    token: session.token,
+    user_id: session.userId,
+    login_state: session.loginState,
+    appkey,
+    query_type: 'day',
+    data_type: '2',
+    data_point: 'p83022',
+    start_time: startTime,
+    end_time: endTime,
+    order: 0,
+    ps_id_list: [String(psId)],
+  });
+  const { hexBody, xRandomSecretKey, aesKey } = await _isolarEncrypt(payload, rsaPubkey);
+  const res = await fetch(`${gateway}/v1/powerStationService/getPowerStationPointDayMonthYearDataList`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain',
+      'x-access-key': accesskey,
+      'x-random-secret-key': xRandomSecretKey,
+      'x-sign-code': '0',
+      'sys_code': '200',
+      'sg_encryption_mode': 'aes_ctr',
+      '_pl': 'js',
+      'lang': '_en_US',
+    },
+    body: hexBody,
+  });
+  const rawBody = await res.text();
+  let body;
+  if (/^[0-9A-Fa-f]{10,}$/.test(rawBody.trim())) {
+    const dec = await _isolarDecrypt(rawBody.trim(), aesKey);
+    body = JSON.parse(dec);
+  } else {
+    try { body = JSON.parse(rawBody); } catch { body = { result_code: 'E_PARSE' }; }
+  }
+  if (body.result_code !== '1') throw new Error('iSolarCloud data: ' + JSON.stringify(body));
+  // Extrai dados de geração
+  const psData = body.result_data?.[String(psId)] || body.result_data?.[psId];
+  const entries = psData?.p83022 || [];
+  const result = {};
+  for (const entry of entries) {
+    const ts = String(entry.time_stamp || '');
+    if (ts.length < 8) continue;
+    const dateKey = ts.slice(0,4)+'-'+ts.slice(4,6)+'-'+ts.slice(6,8);
+    const rawVal = entry['2'] || entry['1'] || entry['4'] || '0';
+    const kwh = (parseFloat(rawVal) || 0) / 1000;
+    if (kwh > 0) result[dateKey] = kwh;
+  }
+  return result;
+}
+
+// Cache de credenciais iSolarCloud por conta (evita chamar a Edge Function toda vez)
+const _isolarCredsCache = {};
+
+// Obtém credenciais iSolarCloud da Edge Function (requer auth de admin)
+async function _isolarGetCreds(conta, userToken) {
+  if (_isolarCredsCache[conta]) return _isolarCredsCache[conta];
+  const res = await fetch(`${SYNC_HISTORICO_API}?get_isolar_creds=1&conta=${encodeURIComponent(conta)}`, {
+    headers: { 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`, 'x-user-token': userToken }
+  });
+  if (!res.ok) throw new Error('Erro ao obter credenciais iSolarCloud: HTTP ' + res.status);
+  const data = await res.json();
+  if (!data.ok) throw new Error('iSolarCloud creds: ' + (data.error || 'erro'));
+  _isolarCredsCache[conta] = data;
+  return data;
+}
+
+// Sync iSolarCloud inteiramente no browser para um conjunto de meses
+async function isolarSyncBrowser(psId, conta, dataInicio, dataFim, codigoUsina, userToken) {
+  console.log(`[iSolarBrowser] sync psId=${psId} conta=${conta} ${dataInicio}→${dataFim}`);
+  // Obtém credenciais
+  const creds = await _isolarGetCreds(conta, userToken);
+  // Obtém/usa sessão cacheada
+  let session = _isolarGetCachedSession(conta);
+  if (!session) {
+    session = await _isolarBrowserLogin(creds);
+    _isolarSetCachedSession(conta, session);
+  }
+  // Calcula meses
+  function monthsBetween(ini, fim) {
+    const months = [];
+    let [y,m] = ini.slice(0,7).split('-').map(Number);
+    const [yf,mf] = fim.slice(0,7).split('-').map(Number);
+    while (y<yf||(y===yf&&m<=mf)) {
+      months.push(`${y}-${String(m).padStart(2,'0')}`);
+      m++; if(m>12){m=1;y++;}
+    }
+    return months;
+  }
+  const meses = monthsBetween(dataInicio, dataFim);
+  const lancamentos = [];
+  for (const mes of meses) {
+    try {
+      const diasKwh = await _isolarBrowserGetMonthData(psId, mes, session, creds);
+      for (const [data, kwh] of Object.entries(diasKwh)) {
+        if (data >= dataInicio && data <= dataFim) {
+          lancamentos.push({ data, codigo_usina: codigoUsina, geracao_real: kwh, obs: 'sync-auto' });
+        }
+      }
+      // Delay entre meses
+      if (meses.indexOf(mes) < meses.length-1) await new Promise(r=>setTimeout(r,800));
+    } catch(e) {
+      console.warn(`[iSolarBrowser] erro no mês ${mes}:`, e.message);
+      // Se token expirou, tenta re-login uma vez
+      if (e.message.includes('login') || e.message.includes('token') || e.message.includes('E907') || e.message.includes('E906')) {
+        _isolarClearCachedSession(conta);
+        session = await _isolarBrowserLogin(creds);
+        _isolarSetCachedSession(conta, session);
+        try {
+          const diasKwh = await _isolarBrowserGetMonthData(psId, mes, session, creds);
+          for (const [data, kwh] of Object.entries(diasKwh)) {
+            if (data >= dataInicio && data <= dataFim) {
+              lancamentos.push({ data, codigo_usina: codigoUsina, geracao_real: kwh, obs: 'sync-auto' });
+            }
+          }
+        } catch(e2) { console.error(`[iSolarBrowser] retry falhou ${mes}:`, e2.message); }
+      }
+    }
+  }
+  // Salva no Supabase diretamente
+  if (lancamentos.length > 0) {
+    const { error } = await sb.from('lancamentos').upsert(lancamentos, { onConflict: 'data,codigo_usina', ignoreDuplicates: false });
+    if (error) throw new Error('Upsert lancamentos: ' + error.message);
+  }
+  console.log(`[iSolarBrowser] ${lancamentos.length} lançamentos salvos para ${codigoUsina}`);
+  return lancamentos.length;
+}
+
+/* ============================================================
    Sync histórico automático (chamado em background após login)
    Para cada usina com integração cadastrada, verifica se há
    lançamentos desde 2026-01-01. Se não houver (ou o último for
@@ -5478,6 +5840,25 @@ async function autoSyncHistorico(forcarTodas = false){
           : '2026-01-01';
         if(dataInicio >= dataFim){ console.log('[autoSyncHistorico]', codigo, 'já em dia (dataInicio='+dataInicio+')'); continue; }
 
+        // Verifica se a usina tem integração iSolarCloud (chamada direta do browser)
+        const integIsolar = integracoes.find(i => i.codigo_usina === codigo && i.plataforma === 'isolar');
+        if(integIsolar){
+          // iSolarCloud: gateway bloqueia IPs de datacenter, então o browser faz a chamada diretamente
+          console.log('[autoSyncHistorico]', codigo, '→ iSolarCloud browser-side sync, ps_id='+integIsolar.station_id+', conta='+integIsolar.conta_isolar);
+          const salvos = await isolarSyncBrowser(
+            integIsolar.station_id,
+            integIsolar.conta_isolar || 'padrao',
+            dataInicio,
+            dataFim,
+            codigo,
+            token
+          );
+          totalSalvo += salvos;
+          if(salvos > 0){ for(const k in MONTH_CACHE) delete MONTH_CACHE[k]; }
+          continue;
+        }
+
+        // Demais plataformas (solis, fusion, apsystems): chama Edge Function normalmente
         const url = `${SYNC_HISTORICO_API}?codigo=${encodeURIComponent(codigo)}&data_inicio=${dataInicio}&data_fim=${dataFim}`;
         console.log('[autoSyncHistorico] chamando Edge Function:', url);
         const res = await fetch(url, {

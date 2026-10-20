@@ -1091,6 +1091,33 @@ serve(async (req) => {
       return json({ ok: false, error: e.message, stack: String(e.stack).slice(0, 500) })
     }
   }
+
+  // ─── Rota: retorna credenciais iSolarCloud para o browser fazer a chamada diretamente ─────
+  // GET /sync-historico?get_isolar_creds=1&conta=padrao
+  // Necessário porque o servidor iSolarCloud HK bloqueia IPs de datacenter/nuvem (504 Gateway Timeout)
+  // O browser do usuário pode fazer a chamada diretamente sem bloqueio.
+  // Requer autenticação via x-user-token (só admins podem acessar).
+  if (url.searchParams.get('get_isolar_creds')) {
+    const token = req.headers.get('x-user-token') || ''
+    if (!token) return json({ ok: false, error: 'x-user-token obrigatório' }, 401)
+    const sessao = await verifySession(token)
+    if (!sessao) return json({ ok: false, error: 'Sessão inválida.' }, 401)
+    if (sessao.papel !== 'Admin') return json({ ok: false, error: 'Apenas admins podem acessar credenciais.' }, 403)
+    const conta = url.searchParams.get('conta') || 'padrao'
+    const suffix = conta === 'padrao' ? '' : '_' + conta
+    const usuario = Deno.env.get('ISOLAR_USER' + suffix) || ''
+    const senha   = Deno.env.get('ISOLAR_PASS' + suffix) || Deno.env.get('ISOLAR_PASSWORD' + suffix) || ''
+    if (!usuario || !senha) return json({ ok: false, error: `Credenciais ISOLAR_USER${suffix} não configuradas.` }, 404)
+    return json({
+      ok: true,
+      usuario,
+      senha,
+      appkey: ISOLAR_HK_APPKEY,
+      accesskey: ISOLAR_HK_ACCESSKEY,
+      gateway: ISOLAR_BASE,
+      rsaPubkey: ISOLAR_SPA_RSA_PUBKEY,
+    })
+  }
   // ─────────────────────────────────────────────────────────────────────────────
 
   // Token do usuário: lido do header x-user-token (evita conflito com gateway JWT do Supabase)
