@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-19e
+// Supabase Edge Function: sync-historico  v2026-10-20a
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -23,11 +23,12 @@ const SOLIS_KEY_SECRET   = Deno.env.get('SOLIS_KEY_SECRET')!
 const FUSION_BASE        = 'https://la5.fusionsolar.huawei.com'
 // Conta lmalta007@gmail.com está no servidor HK (cloudId=2): gateway.isolarcloud.com.hk
 const ISOLAR_BASE        = 'https://gateway.isolarcloud.com.hk'
-// Credenciais iSolarCloud HK (cloudId=2) — extraídas do WASM index_bg-BjKetHzz.wasm
-const ISOLAR_HK_APPKEY    = '56A687E0181F2E2156E43C3FEFB12BFB'
-const ISOLAR_HK_ACCESSKEY = '0uyf06aujq9x8ses5ywfhp94b8yu9b24'
-// RSA public key HK (cloudId=2) — extraída do WASM, formato URL-safe base64
-const ISOLAR_HK_RSA_PUBKEY = 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDE_48F_oYGgXRfJccIp7XngVCGi6vLYJXkII2tgUJxhJ8dMa5087-CE7srhLQKpTS9I7Jz1Z6VebeShzn-K3zSQxn-rMBpKFeU4tQjkjKdn-VTpcrsNvoWPalXdtHsjsRgOQ91SYyPeUFDe7UB0UsHv3lXGk3OL4KW576YJo8BmQIDAQAB'
+// Credenciais iSolarCloud HK (cloudId=2) — chaves DEVELOPER extraídas do WASM index_bg-BjKetHzz.wasm
+// via isolarcloudconfig_get_developer_app_key / get_developer_access_key / get_developer_api_key
+const ISOLAR_HK_APPKEY    = '3D6D4AB05A0A4666F7C4FE07EECBA6F0'
+const ISOLAR_HK_ACCESSKEY = 'jn2yd802j5nzjgyd1ivh15c3fyqkq1ed'
+// RSA public key DEVELOPER HK (cloudId=2) — extraída do WASM, formato URL-safe base64
+const ISOLAR_HK_RSA_PUBKEY = 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCqI34I8N0tg6NsR9_5tseFEeqcPXM0Lt4yT2UeSKgrHq3yMOYs_dCP5L_XYmWXckVWFHS3FIhhzAU9TNKZxEkG_tvPAVOrMUZWCQnPxTS_ZT2M0513pMaAjFLQHV9_k4ysHLoNa27VinetPlIzm_cBaqyCaaLIe3cecyyIBtiZTQIDAQAB'
 
 function corsHeaders() {
   return {
