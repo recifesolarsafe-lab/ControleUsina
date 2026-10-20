@@ -1,4 +1,4 @@
-// Supabase Edge Function: sync-historico  v2026-10-20a
+// Supabase Edge Function: sync-historico  v2026-10-20b
 // Busca geração diária histórica das plataformas e salva em lancamentos.
 // Chamada automaticamente pelo app após login para preencher dados desde 01/01/2026.
 //
@@ -223,29 +223,30 @@ function dateStrToMs(d: string): number {
   return new Date(d + 'T00:00:00Z').getTime()
 }
 
-// ─── iSolarCloud — Criptografia AES-CTR + RSA ────────────────
+// ─── iSolarCloud — Criptografia AES-CTR + RSA PKCS#1 v1.5 ───
 //
 // Protocolo real do servidor HK (capturado via XHR do web3.isolarcloud.com.hk):
 //
 //   1. Gera chave AES-128 aleatória (16 bytes)
-//   2. Criptografa a chave AES com RSA-OAEP (SHA-1) usando a pubkey do servidor
-//      → envia no header x-random-secret-key (base64 standard)
+//   2. Criptografa a chave AES com RSA PKCS#1 v1.5 usando a pubkey SPA
+//      → envia no header x-random-secret-key (base64 standard, ~172 chars para RSA-1024)
+//      NOTA: Web Crypto API só suporta RSA-OAEP — usamos implementação BigInt pura
 //   3. Criptografa o body JSON com AES-128-CTR (counter = 16 zero bytes)
 //      → envia como hex UPPERCASE no body
 //   4. Headers obrigatórios:
 //      - sys_code: '200'
 //      - sg_encryption_mode: 'aes_ctr'
 //      - x-access-key: <accessKey SPA>
-//      - x-random-secret-key: base64(RSA-encrypt(aesKey))
+//      - x-random-secret-key: base64(RSA-PKCS1v15-encrypt(aesKey))
 //      - x-sign-code: '0'
 //      - _pl: 'js'
 //   5. Resposta: também hex UPPERCASE → decriptar com mesma chave AES
 
-// As chaves SPA são usadas pelo protocolo de produção do web app
-const ISOLAR_SPA_ACCESSKEY = '9grzgbmxdsp3arfmmgq347xjbza4ysps'  // x-access-key real do web app
-// RSA public key DEVELOPER HK — extraída do WASM index_bg-BjKetHzz.wasm (get_developer_api_key)
-// NOTA: Tentamos SPA apiKey primeiro (E906), agora tentando developer apiKey
-const ISOLAR_SPA_RSA_PUBKEY = 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCqI34I8N0tg6NsR9_5tseFEeqcPXM0Lt4yT2UeSKgrHq3yMOYs_dCP5L_XYmWXckVWFHS3FIhhzAU9TNKZxEkG_tvPAVOrMUZWCQnPxTS_ZT2M0513pMaAjFLQHV9_k4ysHLoNa27VinetPlIzm_cBaqyCaaLIe3cecyyIBtiZTQIDAQAB'
+// Chaves SPA (usadas pelo protocolo de produção do web app — capturadas do XHR real)
+const ISOLAR_SPA_ACCESSKEY = '9grzgbmxdsp3arfmmgq347xjbza4ysps'
+// RSA-1024 public key SPA — extraída do WASM (get_spa_api_key / apiKey SPA)
+// O web app usa esta chave com NodeRSA pkcs1 scheme
+const ISOLAR_SPA_RSA_PUBKEY = 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCkecphb6vgsBx4LJknKKes-eyj7-RKQ3fikF5B67EObZ3t4moFZyMGuuJPiadYdaxvRqtxyblIlVM7omAasROtKRhtgKwwRxo2a6878qBhTgUVlsqugpI_7ZC9RmO2Rpmr8WzDeAapGANfHN5bVr7G7GYGwIrjvyxMrAVit_oM4wIDAQAB'
 
 function toUrlSafeBase64(buf: Uint8Array): string {
   let b = btoa(String.fromCharCode(...buf))
@@ -271,7 +272,118 @@ function fromHex(hex: string): Uint8Array {
   return result
 }
 
-// Retorna: { hexBody, rsaEncAesKey (base64 standard para x-random-secret-key), aesKey (para decriptar resposta) }
+// ─── RSA PKCS#1 v1.5 encrypt — implementação pura BigInt ────
+// Web Crypto API não suporta PKCS1v15 para encrypt. O iSolarCloud usa NodeRSA
+// com encryptionScheme: 'pkcs1' que é exatamente PKCS#1 v1.5.
+//
+// Algoritmo PKCS#1 v1.5 encrypt:
+//   EM = 0x00 || 0x02 || PS || 0x00 || M
+//   onde PS = k-3-mLen bytes aleatórios != 0x00, k = tamanho da chave em bytes
+//   c = EM^e mod n  (mod-exp BigInt)
+
+function parseDerSpki(spkiDer: Uint8Array): { n: bigint; e: bigint } {
+  // Parser DER mínimo para SubjectPublicKeyInfo contendo RSAPublicKey
+  // Estrutura: SEQUENCE { SEQUENCE { OID, NULL }, BIT STRING { SEQUENCE { INTEGER n, INTEGER e } } }
+  let pos = 0
+  function readLen(): number {
+    const first = spkiDer[pos++]
+    if (first < 0x80) return first
+    const nBytes = first & 0x7f
+    let len = 0
+    for (let i = 0; i < nBytes; i++) len = (len << 8) | spkiDer[pos++]
+    return len
+  }
+  function readTag(expected: number) {
+    const tag = spkiDer[pos++]
+    if (tag !== expected) throw new Error(`DER: expected tag 0x${expected.toString(16)}, got 0x${tag.toString(16)} at pos ${pos-1}`)
+    return readLen()
+  }
+  function readBigInt(): bigint {
+    const len = readTag(0x02) // INTEGER
+    // strip leading zero byte if present (sign byte)
+    let start = pos
+    let count = len
+    if (spkiDer[start] === 0x00) { start++; count-- }
+    const bytes = spkiDer.slice(start, start + count)
+    pos += len
+    let val = 0n
+    for (const b of bytes) val = (val << 8n) | BigInt(b)
+    return val
+  }
+
+  readTag(0x30)  // outer SEQUENCE
+  // Algorithm identifier SEQUENCE — skip it entirely
+  const algLen = readTag(0x30)
+  pos += algLen
+  // BIT STRING containing RSAPublicKey
+  readTag(0x03)  // BIT STRING tag
+  pos++          // skip "unused bits" byte (0x00)
+  readTag(0x30)  // inner SEQUENCE (RSAPublicKey)
+  const n = readBigInt()
+  const e = readBigInt()
+  return { n, e }
+}
+
+function modpow(base: bigint, exp: bigint, mod: bigint): bigint {
+  let result = 1n
+  base = base % mod
+  while (exp > 0n) {
+    if (exp % 2n === 1n) result = result * base % mod
+    exp = exp >> 1n
+    base = base * base % mod
+  }
+  return result
+}
+
+function rsaPkcs1v15Encrypt(message: Uint8Array, n: bigint, e: bigint): Uint8Array {
+  // k = byte length of modulus
+  const nHex = n.toString(16)
+  const k = Math.ceil(nHex.length / 2)
+  if (message.length > k - 11) throw new Error(`RSA PKCS1v15: message too long (${message.length} > ${k-11})`)
+
+  // Build EM = 0x00 || 0x02 || PS || 0x00 || M
+  const psLen = k - message.length - 3
+  const PS = new Uint8Array(psLen)
+  // PS must be non-zero random bytes
+  let filled = 0
+  while (filled < psLen) {
+    const rand = crypto.getRandomValues(new Uint8Array(psLen - filled + 8))
+    for (const b of rand) {
+      if (b !== 0 && filled < psLen) PS[filled++] = b
+    }
+  }
+  const EM = new Uint8Array(k)
+  EM[0] = 0x00; EM[1] = 0x02
+  EM.set(PS, 2)
+  EM[2 + psLen] = 0x00
+  EM.set(message, 3 + psLen)
+
+  // m = OS2IP(EM)
+  let m = 0n
+  for (const b of EM) m = (m << 8n) | BigInt(b)
+
+  // c = RSAEP(m) = m^e mod n
+  const c = modpow(m, e, n)
+
+  // I2OSP(c, k)
+  const result = new Uint8Array(k)
+  let cHexStr = c.toString(16).padStart(k * 2, '0')
+  for (let i = 0; i < k; i++) {
+    result[i] = parseInt(cHexStr.slice(i * 2, i * 2 + 2), 16)
+  }
+  return result
+}
+
+// Cache das partes da chave pública RSA (parseadas uma vez)
+let _rsaPubKeyCache: { n: bigint; e: bigint } | null = null
+function getRsaPubKey(): { n: bigint; e: bigint } {
+  if (_rsaPubKeyCache) return _rsaPubKeyCache
+  const der = fromUrlSafeBase64(ISOLAR_SPA_RSA_PUBKEY)
+  _rsaPubKeyCache = parseDerSpki(der)
+  return _rsaPubKeyCache
+}
+
+// Retorna: { hexBody, xRandomSecretKey (base64 para header), aesKey (para decriptar resposta) }
 async function isolarEncryptBodyCtr(plainBody: string): Promise<{
   hexBody: string;
   xRandomSecretKey: string;
@@ -282,26 +394,21 @@ async function isolarEncryptBodyCtr(plainBody: string): Promise<{
   // AES-CTR: counter inicial = 16 bytes zero
   const counter = new Uint8Array(16)
 
-  // 2. AES-128-CTR encrypt
+  // 2. AES-128-CTR encrypt do body
   const cryptoKey = await crypto.subtle.importKey('raw', aesKey, { name: 'AES-CTR' }, false, ['encrypt'])
   const enc = new TextEncoder()
   const encBody = await crypto.subtle.encrypt(
-    { name: 'AES-CTR', counter, length: 64 },  // length=64 bits = standard CTR
+    { name: 'AES-CTR', counter, length: 64 },
     cryptoKey,
     enc.encode(plainBody)
   )
 
-  // 3. RSA-OAEP encrypt da chave AES com a pubkey SPA
-  const rsaDer = fromUrlSafeBase64(ISOLAR_SPA_RSA_PUBKEY)
-  const rsaKey = await crypto.subtle.importKey(
-    'spki', rsaDer.buffer,
-    { name: 'RSA-OAEP', hash: 'SHA-1' },
-    false, ['encrypt']
-  )
-  const encAesKey = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, rsaKey, aesKey)
+  // 3. RSA PKCS#1 v1.5 encrypt da chave AES (implementação BigInt pura)
+  const { n, e } = getRsaPubKey()
+  const encAesKey = rsaPkcs1v15Encrypt(aesKey, n, e)
 
-  // x-random-secret-key usa base64 standard (não URL-safe)
-  const xRandomSecretKey = btoa(String.fromCharCode(...new Uint8Array(encAesKey)))
+  // x-random-secret-key usa base64 standard (não URL-safe), ~172 chars para RSA-1024
+  const xRandomSecretKey = btoa(String.fromCharCode(...encAesKey))
 
   return {
     hexBody: toHexUpper(new Uint8Array(encBody)),
@@ -760,7 +867,7 @@ async function salvarLancamentos(sb: ReturnType<typeof createClient>, codigo: st
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders() })
 
-  console.log('[sync-historico] versão v2026-10-19e — iSolarCloud V1 HK com AES+RSA encryption')
+  console.log('[sync-historico] versão v2026-10-20b — iSolarCloud V1 HK com AES-CTR + RSA PKCS1v15')
 
   const url = new URL(req.url)
 
