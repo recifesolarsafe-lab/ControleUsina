@@ -869,23 +869,38 @@ serve(async (req) => {
         user_password: md5hex(senha),
       })
       debugInfo.login_payload_plain = loginPayload
-      const encLogin = await isolarEncryptBody(loginPayload)
-      debugInfo.login_encrypted_params_len = encLogin.params.length
-      debugInfo.login_encrypted_time_len   = encLogin.time.length
+      debugInfo.protocol = 'aes_ctr_sys200'
+      const { hexBody: loginHex, xRandomSecretKey: loginRsk, aesKey: loginAesKey } = await isolarEncryptBodyCtr(loginPayload)
+      debugInfo.login_hex_len = loginHex.length
+      debugInfo.login_rsk_len = loginRsk.length
 
       // Envia login
       const loginRes = await fetch(`${ISOLAR_BASE}/v1/userService/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'text/plain',
           'x-access-key': ISOLAR_HK_ACCESSKEY,
-          'sys_code': '901',
+          'x-random-secret-key': loginRsk,
+          'x-sign-code': '0',
+          'sys_code': '200',
+          'sg_encryption_mode': 'aes_ctr',
+          '_pl': 'js',
           'lang': '_en_US',
         },
-        body: JSON.stringify(encLogin),
+        body: loginHex,
       })
-      const loginBody = await loginRes.json()
-      debugInfo.login_status      = loginRes.status
+      const loginRaw = await loginRes.text()
+      debugInfo.login_status   = loginRes.status
+      debugInfo.login_raw_len  = loginRaw.length
+      debugInfo.login_raw_50   = loginRaw.slice(0, 50)
+      let loginBody: any
+      if (/^[0-9A-Fa-f]{10,}$/.test(loginRaw.trim())) {
+        const dec = await isolarDecryptResponseCtr(loginRaw.trim(), loginAesKey)
+        debugInfo.login_decrypted = dec.slice(0, 300)
+        loginBody = JSON.parse(dec)
+      } else {
+        try { loginBody = JSON.parse(loginRaw) } catch { loginBody = { result_code: 'E_PARSE', raw: loginRaw.slice(0, 200) } }
+      }
       debugInfo.login_result_code = loginBody.result_code
       debugInfo.login_result_msg  = loginBody.result_msg
       debugInfo.login_data_keys   = Object.keys(loginBody.result_data || {})
@@ -902,13 +917,25 @@ serve(async (req) => {
           token: loginToken, user_id: loginUserId, login_state: loginState,
           appkey: ISOLAR_HK_APPKEY,
         })
-        const encList = await isolarEncryptBody(listPayload)
+        const { hexBody: listHex, xRandomSecretKey: listRsk, aesKey: listAesKey } = await isolarEncryptBodyCtr(listPayload)
         const listRes = await fetch(`${ISOLAR_BASE}/v1/powerStationService/getPowerStationList`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-access-key': ISOLAR_HK_ACCESSKEY, 'sys_code': '901', 'lang': '_en_US' },
-          body: JSON.stringify(encList),
+          headers: {
+            'Content-Type': 'text/plain', 'x-access-key': ISOLAR_HK_ACCESSKEY,
+            'x-random-secret-key': listRsk, 'x-sign-code': '0',
+            'sys_code': '200', 'sg_encryption_mode': 'aes_ctr', '_pl': 'js', 'lang': '_en_US'
+          },
+          body: listHex,
         })
-        const listBody = await listRes.json().catch(() => ({}))
+        const listRaw = await listRes.text()
+        let listBody: any
+        if (/^[0-9A-Fa-f]{10,}$/.test(listRaw.trim())) {
+          const dec = await isolarDecryptResponseCtr(listRaw.trim(), listAesKey)
+          listBody = JSON.parse(dec)
+        } else {
+          listBody = JSON.parse(listRaw).catch?.(() => ({})) || {}
+          try { listBody = JSON.parse(listRaw) } catch { listBody = {} }
+        }
         debugInfo.list_status = listRes.status
         debugInfo.list_code   = listBody.result_code
         debugInfo.list_msg    = listBody.result_msg
@@ -928,13 +955,24 @@ serve(async (req) => {
           start_time: startTime, end_time: endTime, order: 0,
           ps_id_list: [String(psId)],
         })
-        const encData = await isolarEncryptBody(dataPayload)
+        const { hexBody: dataHex, xRandomSecretKey: dataRsk, aesKey: dataAesKey } = await isolarEncryptBodyCtr(dataPayload)
         const dataRes = await fetch(`${ISOLAR_BASE}/v1/powerStationService/getPowerStationPointDayMonthYearDataList`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-access-key': ISOLAR_HK_ACCESSKEY, 'sys_code': '901', 'lang': '_en_US' },
-          body: JSON.stringify(encData),
+          headers: {
+            'Content-Type': 'text/plain', 'x-access-key': ISOLAR_HK_ACCESSKEY,
+            'x-random-secret-key': dataRsk, 'x-sign-code': '0',
+            'sys_code': '200', 'sg_encryption_mode': 'aes_ctr', '_pl': 'js', 'lang': '_en_US'
+          },
+          body: dataHex,
         })
-        const dataBody = await dataRes.json().catch(() => ({}))
+        const dataRaw = await dataRes.text()
+        let dataBody: any
+        if (/^[0-9A-Fa-f]{10,}$/.test(dataRaw.trim())) {
+          const dec = await isolarDecryptResponseCtr(dataRaw.trim(), dataAesKey)
+          dataBody = JSON.parse(dec)
+        } else {
+          try { dataBody = JSON.parse(dataRaw) } catch { dataBody = {} }
+        }
         debugInfo.data_status = dataRes.status
         debugInfo.data_code   = dataBody.result_code
         debugInfo.data_msg    = dataBody.result_msg
