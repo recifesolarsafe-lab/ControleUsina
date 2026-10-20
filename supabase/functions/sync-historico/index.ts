@@ -1107,6 +1107,7 @@ serve(async (req) => {
     // Passando via query string, o browser usa apenas headers "simples" e não precisa de preflight.
     const ak  = url.searchParams.get('ak')   || req.headers.get('x-access-key')        || ISOLAR_HK_ACCESSKEY
     const rsk = url.searchParams.get('rsk')  || req.headers.get('x-random-secret-key') || ''
+    console.log('[proxy_debug] path='+path+' rsk_len='+rsk.length+' rsk_first60='+rsk.slice(0,60))
     const sc  = url.searchParams.get('sc')   || req.headers.get('x-sign-code')         || '0'
     const sysc= url.searchParams.get('sysc') || req.headers.get('sys_code')            || '200'
     const enc = url.searchParams.get('enc')  || req.headers.get('sg_encryption_mode')  || 'aes_ctr'
