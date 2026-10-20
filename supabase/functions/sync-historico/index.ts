@@ -1142,11 +1142,9 @@ serve(async (req) => {
       headers: forwardHeaders,
       body: hexBody,
     })
-    // Lê como ArrayBuffer para preservar bytes binários sem corrupção UTF-8
-    const gwBuf = await gwRes.arrayBuffer()
-    const gwBytes = new Uint8Array(gwBuf)
-    // Converte para hex uppercase — o browser sabe desencriptar hex
-    const gwHex = Array.from(gwBytes).map(b => b.toString(16).padStart(2,'0').toUpperCase()).join('')
+    // O gateway iSolarCloud já retorna a resposta como texto hex uppercase
+    // Ler como texto e repassar diretamente (sem double-encode)
+    const gwHex = await gwRes.text()
     return new Response(gwHex, {
       status: gwRes.status,
       headers: { ...corsHeaders(), 'Content-Type': 'text/plain', 'x-isolar-proxy': '1' },
