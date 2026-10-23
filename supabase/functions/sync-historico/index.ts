@@ -880,8 +880,9 @@ serve(async (req) => {
     const mes    = url.searchParams.get('mes')     || '2026-09'
     try {
       const suffix      = conta === 'padrao' ? '' : '_' + conta
-      const appkey      = Deno.env.get('ISOLAR_ACCESS_KEY'     + suffix)
-                       || Deno.env.get('ISOLAR_APPKEY'         + suffix) || ''
+      // OpenAPI oficial: appkey (ISOLAR_APPKEY) vai no body; chave secreta (ISOLAR_ACCESS_KEY) vai no header x-access-key
+      const appkey      = Deno.env.get('ISOLAR_APPKEY'         + suffix) || ''
+      const accessKey   = Deno.env.get('ISOLAR_ACCESS_KEY'     + suffix) || ''
       const refreshTok  = Deno.env.get('ISOLAR_REFRESH_TOKEN'  + suffix) || ''
       const debugInfo: any = {
         conta,
@@ -900,19 +901,25 @@ serve(async (req) => {
       await sbAdmin.from('cache_sessoes').delete().eq('chave', `isolar_access_${conta}`)
       debugInfo.cache_cleared = true
 
-      // Passo 1: obter access_token via refresh_token
-      const refreshRes = await fetch(`${ISOLAR_BASE}/apiManage/refreshToken`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-access-key': appkey },
-        body: JSON.stringify({ appkey, refresh_token: refreshTok }),
-      })
-      const refreshBody = await refreshRes.json()
-      debugInfo.refresh_status      = refreshRes.status
-      debugInfo.refresh_result_code = refreshBody.result_code
-      debugInfo.refresh_result_msg  = refreshBody.result_msg
-      debugInfo.refresh_full_body   = JSON.stringify(refreshBody).slice(0, 500)
-      debugInfo.refresh_data_keys   = Object.keys(refreshBody.result_data || {})
-      const accessToken = refreshBody.result_data?.access_token || null
+      debugInfo.access_key_len = accessKey.length
+      debugInfo.access_key_prefix = accessKey.slice(0, 4)
+
+      // Passo 1: obter access_token via refresh_token — testa caminhos candidatos da OpenAPI
+      const candidatos = ['/openapi/apiManage/refreshToken', '/openapi/refreshToken', '/apiManage/refreshToken']
+      debugInfo.tentativas = []
+      let accessToken: string | null = null
+      for (const caminho of candidatos) {
+        const r = await fetch(`${ISOLAR_BASE}${caminho}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json;charset=UTF-8', 'x-access-key': accessKey, 'sys_code': '901' },
+          body: JSON.stringify({ appkey, refresh_token: refreshTok }),
+        })
+        const txt = await r.text()
+        let b: any = {}
+        try { b = JSON.parse(txt) } catch { b = { raw: txt.slice(0, 200) } }
+        debugInfo.tentativas.push({ caminho, status: r.status, code: b.result_code, msg: b.result_msg || b.message, data_keys: Object.keys(b.result_data || {}) })
+        if (b.result_data?.access_token) { accessToken = b.result_data.access_token; debugInfo.caminho_ok = caminho; break }
+      }
       debugInfo.access_token_found  = !!accessToken
       debugInfo.access_token_len    = String(accessToken || '').length
 
@@ -926,9 +933,18 @@ serve(async (req) => {
         debugInfo.endTime   = endTime
 
         const dataPayload = { appkey, query_type: 'day', data_type: '2', data_point: 'p83022', start_time: startTime, end_time: endTime, order: 0, ps_id_list: [String(psId)] }
-        const dataRes = await fetch(`${ISOLAR_BASE}/platform/getPowerStationPointDayMonthYearDataList`, {
+        const hdrData = { 'Content-Type': 'application/json;charset=UTF-8', 'Authorization': `Bearer ${accessToken}`, 'x-access-key': accessKey, 'sys_code': '901' }
+        // Lista de usinas (para descobrir todos os ps_id)
+        const listRes = await fetch(`${ISOLAR_BASE}/openapi/getPowerStationList`, {
+          method: 'POST', headers: hdrData,
+          body: JSON.stringify({ appkey, curPage: 1, size: 50 }),
+        })
+        const listTxt = await listRes.text()
+        debugInfo.list_status = listRes.status
+        debugInfo.list_body   = listTxt.slice(0, 1500)
+        const dataRes = await fetch(`${ISOLAR_BASE}/openapi/getPowerStationPointDayMonthYearDataList`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+          headers: hdrData,
           body: JSON.stringify(dataPayload),
         })
         const dataBodyRaw = await dataRes.text()
