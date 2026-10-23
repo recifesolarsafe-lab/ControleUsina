@@ -905,20 +905,31 @@ serve(async (req) => {
       debugInfo.access_key_prefix = accessKey.slice(0, 4)
 
       // Passo 1: obter access_token via refresh_token — testa caminhos candidatos da OpenAPI
-      const candidatos = ['/openapi/apiManage/refreshToken', '/openapi/refreshToken', '/apiManage/refreshToken']
+      const gateways = [ISOLAR_BASE, 'https://gateway.isolarcloud.eu', 'https://gateway.isolarcloud.com', 'https://augateway.isolarcloud.com']
+      const variantes: Record<string, string>[] = [
+        { 'x-access-key': accessKey, 'sys_code': '901' },
+        { 'x-access-key': accessKey },
+      ]
       debugInfo.tentativas = []
       let accessToken: string | null = null
-      for (const caminho of candidatos) {
-        const r = await fetch(`${ISOLAR_BASE}${caminho}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json;charset=UTF-8', 'x-access-key': accessKey, 'sys_code': '901' },
-          body: JSON.stringify({ appkey, refresh_token: refreshTok }),
-        })
-        const txt = await r.text()
-        let b: any = {}
-        try { b = JSON.parse(txt) } catch { b = { raw: txt.slice(0, 200) } }
-        debugInfo.tentativas.push({ caminho, status: r.status, code: b.result_code, msg: b.result_msg || b.message, data_keys: Object.keys(b.result_data || {}) })
-        if (b.result_data?.access_token) { accessToken = b.result_data.access_token; debugInfo.caminho_ok = caminho; break }
+      for (const gw of gateways) {
+        for (const [vi, extra] of variantes.entries()) {
+          try {
+            const r = await fetch(`${gw}/openapi/apiManage/refreshToken`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json;charset=UTF-8', ...extra },
+              body: JSON.stringify({ appkey, refresh_token: refreshTok }),
+            })
+            const txt = await r.text()
+            let b: any = {}
+            try { b = JSON.parse(txt) } catch { b = { raw: txt.slice(0, 120) } }
+            debugInfo.tentativas.push({ gw: gw.replace('https://', ''), v: vi, status: r.status, code: b.result_code, msg: b.result_msg || b.message || b.raw, data_keys: Object.keys(b.result_data || {}) })
+            if (b.result_data?.access_token) { accessToken = b.result_data.access_token; debugInfo.gateway_ok = gw; break }
+          } catch (e: any) {
+            debugInfo.tentativas.push({ gw, v: vi, erro: e.message })
+          }
+        }
+        if (accessToken) break
       }
       debugInfo.access_token_found  = !!accessToken
       debugInfo.access_token_len    = String(accessToken || '').length
